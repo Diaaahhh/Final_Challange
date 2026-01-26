@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // Ensure this is imported
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   FaMapMarkerAlt, FaEnvelopeOpen, FaClock, FaPhoneAlt, 
   FaFacebookF, FaTwitter, FaLinkedinIn, FaWhatsapp, 
@@ -9,18 +9,35 @@ import {
 export default function Navbar() {
   const [isSticky, setIsSticky] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // ---> THIS IS THE MISSING LINE <---
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
+  // 1. Handle Scroll Effect
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsSticky(true);
-      } else {
-        setIsSticky(false);
-      }
+      setIsSticky(window.scrollY > 50);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // 2. Check for User Login Status
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  // 3. Handle Logout Logic
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login');
+    setIsMobileMenuOpen(false); // Close mobile menu if open
+  };
 
   return (
     <header className="relative w-full z-50 font-['Inter']">
@@ -99,15 +116,25 @@ export default function Navbar() {
               </ul>
             </div>
 
-            {/* BUTTONS */}
+            {/* NAVBAR END: Buttons */}
             <div className="navbar-end flex gap-4 items-center w-full lg:w-auto">
-              {/* Sign Up Button (Working Link) */}
-              <Link 
-                to="/signup" 
-                className="btn btn-sm bg-transparent border border-[#C59D5F] text-white hover:bg-[#C59D5F] hover:text-[#0E1014] rounded-[4px] px-5 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex mr-2 transition-all duration-300"
-              >
-                Sign Up
-              </Link>
+              
+              {/* Login / Logout Button (Desktop) */}
+              {user ? (
+                <button 
+                  onClick={handleLogout}
+                  className="btn btn-sm bg-transparent border border-[#C59D5F] text-white hover:bg-[#C59D5F] hover:text-[#0E1014] rounded-[4px] px-5 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex mr-2 transition-all duration-300"
+                >
+                  Logout
+                </button>
+              ) : (
+                <Link 
+                  to="/login" 
+                  className="btn btn-sm bg-transparent border border-[#C59D5F] text-white hover:bg-[#C59D5F] hover:text-[#0E1014] rounded-[4px] px-5 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex mr-2 transition-all duration-300"
+                >
+                  Login
+                </Link>
+              )}
 
               <button className="btn btn-circle btn-ghost btn-sm relative text-white hover:text-[#C59D5F] mr-2">
                 <FaShoppingCart size={20} />
@@ -118,6 +145,7 @@ export default function Navbar() {
                 Reserve a Table
               </Link>
 
+              {/* Mobile Menu Button */}
               <button 
                 className="btn btn-ghost lg:hidden text-2xl text-white"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -129,7 +157,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU OVERLAY */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[60] bg-black/70 lg:hidden backdrop-blur-sm transition-all">
           <div className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-[#0E1014] text-white shadow-2xl p-6 border-l border-white/10">
@@ -141,13 +169,20 @@ export default function Navbar() {
             </div>
             
             <div className="flex flex-col gap-0 font-['Barlow_Condensed'] text-lg uppercase tracking-wide">
-              <Link to="/" className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Home</Link>
-              <Link to="/about" className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">About</Link>
-              <Link to="/menu-grid" className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Menu</Link>
-              <Link to="/contact" className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Contact</Link>
-              <Link to="/signup" className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors text-[#C59D5F]">Sign Up</Link>
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Home</Link>
+              <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">About</Link>
+              <Link to="/menu-grid" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Menu</Link>
+              <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Contact</Link>
+              
+              {/* Mobile Login / Logout Logic */}
+              {user ? (
+                 <button onClick={handleLogout} className="text-left border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors text-[#C59D5F]">Logout</button>
+              ) : (
+                 <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors text-[#C59D5F]">Login</Link>
+              )}
+
               <div className="mt-8">
-                <Link to="/reservation" className="btn bg-[#C59D5F] hover:bg-white hover:text-black text-white border-none w-full font-bold uppercase rounded-[4px]">Reserve Table</Link>
+                <Link to="/reservation" onClick={() => setIsMobileMenuOpen(false)} className="btn bg-[#C59D5F] hover:bg-white hover:text-black text-white border-none w-full font-bold uppercase rounded-[4px]">Reserve Table</Link>
               </div>
             </div>
           </div>
