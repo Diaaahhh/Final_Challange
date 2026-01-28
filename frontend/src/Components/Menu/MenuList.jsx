@@ -223,7 +223,7 @@ export default function MenuList() {
                       </td>
                       
                       <td className="font-mono text-success font-bold">
-                        ${Number(item.price).toFixed(2)}
+                        BDT{Number(item.price).toFixed(2)}
                       </td>
 
                       <td>

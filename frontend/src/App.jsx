@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom"; // Added Navigate
 
 // Import Components
 import Navbar from "./Components/Header/Navbar";
@@ -18,12 +18,33 @@ import Reservation from "./Components/Reservation/Reservation";
 import ReservationView from "./Components/Reservation/ReservationView";
 
 import WriteAbout from "./Components/About/WriteAbout";
-import ViewAbout from "./Components/About/ViewAbout"; // Make sure this path is correct
+import ViewAbout from "./Components/About/ViewAbout"; 
 
 import WriteReview from "./Components/Review/WriteReview";
 import ViewReview from './Components/Review/ViewReview';
+import UploadHero from './Components/Hero/UploadHero';
 
-import UploadHero from './Components/Hero/UploadHero'
+// --- NEW COMPONENT: Admin Protection Guard ---
+// This checks if the user is allowed to be here
+const AdminGuard = ({ children }) => {
+  // 1. Get user from LocalStorage (Assuming you saved it there during Login)
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  // 2. If not logged in at all -> Go to Login
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 3. If User has Role 1 (Regular User) -> Go to Home (Access Denied)
+  // Using '==' to catch both string "1" and number 1
+  if (user.role == 1) {
+    return <Navigate to="/" replace />;
+  }
+
+  // 4. If Logged in AND not Role 1 (must be Admin) -> Show the page
+  return children;
+};
+
 function App() {
   const location = useLocation();
 
@@ -40,7 +61,7 @@ function App() {
         <Route path="/" element={
           <>
             <Hero />
-            {/* Pass isHome={true} to show the preview version (shorter text + button) */}
+            {/* Pass isHome={true} to show the preview version */}
             <ViewAbout isHome={true} />
             <WriteReview />
           </>
@@ -51,22 +72,24 @@ function App() {
         <Route path="/menu-user" element={<MenuUser />} />
         <Route path="/reservation" element={<Reservation />} />
         
-        {/* Full About Page (No isHome prop, so it shows full text) */}
+        {/* Full About Page */}
         <Route path="/about" element={<ViewAbout />} />
 
-
-        {/* Admin Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
+        {/* --- PROTECTED ADMIN ROUTES --- */}
+        {/* We wrap the AdminLayout inside the AdminGuard */}
+        <Route path="/admin" element={
+          <AdminGuard>
+            <AdminLayout />
+          </AdminGuard>
+        }>
           <Route path="create-menu" element={<CreateMenu />} />
           <Route path="menu-list" element={<MenuList />} />
           <Route path="reservation_view" element={<ReservationView />} />
           <Route path="write_about" element={<WriteAbout />} />
-                    <Route path="view_review" element={<ViewReview />} />
-                                        <Route path="upload_hero" element={<UploadHero />} />
-
-
-
+          <Route path="view_review" element={<ViewReview />} />
+          <Route path="upload_hero" element={<UploadHero />} />
         </Route>
+
       </Routes>
 
       {!shouldHideNavbarFooter && <Footer />}

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaUtensils, FaDollarSign, FaList, FaEdit, FaCheckCircle, FaExclamationTriangle, FaPlus } from 'react-icons/fa';
+// Removed FaDollarSign from imports
+import { FaUtensils, FaList, FaEdit, FaCheckCircle, FaExclamationTriangle, FaPlus } from 'react-icons/fa';
 
 export default function CreateMenu() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
   // 1. Dynamic Category State
-  // We now store objects: { id, name, code }
   const [categories, setCategories] = useState([]);
   const [newCategoryName, setNewCategoryName] = useState("");
 
@@ -31,7 +31,6 @@ export default function CreateMenu() {
   };
 
   // --- Handlers ---
-
   const handleSingleChange = (e) => {
     const { name, value, files } = e.target;
     setSingleForm(prev => ({
@@ -59,7 +58,7 @@ export default function CreateMenu() {
 
       setCategories([...categories, newCat]);
       
-      // Auto-select the new category (Store the CODE, not the name)
+      // Auto-select the new category
       setSingleForm(prev => ({ ...prev, categoryCode: res.data.code }));
       
       setStatus({ type: 'success', message: `Category "${newCategoryName}" added!` });
@@ -71,37 +70,34 @@ export default function CreateMenu() {
   };
 
   // --- 3. Submit Menu Item (API) ---
- const handleSingleSubmit = async (e) => {
-e.preventDefault();setLoading(true);
-setStatus({ type: '', message: '' });
-try {
-const payload = {
-name: singleForm.name,
-category_code: singleForm.categoryCode,
-price: singleForm.price,
-description: singleForm.description
-};
+  const handleSingleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus({ type: '', message: '' });
 
-      // Make sure values are not strings if numbers are expected
-      // (Though JS usually handles this, it's safer to ensure)
+    try {
+      const payload = {
+        name: singleForm.name,
+        category_code: singleForm.categoryCode,
+        price: singleForm.price,
+        description: singleForm.description
+      };
+
       if(!payload.category_code) throw new Error("Please select a category first.");
 
-await axios.post('http://localhost:8081/api/menu/add', payload);
+      await axios.post('http://localhost:8081/api/menu/add', payload);
 
-setStatus({ type: 'success', message: 'Menu item added successfully!' });
-setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: null });
+      setStatus({ type: 'success', message: 'Menu item added successfully!' });
+      setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: null });
 
-
- } catch (err) {
- console.error("Full Error:", err);
-      
-      // CAPTURE THE REAL SERVER ERROR
+    } catch (err) {
+      console.error("Full Error:", err);
       const serverError = err.response?.data?.error || err.message;
- setStatus({ type: 'error', message: `Failed: ${serverError}` });
- } finally {
- setLoading(false);
- }
- };
+      setStatus({ type: 'error', message: `Failed: ${serverError}` });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <section className="space fadeinup">
@@ -166,13 +162,12 @@ setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: n
                                     name="categoryCode"
                                     value={singleForm.categoryCode}
                                     onChange={handleSingleChange}
-                                    onClick={fetchCategories} // Refresh list on click
+                                    onClick={fetchCategories} 
                                     className="select select-sm select-bordered w-full pl-9 focus:select-primary appearance-none capitalize"
                                     required
                                 >
                                     <option value="" disabled>Select...</option>
                                     {categories.map((cat) => (
-                                        // VALUE is the Code (FK), LABEL is the Name
                                         <option key={cat.id} value={cat.code}>
                                             {cat.name} (Code: {cat.code})
                                         </option>
@@ -207,7 +202,7 @@ setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: n
                         </div>
                     </div>
 
-                    {/* 3. Price */}
+                    {/* 3. Price (Changed to BDT) */}
                     <div className="form-control w-full">
                         <label className="label pt-0 pb-1">
                             <span className="label-text font-bold text-gray-500 uppercase text-xs">Price</span>
@@ -219,10 +214,12 @@ setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: n
                                 value={singleForm.price}
                                 onChange={handleSingleChange}
                                 placeholder="0.00" 
-                                className="input input-sm input-bordered w-full pl-9 focus:input-primary"
+                                // Increased padding-left (pl-12) to make room for 'BDT'
+                                className="input input-sm input-bordered w-full pl-12 focus:input-primary"
                                 required 
                             />
-                            <span className="absolute left-3 top-2.5 text-gray-400 text-sm"><FaDollarSign /></span>
+                            {/* Replaced FaDollarSign with Text BDT */}
+                            <span className="absolute left-3 top-2.5 text-gray-400 text-xs font-bold tracking-wider">BDT</span>
                         </div>
                     </div>
 
@@ -242,19 +239,6 @@ setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: n
                             <span className="absolute left-3 top-3 text-gray-400 text-sm"><FaEdit /></span>
                         </div>
                     </div>
-
-                    {/* 5. Image Upload (UI Only) */}
-                    {/* <div className="form-control w-full">
-                        <label className="label pt-0 pb-1">
-                            <span className="label-text font-bold text-gray-500 uppercase text-xs">Item Image</span>
-                        </label>
-                        <input 
-                            type="file" 
-                            name="image"
-                            onChange={handleSingleChange}
-                            className="file-input file-input-sm file-input-bordered file-input-primary w-full" 
-                        />
-                    </div> */}
 
                     {/* Submit Button */}
                     <button 
