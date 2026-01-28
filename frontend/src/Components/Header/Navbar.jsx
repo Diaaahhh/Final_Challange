@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   FaMapMarkerAlt, FaEnvelopeOpen, FaClock, FaPhoneAlt, 
-  FaFacebookF, FaTwitter, FaLinkedinIn, FaWhatsapp, 
-  FaShoppingCart, FaBars 
+  FaFacebookF, FaTwitter, FaWhatsapp, FaBars 
 } from 'react-icons/fa'; 
 
 export default function Navbar() {
@@ -48,29 +47,28 @@ export default function Navbar() {
           <div className="flex gap-6">
             <div className="flex items-center gap-2 hidden xl:flex">
               <FaMapMarkerAlt className="text-[#C59D5F]" />
-              <span className="text-gray-300">8502 Preston Rd. Inglewood, Maine 98380</span>
+              <span className="text-gray-300">House 33A, Road 4, Dhanmondi, Dhaka</span>
             </div>
             <div className="flex items-center gap-2 hidden lg:flex">
               <FaEnvelopeOpen className="text-[#C59D5F]" />
-              <a href="mailto:info@barab.com" className="hover:text-[#C59D5F] transition-colors">info@barab.com</a>
+              <a href="mailto:info@barab.com" className="hover:text-[#C59D5F] transition-colors">info@iglweb.com</a>
             </div>
             <div className="flex items-center gap-2">
               <FaClock className="text-[#C59D5F]" />
-              <span>Mon to Sat - 9am to 5pm</span>
+              <span>Sun to Sat - 10am to 9pm</span>
             </div>
           </div>
 
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 hidden xl:flex">
               <FaPhoneAlt className="text-[#C59D5F]" />
-              <a href="tel:+26365479875" className="hover:text-white transition-colors">+263 6547 9875</a>
+              <a href="tel:+26365479875" className="hover:text-white transition-colors">+880-1958-666 999</a>
             </div>
             <div className="flex gap-3">
                {[
-                 { Icon: FaFacebookF, link: "https://facebook.com" },
-                 { Icon: FaTwitter, link: "https://twitter.com" },
-                 { Icon: FaLinkedinIn, link: "https://linkedin.com" },
-                 { Icon: FaWhatsapp, link: "https://whatsapp.com" },
+                 { Icon: FaFacebookF, link:"https://www.facebook.com/IGLWebLtd/" },
+                 { Icon: FaTwitter, link:"https://twitter.com/iglwebltd" },
+                 { Icon: FaWhatsapp, link: "https://wa.me/8801958666999" },
                ].map((social, idx) => (
                  <a key={idx} href={social.link} className="hover:text-[#C59D5F] transition-colors">
                    <social.Icon size={14} />
@@ -104,15 +102,18 @@ export default function Navbar() {
               <ul className="menu menu-horizontal px-1 gap-6 font-bold text-white uppercase tracking-wide text-[15px] font-['Barlow_Condensed']">
                 <li><Link to="/" className="hover:text-[#C59D5F] focus:text-[#C59D5F] p-0 bg-transparent">Home</Link></li>
                 <li><Link to="/about" className="hover:text-[#C59D5F] p-0 bg-transparent">About</Link></li>
-                <li tabIndex={0} className="dropdown dropdown-hover group">
+                                <li><Link to="/menu-user" className="hover:text-[#C59D5F] p-0 bg-transparent">Menu</Link></li>
+
+                {/* <li tabIndex={0} className="dropdown dropdown-hover group">
+
                   <span className="hover:text-[#C59D5F] p-0 bg-transparent cursor-pointer">Menu</span>
                   <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-52 text-sm mt-4 border-t-4 border-[#C59D5F]">
                     <li><Link to="/menu-grid" className="hover:text-[#C59D5F] hover:bg-transparent">Menu Grid</Link></li>
                     <li><Link to="/menu-list" className="hover:text-[#C59D5F] hover:bg-transparent">Menu List</Link></li>
                   </ul>
-                </li>
-                <li><Link to="/blog" className="hover:text-[#C59D5F] p-0 bg-transparent">Blog</Link></li>
-                <li><Link to="/contact" className="hover:text-[#C59D5F] p-0 bg-transparent">Contact</Link></li>
+                </li> */}
+                {/* <li><Link to="/blog" className="hover:text-[#C59D5F] p-0 bg-transparent">Blog</Link></li>
+                <li><Link to="/contact" className="hover:text-[#C59D5F] p-0 bg-transparent">Contact</Link></li> */}
               </ul>
             </div>
 
@@ -136,10 +137,10 @@ export default function Navbar() {
                 </Link>
               )}
 
-              <button className="btn btn-circle btn-ghost btn-sm relative text-white hover:text-[#C59D5F] mr-2">
+              {/* <button className="btn btn-circle btn-ghost btn-sm relative text-white hover:text-[#C59D5F] mr-2">
                 <FaShoppingCart size={20} />
                 <span className="absolute -top-1 -right-1 bg-[#C59D5F] text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">5</span>
-              </button>
+              </button> */}
 
               <Link to="/reservation" className="btn bg-[#C59D5F] hover:bg-white hover:text-[#0E1014] text-white border-none rounded-[4px] px-7 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex transition-all duration-300">
                 Reserve a Table
@@ -172,7 +173,6 @@ export default function Navbar() {
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Home</Link>
               <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">About</Link>
               <Link to="/menu-grid" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Menu</Link>
-              <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Contact</Link>
               
               {/* Mobile Login / Logout Logic */}
               {user ? (

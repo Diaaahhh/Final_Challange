@@ -39,16 +39,13 @@ export default function Sidebar() {
         `}
       >
         
-        {/* 1. HEADER / LOGO */}
-        <div className="h-20 flex items-center justify-center border-b border-white/10 relative">
-          
-        </div>
+        
 
         {/* 2. NAVIGATION LINKS */}
         <nav className="flex-1 py-8 flex flex-col gap-2 px-3 overflow-y-auto">
           
           <p className={`text-xs font-bold text-gray-600 uppercase tracking-widest mb-2 px-4 ${!isOpen && 'lg:hidden'}`}>
-            Menu Management
+         Admin Panel
           </p>
 
           {/* Create Menu Item */}
@@ -79,39 +76,84 @@ export default function Sidebar() {
               Menu List
             </span>
 
-             {/* Tooltip for collapsed mode */}
-             {!isOpen && (
+            {!isOpen && (
               <div className="absolute left-14 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl border border-white/10">
                 Menu List
               </div>
             )}
           </Link>
 
-        </nav>
-
-        {/* 3. FOOTER (Collapse & Logout) */}
-        <div className="p-4 border-t border-white/10 bg-[#0E1014]">
-          {/* Desktop Collapse Button */}
-          <button 
-             onClick={() => setIsOpen(!isOpen)}
-             className="w-full flex items-center justify-center p-2 rounded-lg text-gray-500 hover:bg-white/5 hover:text-white transition-colors mb-4 hidden lg:flex"
+          {/* //reservation Management */}
+          <Link 
+            to="/admin/reservation_view" 
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 group relative ${isActive('/admin/reservation_view')}`}
           >
-            {isOpen ? <FaChevronLeft /> : <FaChevronRight />}
-          </button>
-          
-          <button className="w-full flex items-center gap-4 px-4 py-3 rounded-lg text-red-500 hover:bg-red-500/10 hover:text-red-400 transition-all group relative">
-             <FaSignOutAlt className="text-lg min-w-[20px]" />
-             <span className={`whitespace-nowrap font-medium ${!isOpen && 'lg:hidden'}`}>Logout</span>
-             
-             {/* Tooltip for logout */}
-             {!isOpen && (
-              <div className="absolute left-14 bg-red-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl">
-                Logout
+            <FaListUl className="text-lg min-w-[20px]" />
+            <span className={`whitespace-nowrap font-medium tracking-wide ${!isOpen && 'lg:hidden'}`}>
+              View Reservation
+            </span>
+
+            {!isOpen && (
+              <div className="absolute left-14 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl border border-white/10">
+              View Reservation
               </div>
             )}
-          </button>
-        </div>
+          </Link>
 
+           {/* //create about */}
+          <Link 
+            to="/admin/write_about" 
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 group relative ${isActive('/admin/write_about')}`}
+          >
+            <FaListUl className="text-lg min-w-[20px]" />
+            <span className={`whitespace-nowrap font-medium tracking-wide ${!isOpen && 'lg:hidden'}`}>
+              Create About
+            </span>
+
+            {!isOpen && (
+              <div className="absolute left-14 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl border border-white/10">
+               Create About
+              </div>
+            )}
+          </Link>
+
+           {/* //view review */}
+          <Link 
+            to="/admin/view_review" 
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 group relative ${isActive('/admin/view_review')}`}
+          >
+            <FaListUl className="text-lg min-w-[20px]" />
+            <span className={`whitespace-nowrap font-medium tracking-wide ${!isOpen && 'lg:hidden'}`}>
+              View Review
+            </span>
+
+            {!isOpen && (
+              <div className="absolute left-14 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl border border-white/10">
+               View Review
+              </div>
+            )}
+          </Link>
+
+  {/* Upload Hero*/}
+          <Link 
+            to="/admin/upload_hero" 
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-300 group relative ${isActive('/admin/upload_hero')}`}
+          >
+            <FaListUl className="text-lg min-w-[20px]" />
+            <span className={`whitespace-nowrap font-medium tracking-wide ${!isOpen && 'lg:hidden'}`}>
+              Upload Hero
+            </span>
+
+            {!isOpen && (
+              <div className="absolute left-14 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-xl border border-white/10">
+               Upload Hero
+              </div>
+            )}
+          </Link>
+        </nav>
+
+
+      
       </div>
     </div>
   );

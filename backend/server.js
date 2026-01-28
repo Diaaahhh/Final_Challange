@@ -66,6 +66,35 @@ app.post('/login', (req, res) => {
     });
 });
 
+const createMenuRoutes = require('./routes/create_menu'); 
+app.use('/api', createMenuRoutes);
+
+app.use('/api/menu', require('./routes/menu_list'));
+
+const menuUserRoutes = require('./routes/menu_user');
+
+const reservationRoutes = require('./routes/reservation');
+app.use('/api/reservation', reservationRoutes);
+
+
+// In server.js
+app.use(express.static('public')); // To serve images
+const aboutRoutes = require('./routes/write_about');
+app.use('/api/about', aboutRoutes);
+
+app.use('/api/menu-user', menuUserRoutes);
+
+app.use('/api/view-about', require('./routes/view_about'));
+
+const writeReviewRoute = require('./routes/write_review');
+app.use('/api', writeReviewRoute);
+
+const viewReviewRoute = require('./routes/view_review');
+app.use('/api', viewReviewRoute);
+
+const uploadHeroRoute = require('./routes/upload_hero');
+app.use('/api', uploadHeroRoute);
+
 app.listen(8081, () => {
     console.log("Listening on port 8081");
 });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 // 1. IMPORT THE ICONS FROM REACT-ICONS
-import { FaFacebookF, FaTwitter, FaLinkedinIn, FaWhatsapp } from "react-icons/fa";
+import { FaFacebookF, FaTwitter, FaInstagram, FaWhatsapp } from "react-icons/fa";
 import { FaArrowUp } from "react-icons/fa6"; // For the scroll-up arrow
 
 // Import Images
@@ -36,9 +36,8 @@ const Footer = () => {
   const socialLinks = [
     { icon: <FaFacebookF />, link: 'https://www.facebook.com/' },
     { icon: <FaTwitter />, link: 'https://www.twitter.com/' },
-    { icon: <FaLinkedinIn />, link: 'https://www.linkedin.com/' },
-    { icon: <FaWhatsapp />, link: 'https://www.whatsapp.com/' }
-  ];
+    { icon: <FaInstagram />, link: 'https://www.linkedin.com/' },
+{ icon: <FaWhatsapp/>, link: "https://wa.me/8801958666999" }  ];
 
   return (
     <footer className="relative bg-[#0E1014] text-white pt-20 overflow-hidden font-['Inter']">
@@ -72,12 +71,26 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {/* LINKS */}
           <div className="text-center lg:text-left">
-            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Useful Links</h3>
+            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Sister Concerns</h3>
             <ul className="space-y-3">
-              {['Home', 'Our History', 'Our Services', 'Favorite Place', 'Contact Us', 'Privacy Policy'].map((item, i) => (
-                <li key={i}><a href="#" className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg">{item}</a></li>
-              ))}
-            </ul>
+  {[
+    { name: 'IGL Tours and Travels', link: 'https://iglweb.com/web/' },
+    { name: 'IGL Network',           link: '#' },
+    { name: 'Student Visa',          link: 'https://studentvisabd.com/' },
+    { name: 'FelnaTech',             link: 'https://felnatech.com' }
+  ].map((item, i) => (
+    <li key={i}>
+      <a 
+        href={item.link} 
+        target={item.link !== '#' ? "_blank" : "_self"} 
+        rel={item.link !== '#' ? "noopener noreferrer" : ""}
+        className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg"
+      >
+        {item.name}
+      </a>
+    </li>
+  ))}
+</ul>
           </div>
 
           {/* CENTER WIDGET */}
@@ -89,7 +102,7 @@ const Footer = () => {
                   <i className="fa-regular fa-clock"></i> 
                 </div>
                 <p className="text-[#C59D5F] font-semibold mb-1 uppercase tracking-wider">We’re currently open!</p>
-                <p className="text-gray-300 text-sm">Opening Hours: 8:00AM To 10:00PM</p>
+                <p className="text-gray-300 text-sm">Opening Hours: 10:00AM To 9:00PM</p>
               </div>
             </div>
 
@@ -109,9 +122,9 @@ const Footer = () => {
 
           {/* MENUS */}
           <div className="text-center lg:text-right">
-            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Favorite Menus</h3>
+            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Sister Concerns</h3>
             <ul className="space-y-3">
-              {['Burgers', 'Crispy Flavors', 'Breakfast Menu', 'Desserts', 'Kids Menus', 'Beverages'].map((item, i) => (
+              {['IGL Web Ltd.', 'Felna Digital Marketing Agency', 'Felna Online', 'IGL Host LLC'].map((item, i) => (
                 <li key={i}><a href="#" className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg">{item}</a></li>
               ))}
             </ul>
@@ -123,8 +136,15 @@ const Footer = () => {
       <div className="border-t border-white/10 bg-[#08090C] py-6">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm text-center md:text-left">
-            Copyright © 2025 <a href="#" className="text-[#C59D5F] hover:text-white ml-1">Barab</a> All Rights Reserved.
-          </p>
+  Copyright © 2025 
+  <a 
+    href="https://iglweb.com/web/contact-address.php" 
+    className="text-[#C59D5F] hover:text-white ml-1 font-['Arial_Black']"
+  >
+    IGL Web Ltd.
+  </a> 
+  All Rights Reserved.
+</p>
           <div className="flex gap-6">
             {['Privacy Policy', 'Terms & Condition', 'Support policy'].map((link, i) => (
               <a key={i} href="#" className="text-gray-500 hover:text-[#C59D5F] text-sm transition-colors">{link}</a>

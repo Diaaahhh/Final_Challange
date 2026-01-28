@@ -1,14 +1,34 @@
-import React, { useState } from 'react';
-import { FaUtensils, FaDollarSign, FaList, FaEdit, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { FaUtensils, FaDollarSign, FaList, FaEdit, FaCheckCircle, FaExclamationTriangle, FaPlus } from 'react-icons/fa';
 
 export default function CreateMenu() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
+  // 1. Dynamic Category State
+  // We now store objects: { id, name, code }
+  const [categories, setCategories] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+
   // Form Data State
   const [singleForm, setSingleForm] = useState({ 
-    name: '', category: '', price: '', description: '', image: null 
+    name: '', categoryCode: '', price: '', description: '', image: null 
   });
+
+  // --- 1. Fetch Categories on Load ---
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get('http://localhost:8081/api/categories');
+      setCategories(res.data);
+    } catch (err) {
+      console.error("Failed to fetch categories", err);
+    }
+  };
 
   // --- Handlers ---
 
@@ -20,52 +40,103 @@ export default function CreateMenu() {
     }));
   };
 
-  const handleSingleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      setStatus({ type: 'success', message: 'Menu item added successfully!' });
-      // Reset Form
-      setSingleForm({ name: '', category: '', price: '', description: '', image: null });
-    }, 1500);
+  // --- 2. Add New Category (API) ---
+  const handleAddCategory = async (e) => {
+    e.preventDefault(); 
+    if (newCategoryName.trim() === "") return;
+
+    try {
+      const res = await axios.post('http://localhost:8081/api/categories/add', {
+        name: newCategoryName
+      });
+
+      // Update list with new category from backend response
+      const newCat = { 
+        id: res.data.id, 
+        name: res.data.name, 
+        code: res.data.code 
+      };
+
+      setCategories([...categories, newCat]);
+      
+      // Auto-select the new category (Store the CODE, not the name)
+      setSingleForm(prev => ({ ...prev, categoryCode: res.data.code }));
+      
+      setStatus({ type: 'success', message: `Category "${newCategoryName}" added!` });
+      setNewCategoryName("");
+
+    } catch (err) {
+      setStatus({ type: 'error', message: 'Failed to add category. Name might be duplicate.' });
+    }
   };
+
+  // --- 3. Submit Menu Item (API) ---
+ const handleSingleSubmit = async (e) => {
+e.preventDefault();setLoading(true);
+setStatus({ type: '', message: '' });
+try {
+const payload = {
+name: singleForm.name,
+category_code: singleForm.categoryCode,
+price: singleForm.price,
+description: singleForm.description
+};
+
+      // Make sure values are not strings if numbers are expected
+      // (Though JS usually handles this, it's safer to ensure)
+      if(!payload.category_code) throw new Error("Please select a category first.");
+
+await axios.post('http://localhost:8081/api/menu/add', payload);
+
+setStatus({ type: 'success', message: 'Menu item added successfully!' });
+setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: null });
+
+
+ } catch (err) {
+ console.error("Full Error:", err);
+      
+      // CAPTURE THE REAL SERVER ERROR
+      const serverError = err.response?.data?.error || err.message;
+ setStatus({ type: 'error', message: `Failed: ${serverError}` });
+ } finally {
+ setLoading(false);
+ }
+ };
 
   return (
     <section className="space fadeinup">
       <div className="container">
         <div className="row justify-content-center">
-          <div className="col-lg-8">
+          {/* Compact Column Size */}
+          <div className="col-lg-6 col-md-8">
             
             {/* Main Card */}
             <div className="card w-full bg-base-100 shadow-xl border border-base-200">
-              <div className="card-body p-6 md:p-10">
+              <div className="card-body p-6">
                 
-                {/* Header Section */}
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-gray-800 uppercase tracking-wide">
+                {/* Header */}
+                <div className="text-center mb-6">
+                    <h2 className="text-xl font-bold text-white-800 uppercase tracking-wide">
                         Add New Menu Item
                     </h2>
-                    <p className="text-sm text-gray-500 mt-1">Fill in the details below to update your menu</p>
+                    <p className="text-xs text-gray-500 mt-1">Create a new dish for your restaurant</p>
                 </div>
 
                 {/* Status Alert */}
                 {status.message && (
-                    <div className={`alert ${status.type === 'success' ? 'alert-success' : 'alert-error'} mb-6 shadow-md`}>
+                    <div className={`alert ${status.type === 'success' ? 'alert-success' : 'alert-error'} mb-4 py-2 shadow-sm text-sm`}>
                         {status.type === 'success' ? <FaCheckCircle className="text-white"/> : <FaExclamationTriangle className="text-white"/>}
                         <span className="text-white font-medium">{status.message}</span>
                         <button className="btn btn-xs btn-ghost text-white" onClick={() => setStatus({type:'', message:''})}>✕</button>
                     </div>
                 )}
 
-                {/* === SINGLE ITEM FORM === */}
-                <form onSubmit={handleSingleSubmit} className="flex flex-col gap-5">
+                {/* === FORM === */}
+                <form onSubmit={handleSingleSubmit} className="flex flex-col gap-3">
                     
                     {/* 1. Item Name */}
                     <div className="form-control w-full">
-                        <label className="label pt-0">
+                        <label className="label pt-0 pb-1">
                             <span className="label-text font-bold text-gray-500 uppercase text-xs">Item Name</span>
                         </label>
                         <div className="relative">
@@ -74,61 +145,90 @@ export default function CreateMenu() {
                                 name="name"
                                 value={singleForm.name}
                                 onChange={handleSingleChange}
-                                placeholder="e.g. Double Cheese Burger" 
-                                className="input input-bordered w-full pl-10 focus:input-primary"
+                                placeholder="e.g. Classic Burger" 
+                                className="input input-sm input-bordered w-full pl-9 focus:input-primary"
                                 required 
                             />
-                            <span className="absolute left-3 top-3.5 text-gray-400"><FaUtensils /></span>
+                            <span className="absolute left-3 top-2.5 text-gray-400 text-sm"><FaUtensils /></span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* 2. Category */}
+                    {/* 2. Category Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        
+                        {/* Select Category */}
                         <div className="form-control w-full">
-                            <label className="label pt-0">
+                            <label className="label pt-0 pb-1">
                                 <span className="label-text font-bold text-gray-500 uppercase text-xs">Category</span>
                             </label>
                             <div className="relative">
                                 <select 
-                                    name="category"
-                                    value={singleForm.category}
+                                    name="categoryCode"
+                                    value={singleForm.categoryCode}
                                     onChange={handleSingleChange}
-                                    className="select select-bordered w-full pl-10 focus:select-primary appearance-none"
+                                    onClick={fetchCategories} // Refresh list on click
+                                    className="select select-sm select-bordered w-full pl-9 focus:select-primary appearance-none capitalize"
                                     required
                                 >
-                                    <option value="" disabled>Select Category</option>
-                                    <option value="burgers">Burgers</option>
-                                    <option value="pizza">Pizza</option>
-                                    <option value="drinks">Drinks</option>
-                                    <option value="dessert">Dessert</option>
+                                    <option value="" disabled>Select...</option>
+                                    {categories.map((cat) => (
+                                        // VALUE is the Code (FK), LABEL is the Name
+                                        <option key={cat.id} value={cat.code}>
+                                            {cat.name} (Code: {cat.code})
+                                        </option>
+                                    ))}
                                 </select>
-                                <span className="absolute left-3 top-3.5 text-gray-400 pointer-events-none"><FaList /></span>
+                                <span className="absolute left-3 top-2.5 text-gray-400 pointer-events-none text-sm"><FaList /></span>
                             </div>
                         </div>
 
-                        {/* 3. Price */}
+                        {/* Add New Category */}
                         <div className="form-control w-full">
-                            <label className="label pt-0">
-                                <span className="label-text font-bold text-gray-500 uppercase text-xs">Price</span>
+                            <label className="label pt-0 pb-1">
+                                <span className="label-text font-bold text-theme uppercase text-xs">Or Add New</span>
                             </label>
-                            <div className="relative">
+                            <div className="input-group">
                                 <input 
-                                    type="number" 
-                                    name="price"
-                                    value={singleForm.price}
-                                    onChange={handleSingleChange}
-                                    placeholder="0.00" 
-                                    className="input input-bordered w-full pl-10 focus:input-primary"
-                                    required 
+                                    type="text" 
+                                    placeholder="New Category" 
+                                    className="input input-sm input-bordered w-full focus:input-primary"
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
                                 />
-                                <span className="absolute left-3 top-3.5 text-gray-400"><FaDollarSign /></span>
+                                <button 
+                                    type="button"
+                                    onClick={handleAddCategory}
+                                    className="btn btn-sm btn-square btn-primary text-white"
+                                    title="Add Category"
+                                >
+                                    <FaPlus />
+                                </button>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Price */}
+                    <div className="form-control w-full">
+                        <label className="label pt-0 pb-1">
+                            <span className="label-text font-bold text-gray-500 uppercase text-xs">Price</span>
+                        </label>
+                        <div className="relative">
+                            <input 
+                                type="number" 
+                                name="price"
+                                value={singleForm.price}
+                                onChange={handleSingleChange}
+                                placeholder="0.00" 
+                                className="input input-sm input-bordered w-full pl-9 focus:input-primary"
+                                required 
+                            />
+                            <span className="absolute left-3 top-2.5 text-gray-400 text-sm"><FaDollarSign /></span>
                         </div>
                     </div>
 
                     {/* 4. Description */}
                     <div className="form-control w-full">
-                        <label className="label pt-0">
+                        <label className="label pt-0 pb-1">
                             <span className="label-text font-bold text-gray-500 uppercase text-xs">Description</span>
                         </label>
                         <div className="relative">
@@ -136,32 +236,32 @@ export default function CreateMenu() {
                                 name="description"
                                 value={singleForm.description}
                                 onChange={handleSingleChange}
-                                className="textarea textarea-bordered w-full pl-10 pt-3 h-24 focus:textarea-primary"
-                                placeholder="Short description of the item..."
+                                className="textarea textarea-bordered w-full pl-9 pt-2 h-20 focus:textarea-primary text-sm leading-tight"
+                                placeholder="Short description..."
                             ></textarea>
-                            <span className="absolute left-3 top-3.5 text-gray-400"><FaEdit /></span>
+                            <span className="absolute left-3 top-3 text-gray-400 text-sm"><FaEdit /></span>
                         </div>
                     </div>
 
-                    {/* 5. Image Upload */}
-                    <div className="form-control w-full">
-                        <label className="label pt-0">
+                    {/* 5. Image Upload (UI Only) */}
+                    {/* <div className="form-control w-full">
+                        <label className="label pt-0 pb-1">
                             <span className="label-text font-bold text-gray-500 uppercase text-xs">Item Image</span>
                         </label>
                         <input 
                             type="file" 
                             name="image"
                             onChange={handleSingleChange}
-                            className="file-input file-input-bordered file-input-primary w-full" 
+                            className="file-input file-input-sm file-input-bordered file-input-primary w-full" 
                         />
-                    </div>
+                    </div> */}
 
                     {/* Submit Button */}
                     <button 
                         type="submit" 
-                        className={`btn btn-primary w-full mt-2 text-white uppercase tracking-wider font-bold ${loading ? 'loading' : ''}`}
+                        className={`btn btn-primary btn-sm w-full mt-3 text-white uppercase tracking-wider font-bold ${loading ? 'loading' : ''}`}
                     >
-                        {loading ? 'Saving Item...' : 'Add Item Now'}
+                        {loading ? 'Saving...' : 'Save Item'}
                     </button>
                 </form>
 
