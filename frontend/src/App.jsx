@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, useLocation, Navigate } from "react-router-dom"; // Added Navigate
+import { Routes, Route, useLocation, Navigate } from "react-router-dom"; 
 
 // Import Components
 import Navbar from "./Components/Header/Navbar";
@@ -24,24 +24,25 @@ import WriteReview from "./Components/Review/WriteReview";
 import ViewReview from './Components/Review/ViewReview';
 import UploadHero from './Components/Hero/UploadHero';
 
-// --- NEW COMPONENT: Admin Protection Guard ---
-// This checks if the user is allowed to be here
+// --- UPDATED COMPONENT: Admin Protection Guard ---
 const AdminGuard = ({ children }) => {
-  // 1. Get user from LocalStorage (Assuming you saved it there during Login)
+  // 1. Get user from LocalStorage
   const user = JSON.parse(localStorage.getItem("user"));
 
-  // 2. If not logged in at all -> Go to Login
+  // 2. SCENARIO A: User is NOT logged in.
+  // Requirement: Redirect to "/" (Home).
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
-  // 3. If User has Role 1 (Regular User) -> Go to Home (Access Denied)
-  // Using '==' to catch both string "1" and number 1
+  // 3. SCENARIO B: User IS logged in, but Role is 1 (Regular Customer).
+  // Requirement: Redirect to "/" (Home).
   if (user.role == 1) {
     return <Navigate to="/" replace />;
   }
 
-  // 4. If Logged in AND not Role 1 (must be Admin) -> Show the page
+  // 4. SCENARIO C: User is logged in AND is Admin (Role 0 or other).
+  // Requirement: Allow access to the Admin Panel.
   return children;
 };
 
@@ -49,6 +50,7 @@ function App() {
   const location = useLocation();
 
   const isAuthPage = ["/signup", "/login"].includes(location.pathname);
+  // Admin page check ensures navbar hides on admin panel
   const isAdminPage = location.pathname.startsWith("/admin");
   const shouldHideNavbarFooter = isAuthPage || isAdminPage;
 
@@ -57,26 +59,30 @@ function App() {
       {!shouldHideNavbarFooter && <Navbar />}
 
       <Routes>
-        {/* --- MODIFIED HOME ROUTE --- */}
+        {/* --- PUBLIC HOME ROUTE --- */}
+        {/* Anyone can visit this because it is NOT wrapped in AdminGuard */}
         <Route path="/" element={
           <>
             <Hero />
-            {/* Pass isHome={true} to show the preview version */}
             <ViewAbout isHome={true} />
             <WriteReview />
           </>
         } />
 
+        {/* Public Routes */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/menu-user" element={<MenuUser />} />
         <Route path="/reservation" element={<Reservation />} />
-        
-        {/* Full About Page */}
         <Route path="/about" element={<ViewAbout />} />
 
         {/* --- PROTECTED ADMIN ROUTES --- */}
-        {/* We wrap the AdminLayout inside the AdminGuard */}
+        {/* If someone adds "/admin" to the URL:
+            1. AdminGuard runs.
+            2. Checks if logged in? No -> Redirect to "/".
+            3. Checks if Role 1? Yes -> Redirect to "/".
+            4. If Admin -> Shows AdminLayout.
+        */}
         <Route path="/admin" element={
           <AdminGuard>
             <AdminLayout />
