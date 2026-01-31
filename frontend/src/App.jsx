@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, useLocation, Navigate } from "react-router-dom"; 
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 
 // Import Components
 import Navbar from "./Components/Header/Navbar";
@@ -18,31 +18,34 @@ import Reservation from "./Components/Reservation/Reservation";
 import ReservationView from "./Components/Reservation/ReservationView";
 
 import WriteAbout from "./Components/About/WriteAbout";
-import ViewAbout from "./Components/About/ViewAbout"; 
+import ViewAbout from "./Components/About/ViewAbout";
 
 import WriteReview from "./Components/Review/WriteReview";
-import ViewReview from './Components/Review/ViewReview';
-import UploadHero from './Components/Hero/UploadHero';
+import ViewReview from "./Components/Review/ViewReview";
+import UploadHero from "./Components/Hero/UploadHero";
 
-// --- UPDATED COMPONENT: Admin Protection Guard ---
+import Address from "./Components/Contact/Address";
+
+import Map from "./Components/Contact/Map";
+
+import Profile from "./Components/Profile/Profile";
+
+import Settings from "./Components/Settings/Settings"
+import Branches from "./Components/Branches/Branches";
+
+
+// --- ADMIN PROTECTION GUARD ---
 const AdminGuard = ({ children }) => {
-  // 1. Get user from LocalStorage
   const user = JSON.parse(localStorage.getItem("user"));
 
-  // 2. SCENARIO A: User is NOT logged in.
-  // Requirement: Redirect to "/" (Home).
   if (!user) {
     return <Navigate to="/" replace />;
   }
 
-  // 3. SCENARIO B: User IS logged in, but Role is 1 (Regular Customer).
-  // Requirement: Redirect to "/" (Home).
   if (user.role == 1) {
     return <Navigate to="/" replace />;
   }
 
-  // 4. SCENARIO C: User is logged in AND is Admin (Role 0 or other).
-  // Requirement: Allow access to the Admin Panel.
   return children;
 };
 
@@ -50,7 +53,6 @@ function App() {
   const location = useLocation();
 
   const isAuthPage = ["/signup", "/login"].includes(location.pathname);
-  // Admin page check ensures navbar hides on admin panel
   const isAdminPage = location.pathname.startsWith("/admin");
   const shouldHideNavbarFooter = isAuthPage || isAdminPage;
 
@@ -60,42 +62,81 @@ function App() {
 
       <Routes>
         {/* --- PUBLIC HOME ROUTE --- */}
-        {/* Anyone can visit this because it is NOT wrapped in AdminGuard */}
-        <Route path="/" element={
-          <>
-            <Hero />
-            <ViewAbout isHome={true} />
-            <WriteReview />
-          </>
-        } />
+        <Route
+          path="/"
+          element={
+            <>
+              <Hero />
+              <ViewAbout isHome={true} />
+              <WriteReview />
+            </>
+          }
+        />
 
-        {/* Public Routes */}
+        {/* --- PUBLIC MENU & AUTH --- */}
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/menu-user" element={<MenuUser />} />
         <Route path="/reservation" element={<Reservation />} />
         <Route path="/about" element={<ViewAbout />} />
+        <Route path="/profile" element={<Profile />} />
+
+        {/* --- DROPDOWN ROUTES (CONTACT) --- */}
+        {/* 1. Address Page */}
+        <Route
+          path="/address"
+          element={
+            <div className="min-h-screen flex items-center justify-center pt-20">
+              <h1 className="text-3xl font-bold">
+                <Address />
+              </h1>
+              {/* Replace this div with your <Address /> component later */}
+            </div>
+          }
+        />
+
+        {/* 2. Feedback Page (Reusing WriteReview) */}
+        <Route
+          path="/review"
+          element={
+            <div className="pt-24 pb-12 bg-base-200 min-h-screen">
+              <WriteReview />
+            </div>
+          }
+        />
+
+        {/* 3. Map Page */}
+        <Route
+          path="/map"
+          element={
+            <div className="min-h-screen flex items-center justify-center pt-20">
+              <h1 className="text-3xl font-bold">
+                <Map />
+              </h1>
+              {/* Replace this div with your <Map /> component later */}
+            </div>
+          }
+        />
 
         {/* --- PROTECTED ADMIN ROUTES --- */}
-        {/* If someone adds "/admin" to the URL:
-            1. AdminGuard runs.
-            2. Checks if logged in? No -> Redirect to "/".
-            3. Checks if Role 1? Yes -> Redirect to "/".
-            4. If Admin -> Shows AdminLayout.
-        */}
-        <Route path="/admin" element={
-          <AdminGuard>
-            <AdminLayout />
-          </AdminGuard>
-        }>
+        <Route
+          path="/admin"
+          element={
+            <AdminGuard>
+              <AdminLayout />
+            </AdminGuard>
+          }
+        >
+                    <Route path="branch_list" element={<Branches />} />
+
           <Route path="create-menu" element={<CreateMenu />} />
           <Route path="menu-list" element={<MenuList />} />
           <Route path="reservation_view" element={<ReservationView />} />
           <Route path="write_about" element={<WriteAbout />} />
           <Route path="view_review" element={<ViewReview />} />
           <Route path="upload_hero" element={<UploadHero />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
-
       </Routes>
 
       {!shouldHideNavbarFooter && <Footer />}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios'; 
 import { 
   FaMapMarkerAlt, FaEnvelopeOpen, FaClock, FaPhoneAlt, 
   FaFacebookF, FaTwitter, FaWhatsapp, FaBars 
@@ -9,7 +10,6 @@ export default function Navbar() {
   const [isSticky, setIsSticky] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // ---> THIS IS THE MISSING LINE <---
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
@@ -22,11 +22,24 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 2. Check for User Login Status
+  // 2. Check for User Login Status & FETCH FRESH DATA
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
+    
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser); 
+
+      // Fetch the latest user data (including photoUrl) from the database
+      if (parsedUser.id) {
+          axios.get(`http://localhost:8081/api/user/${parsedUser.id}`)
+            .then(res => {
+                const freshUserData = res.data;
+                setUser(prev => ({ ...prev, ...freshUserData }));
+                localStorage.setItem('user', JSON.stringify({ ...parsedUser, ...freshUserData }));
+            })
+            .catch(err => console.error("Error fetching fresh user data:", err));
+      }
     }
   }, []);
 
@@ -35,7 +48,13 @@ export default function Navbar() {
     localStorage.removeItem('user');
     setUser(null);
     navigate('/login');
-    setIsMobileMenuOpen(false); // Close mobile menu if open
+    setIsMobileMenuOpen(false); 
+  };
+
+  // Helper to get Image URL (Backend Port 8081)
+  const getPhotoUrl = (url) => {
+    if (!url) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+    return `http://localhost:8081${url}`;
   };
 
   return (
@@ -68,7 +87,7 @@ export default function Navbar() {
                {[
                  { Icon: FaFacebookF, link:"https://www.facebook.com/IGLWebLtd/" },
                  { Icon: FaTwitter, link:"https://twitter.com/iglwebltd" },
-                 { Icon: FaWhatsapp, link: "https://wa.me/8801958666999" },
+                 { Icon: FaWhatsapp, link: "https://wa.me/8801958666999" }
                ].map((social, idx) => (
                  <a key={idx} href={social.link} className="hover:text-[#C59D5F] transition-colors">
                    <social.Icon size={14} />
@@ -102,33 +121,63 @@ export default function Navbar() {
               <ul className="menu menu-horizontal px-1 gap-6 font-bold text-white uppercase tracking-wide text-[15px] font-['Barlow_Condensed']">
                 <li><Link to="/" className="hover:text-[#C59D5F] focus:text-[#C59D5F] p-0 bg-transparent">Home</Link></li>
                 <li><Link to="/about" className="hover:text-[#C59D5F] p-0 bg-transparent">About</Link></li>
-                                <li><Link to="/menu-user" className="hover:text-[#C59D5F] p-0 bg-transparent">Menu</Link></li>
+                <li><Link to="/menu-user" className="hover:text-[#C59D5F] p-0 bg-transparent">Menu</Link></li>
 
-                {/* <li tabIndex={0} className="dropdown dropdown-hover group">
-
-                  <span className="hover:text-[#C59D5F] p-0 bg-transparent cursor-pointer">Menu</span>
+                <li tabIndex={0} className="dropdown dropdown-hover group">
+                  <span className="hover:text-[#C59D5F] p-0 bg-transparent cursor-pointer">Contact</span>
                   <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-52 text-sm mt-4 border-t-4 border-[#C59D5F]">
-                    <li><Link to="/menu-grid" className="hover:text-[#C59D5F] hover:bg-transparent">Menu Grid</Link></li>
-                    <li><Link to="/menu-list" className="hover:text-[#C59D5F] hover:bg-transparent">Menu List</Link></li>
+                    <li><Link to="/address" className="hover:text-[#C59D5F] hover:bg-transparent">Address</Link></li>
+                    <li><Link to="/review" className="hover:text-[#C59D5F] hover:bg-transparent">Feedback</Link></li>
+                    <li><Link to="/map" className="hover:text-[#C59D5F] hover:bg-transparent">Location Map</Link></li>
                   </ul>
-                </li> */}
-                {/* <li><Link to="/blog" className="hover:text-[#C59D5F] p-0 bg-transparent">Blog</Link></li>
-                <li><Link to="/contact" className="hover:text-[#C59D5F] p-0 bg-transparent">Contact</Link></li> */}
+                </li>
               </ul>
             </div>
 
             {/* NAVBAR END: Buttons */}
             <div className="navbar-end flex gap-4 items-center w-full lg:w-auto">
               
-              {/* Login / Logout Button (Desktop) */}
-              {user ? (
-                <button 
-                  onClick={handleLogout}
-                  className="btn btn-sm bg-transparent border border-[#C59D5F] text-white hover:bg-[#C59D5F] hover:text-[#0E1014] rounded-[4px] px-5 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex mr-2 transition-all duration-300"
-                >
-                  Logout
-                </button>
-              ) : (
+              {/* --- PROFILE PICTURE DROPDOWN --- */}
+              {user && (
+                <div className="dropdown dropdown-end dropdown-hover group hidden xl:block mr-2">
+                  
+                  {/* Circular Image Trigger */}
+                  <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar ring-2 ring-[#C59D5F] ring-offset-2 ring-offset-[#0E1014]">
+                    <div className="w-10 rounded-full">
+                      <img 
+                        alt="Profile" 
+                        src={getPhotoUrl(user.photoUrl)} 
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Dropdown Content */}
+                  <ul 
+                    tabIndex={0} 
+                    className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-40 text-sm mt-4 border-t-4 border-[#C59D5F] font-['Barlow_Condensed'] uppercase font-bold before:absolute before:-top-4 before:left-0 before:h-4 before:w-full before:content-['']"
+                  >
+                    <li>
+                        <Link to="/profile" className="hover:text-[#C59D5F] hover:bg-transparent">
+                            Profile
+                        </Link>
+                    </li>
+                    <li className="border-t border-gray-200 mt-1 pt-1">
+                        {/* CHANGED TO ANCHOR TAG TO MATCH STYLING EXACTLY */}
+                        <a 
+                            onClick={handleLogout} 
+                            className="hover:text-[#C59D5F] hover:bg-transparent"
+                        >
+                            Logout
+                        </a>
+                    </li>
+                  </ul>
+                </div>
+              )}
+              {/* --- END PROFILE PICTURE DROPDOWN --- */}
+
+              {/* Login Button (Only shows if NOT logged in) */}
+              {!user && (
                 <Link 
                   to="/login" 
                   className="btn btn-sm bg-transparent border border-[#C59D5F] text-white hover:bg-[#C59D5F] hover:text-[#0E1014] rounded-[4px] px-5 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex mr-2 transition-all duration-300"
@@ -136,11 +185,6 @@ export default function Navbar() {
                   Login
                 </Link>
               )}
-
-              {/* <button className="btn btn-circle btn-ghost btn-sm relative text-white hover:text-[#C59D5F] mr-2">
-                <FaShoppingCart size={20} />
-                <span className="absolute -top-1 -right-1 bg-[#C59D5F] text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">5</span>
-              </button> */}
 
               <Link to="/reservation" className="btn bg-[#C59D5F] hover:bg-white hover:text-[#0E1014] text-white border-none rounded-[4px] px-7 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex transition-all duration-300">
                 Reserve a Table
@@ -170,11 +214,26 @@ export default function Navbar() {
             </div>
             
             <div className="flex flex-col gap-0 font-['Barlow_Condensed'] text-lg uppercase tracking-wide">
+              
+              {/* Mobile Profile Pic */}
+              {user && (
+                  <div className="flex items-center gap-4 border-b border-white/10 py-4 mb-2">
+                    <div className="avatar">
+                      <div className="w-12 rounded-full ring ring-[#C59D5F] ring-offset-base-100 ring-offset-2">
+                        <img src={getPhotoUrl(user.photoUrl)} alt="profile" />
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[#C59D5F] font-bold">{user.name}</span>
+                        <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="text-xs text-gray-400 hover:text-white">View Profile</Link>
+                    </div>
+                  </div>
+              )}
+
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Home</Link>
               <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">About</Link>
               <Link to="/menu-grid" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Menu</Link>
               
-              {/* Mobile Login / Logout Logic */}
               {user ? (
                  <button onClick={handleLogout} className="text-left border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors text-[#C59D5F]">Logout</button>
               ) : (

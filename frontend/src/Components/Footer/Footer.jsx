@@ -32,12 +32,7 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // 2. DEFINE SOCIAL LINKS WITH COMPONENTS
-  const socialLinks = [
-    { icon: <FaFacebookF />, link: 'https://www.facebook.com/' },
-    { icon: <FaTwitter />, link: 'https://www.twitter.com/' },
-    { icon: <FaInstagram />, link: 'https://www.linkedin.com/' },
-{ icon: <FaWhatsapp/>, link: "https://wa.me/8801958666999" }  ];
+
 
   return (
     <footer className="relative bg-[#0E1014] text-white pt-20 overflow-hidden font-['Inter']">
@@ -106,18 +101,7 @@ const Footer = () => {
               </div>
             </div>
 
-            {/* 3. SOCIAL ICONS (UPDATED) */}
-            <div className="flex justify-center gap-4 mt-4">
-              {socialLinks.map((social, idx) => (
-                <a 
-                  key={idx} 
-                  href={social.link} 
-                  className="btn btn-circle btn-sm bg-[#1F2125] border-none text-white hover:bg-[#C59D5F] hover:text-black transition-all text-sm flex items-center justify-center"
-                >
-                  {social.icon}
-                </a>
-              ))}
-            </div>
+            
           </div>
 
           {/* MENUS */}

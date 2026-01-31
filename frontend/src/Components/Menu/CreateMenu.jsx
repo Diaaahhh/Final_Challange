@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// Removed FaDollarSign from imports
-import { FaUtensils, FaList, FaEdit, FaCheckCircle, FaExclamationTriangle, FaPlus } from 'react-icons/fa';
+import { FaUtensils, FaList, FaEdit, FaCheckCircle, FaExclamationTriangle, FaPlus, FaSave } from 'react-icons/fa';
 
 export default function CreateMenu() {
   const [loading, setLoading] = useState(false);
@@ -100,11 +99,11 @@ export default function CreateMenu() {
   };
 
   return (
-    <section className="space fadeinup">
-      <div className="container">
-        <div className="row justify-content-center">
+    <section className="space fadeinup py-10">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-center">
           {/* Compact Column Size */}
-          <div className="col-lg-6 col-md-8">
+          <div className="w-full max-w-lg">
             
             {/* Main Card */}
             <div className="card w-full bg-base-100 shadow-xl border border-base-200">
@@ -112,7 +111,7 @@ export default function CreateMenu() {
                 
                 {/* Header */}
                 <div className="text-center mb-6">
-                    <h2 className="text-xl font-bold text-white-800 uppercase tracking-wide">
+                    <h2 className="text-xl font-bold text-base-content uppercase tracking-wide">
                         Add New Menu Item
                     </h2>
                     <p className="text-xs text-gray-500 mt-1">Create a new dish for your restaurant</p>
@@ -120,15 +119,17 @@ export default function CreateMenu() {
 
                 {/* Status Alert */}
                 {status.message && (
-                    <div className={`alert ${status.type === 'success' ? 'alert-success' : 'alert-error'} mb-4 py-2 shadow-sm text-sm`}>
-                        {status.type === 'success' ? <FaCheckCircle className="text-white"/> : <FaExclamationTriangle className="text-white"/>}
-                        <span className="text-white font-medium">{status.message}</span>
+                    <div className={`alert ${status.type === 'success' ? 'alert-success' : 'alert-error'} mb-4 py-2 shadow-sm text-sm flex justify-between`}>
+                        <div className="flex items-center gap-2">
+                            {status.type === 'success' ? <FaCheckCircle className="text-white"/> : <FaExclamationTriangle className="text-white"/>}
+                            <span className="text-white font-medium">{status.message}</span>
+                        </div>
                         <button className="btn btn-xs btn-ghost text-white" onClick={() => setStatus({type:'', message:''})}>✕</button>
                     </div>
                 )}
 
                 {/* === FORM === */}
-                <form onSubmit={handleSingleSubmit} className="flex flex-col gap-3">
+                <form onSubmit={handleSingleSubmit} className="flex flex-col gap-4">
                     
                     {/* 1. Item Name */}
                     <div className="form-control w-full">
@@ -180,9 +181,9 @@ export default function CreateMenu() {
                         {/* Add New Category */}
                         <div className="form-control w-full">
                             <label className="label pt-0 pb-1">
-                                <span className="label-text font-bold text-theme uppercase text-xs">Or Add New</span>
+                                <span className="label-text font-bold text-primary uppercase text-xs">Or Add New</span>
                             </label>
-                            <div className="input-group">
+                            <div className="input-group flex">
                                 <input 
                                     type="text" 
                                     placeholder="New Category" 
@@ -202,7 +203,7 @@ export default function CreateMenu() {
                         </div>
                     </div>
 
-                    {/* 3. Price (Changed to BDT) */}
+                    {/* 3. Price (BDT) */}
                     <div className="form-control w-full">
                         <label className="label pt-0 pb-1">
                             <span className="label-text font-bold text-gray-500 uppercase text-xs">Price</span>
@@ -214,11 +215,9 @@ export default function CreateMenu() {
                                 value={singleForm.price}
                                 onChange={handleSingleChange}
                                 placeholder="0.00" 
-                                // Increased padding-left (pl-12) to make room for 'BDT'
                                 className="input input-sm input-bordered w-full pl-12 focus:input-primary"
                                 required 
                             />
-                            {/* Replaced FaDollarSign with Text BDT */}
                             <span className="absolute left-3 top-2.5 text-gray-400 text-xs font-bold tracking-wider">BDT</span>
                         </div>
                     </div>
@@ -240,13 +239,26 @@ export default function CreateMenu() {
                         </div>
                     </div>
 
-                    {/* Submit Button */}
-                    <button 
-                        type="submit" 
-                        className={`btn btn-primary btn-sm w-full mt-3 text-white uppercase tracking-wider font-bold ${loading ? 'loading' : ''}`}
-                    >
-                        {loading ? 'Saving...' : 'Save Item'}
-                    </button>
+                    {/* --- FIXED SUBMIT BUTTON --- */}
+                    <div className="mt-2">
+                        <button 
+                            type="submit" 
+                            disabled={loading}
+                            className="btn btn-primary btn-sm w-full text-black uppercase tracking-wider font-bold h-10 min-h-[2.5rem]"
+                        >
+                            {loading ? (
+                                <>
+                                    <span className="loading loading-spinner loading-xs"></span>
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <FaSave className="mr-2" /> Save Item
+                                </>
+                            )}
+                        </button>
+                    </div>
+
                 </form>
 
               </div>

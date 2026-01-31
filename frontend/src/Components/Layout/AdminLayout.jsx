@@ -1,30 +1,28 @@
-// src/Components/Layout/AdminLayout.jsx (Check your path!)
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar'; 
-import Footer from './Footer'; // Make sure you created this file
-import Navbar from './Navbar'; // Make sure you created this file
+import Footer from './Footer'; 
+import Navbar from './Navbar'; 
 
 export default function AdminLayout() {
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-[#0E1014] text-white font-['Inter']">
       
       {/* 1. LEFT SIDE: Sidebar (Fixed) */}
       <Sidebar />
 
-      {/* 2. RIGHT SIDE: Wrapper for Nav, Content, Footer */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* 2. RIGHT SIDE: Wrapper */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         
-        {/* A. Admin Navbar (Stays at the top) */}
+        {/* A. Admin Navbar */}
         <Navbar />
 
-        {/* B. Main Content (Scrollable Area) */}
-        {/* 'flex-1' makes it take up all remaining space between Nav and Footer */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-8">
+        {/* B. Main Content */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-[#1A1C21]">
           <Outlet />
         </main>
 
-        {/* C. Admin Footer (Stays at the bottom) */}
+        {/* C. Admin Footer */}
         <Footer />
         
       </div>

@@ -62,20 +62,20 @@ export default function ViewAbout({ isHome = false }) {
                 className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
               />
               
-              <div className="absolute bottom-6 left-6 z-20 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-lg text-white">
+              {/* <div className="absolute bottom-6 left-6 z-20 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-lg text-white">
                 <FaUtensils className="text-amber-400 text-xl mb-1" />
                 <p className="text-xs font-light uppercase tracking-widest">Est. 1998</p>
-              </div>
+              </div> */}
             </div>
           </div>
 
           {/* --- RIGHT SIDE: CONTENT (Original Size: w-1/2) --- */}
           <div className="w-full lg:w-1/2 text-center lg:text-left space-y-8">
             
-            <div className="inline-flex items-center gap-2 text-amber-500 text-sm font-bold tracking-[0.2em] uppercase">
+            {/* <div className="inline-flex items-center gap-2 text-amber-500 text-sm font-bold tracking-[0.2em] uppercase">
               <span className="w-8 h-[2px] bg-amber-500"></span>
               Our Story
-            </div>
+            </div> */}
 
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white leading-tight">
               {data?.heading || "The Essence of Taste"}

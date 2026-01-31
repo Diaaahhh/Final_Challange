@@ -95,6 +95,15 @@ app.use('/api', viewReviewRoute);
 const uploadHeroRoute = require('./routes/upload_hero');
 app.use('/api', uploadHeroRoute);
 
+const profileRoutes = require('./routes/Profile'); // Make sure filename matches exactly
+app.use('/api', profileRoutes);
+
+const settingsRoute = require('./routes/settings');
+app.use('/api/settings', settingsRoute);
+
+const branchesRoutes = require('./routes/branches'); 
+app.use('/api/branches', branchesRoutes); // This makes the URL http://localhost:8081/api/branches
+
 app.listen(8081, () => {
     console.log("Listening on port 8081");
 });
