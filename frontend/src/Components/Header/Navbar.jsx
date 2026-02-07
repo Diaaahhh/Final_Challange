@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios'; 
 import { 
   FaMapMarkerAlt, FaEnvelopeOpen, FaClock, FaPhoneAlt, 
-  FaFacebookF, FaTwitter, FaWhatsapp, FaBars 
+  FaFacebookF, FaTwitter, FaWhatsapp, FaBars, FaShoppingCart 
 } from 'react-icons/fa'; 
 
 export default function Navbar() {
@@ -163,10 +163,9 @@ export default function Navbar() {
                         </Link>
                     </li>
                     <li className="border-t border-gray-200 mt-1 pt-1">
-                        {/* CHANGED TO ANCHOR TAG TO MATCH STYLING EXACTLY */}
                         <a 
                             onClick={handleLogout} 
-                            className="hover:text-[#C59D5F] hover:bg-transparent"
+                            className="hover:text-[#C59D5F] hover:bg-transparent cursor-pointer"
                         >
                             Logout
                         </a>
@@ -185,6 +184,15 @@ export default function Navbar() {
                   Login
                 </Link>
               )}
+
+              {/* === CART BUTTON === */}
+              <Link 
+                to="/cart" 
+                className="btn btn-ghost btn-circle text-white hover:text-[#C59D5F] mr-2 hidden xl:flex items-center justify-center transition-colors"
+                title="View Cart"
+              >
+                <FaShoppingCart size={22} />
+              </Link>
 
               <Link to="/reservation" className="btn bg-[#C59D5F] hover:bg-white hover:text-[#0E1014] text-white border-none rounded-[4px] px-7 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex transition-all duration-300">
                 Reserve a Table
@@ -232,7 +240,8 @@ export default function Navbar() {
 
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Home</Link>
               <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">About</Link>
-              <Link to="/menu-grid" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Menu</Link>
+              <Link to="/menu-user" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Menu</Link>
+              <Link to="/cart" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors flex items-center gap-2">Cart <FaShoppingCart size={16} /></Link>
               
               {user ? (
                  <button onClick={handleLogout} className="text-left border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors text-[#C59D5F]">Logout</button>

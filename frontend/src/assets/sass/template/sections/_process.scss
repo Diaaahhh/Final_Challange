@@ -1,0 +1,175 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Process Card ---------------------------------- */
+
+.process-thumb-wrap {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  align-items: end;
+  .thumb {
+    border-radius: 30px;
+    img {
+    }
+  }
+
+  .process-2-icon {
+    position: absolute;
+    right: 40px;
+    top: 0px;
+  }
+
+  .process-2-icon {
+    .logo-icon-wrap .logo-icon {
+      height: 130px;
+      width: 130px;
+      line-height: 130px;
+    }
+  }
+}
+
+.progress-item {
+  margin-bottom: 35px;
+  &:last-child {
+    margin-bottom: 0;
+  }
+  .count {
+        font-size: 24px;
+        color: var(--theme-color2);
+    }
+    .box-title {
+        font-size: 28px;
+        border-bottom: 1px solid #7F909E;
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+    }
+}
+
+
+.process-2-icon {
+    .logo-icon-wrap__text {
+    width: 160px;
+    height: 160px;
+    color: var(--title-color);
+    font-weight: 600;
+    font-size: 19px;
+    margin-left: -80px;
+    margin-top: -80px;
+    span {
+      height: 80px;
+      background: transparent;
+      padding: 0;
+      left: 51%;
+      top: 0px;
+      --rotate-letter: 10deg;
+    }
+  }
+  .char1 {
+    height: 80px;
+    --rotate-letter: 9deg;
+  }
+}
+
+
+.process-thumb-wrap  {
+  .process-2-icon .logo-icon-wrap .logo-icon {
+    height: 80px;
+    width: 80px;
+    line-height: 80px;
+    background: transparent;
+  }
+  .prog-2-circle {
+    inline-size: stretch;
+    inset: 0;
+  }
+}
+
+
+
+@include sm {
+  .process-thumb-wrap .process-2-icon {
+    position: inherit;
+    margin-top: 35px;
+    margin-bottom: -30px;
+  }
+  .process-thumb-wrap {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+/* Process Card 2 ---------------------------------- */
+
+.process-sec-2-container-wrap {
+	background-color: var(--theme-color2);
+	padding: 60px 100px;
+	margin-left: -100px;
+	margin-right: -100px;
+}
+
+.process-sec-2-bg-inner-wrap {
+	background-color: var(--white-color);
+	padding: 90px 50px 70px;
+	margin-right: -50px;
+}
+
+.process-box-2 {
+  text-align: center;
+   .box-img {
+    margin-bottom: 30px;
+  }
+  .content {
+    position: relative;
+    .box-number {
+      font-size: 36px;
+      font-weight: 600;
+      color: var(--theme-color);
+      position: absolute;
+      top: -46px;
+      font-family: var(--banger-font);
+      transform: rotate(-30deg);
+    }
+    .box-title {
+      width: 62%;
+      margin: 0 auto 15px;
+    }
+  }
+}
+
+.col-xl-4:nth-child(2) .process-box-2 .box-number {
+	color: var(--theme-color3);
+}
+.col-xl-4:nth-child(3) .process-box-2 .box-number {
+	color: var(--theme-color2);
+}
+
+@include lg {
+  .process-sec-2-container-wrap.bg-mask {
+    mask-image: none !important;
+    margin-top: 0px;
+  }
+  .process-sec-2-bg-inner-wrap {
+    background-color: var(--white-color);
+    mask-image: none !important;
+    padding: 30px;
+    margin-right: -50px;
+  }
+}
+
+@include md {
+  .process-box-2 .box-img {
+    margin-bottom: 15px;
+  }
+  .why-img-box {
+    margin-right: 0;
+  }
+}
+
+@media (max-widtH: 425px) {
+  .process-sec-2-bg-inner-wrap {
+    padding: 90px 17px 70px;
+    margin-right: 0px;
+  }
+}                                                                                                                                                  

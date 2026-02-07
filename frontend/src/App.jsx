@@ -7,10 +7,10 @@ import Hero from "./Components/Hero/Hero";
 import Signup from "./Components/Authentication/Signup";
 import Login from "./Components/Authentication/Login";
 import Footer from "./Components/Footer/Footer";
-
+import { CartProvider } from './Components/Cart/CartContext';
 // Admin Imports
 import AdminLayout from "./Components/Layout/AdminLayout";
-import CreateMenu from "./Components/Menu/CreateMenu";
+// import CreateMenu from "./Components/Menu/CreateMenu";
 import MenuList from "./Components/Menu/MenuList";
 import MenuUser from "./Components/Menu/MenuUser";
 
@@ -33,7 +33,9 @@ import Profile from "./Components/Profile/Profile";
 import Settings from "./Components/Settings/Settings"
 import Branches from "./Components/Branches/Branches";
 
+import Cart from "./Components/Cart/Cart";
 
+import Checkout from "./Components/Cart/Checkout";
 // --- ADMIN PROTECTION GUARD ---
 const AdminGuard = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -57,7 +59,8 @@ function App() {
   const shouldHideNavbarFooter = isAuthPage || isAdminPage;
 
   return (
-    <>
+    <CartProvider>
+    
       {!shouldHideNavbarFooter && <Navbar />}
 
       <Routes>
@@ -80,6 +83,10 @@ function App() {
         <Route path="/reservation" element={<Reservation />} />
         <Route path="/about" element={<ViewAbout />} />
         <Route path="/profile" element={<Profile />} />
+                <Route path="/cart" element={<Cart />} />
+                                <Route path="/checkout" element={<Checkout />} />
+
+
 
         {/* --- DROPDOWN ROUTES (CONTACT) --- */}
         {/* 1. Address Page */}
@@ -129,7 +136,7 @@ function App() {
         >
                     <Route path="branch_list" element={<Branches />} />
 
-          <Route path="create-menu" element={<CreateMenu />} />
+          {/* <Route path="create-menu" element={<CreateMenu />} /> */}
           <Route path="menu-list" element={<MenuList />} />
           <Route path="reservation_view" element={<ReservationView />} />
           <Route path="write_about" element={<WriteAbout />} />
@@ -140,7 +147,7 @@ function App() {
       </Routes>
 
       {!shouldHideNavbarFooter && <Footer />}
-    </>
+    </CartProvider>
   );
 }
 

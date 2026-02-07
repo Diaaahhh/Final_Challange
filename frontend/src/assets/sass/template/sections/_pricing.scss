@@ -1,0 +1,235 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Pricing Card ---------------------------------- */
+.price-tab-btn.tab-menu1 {
+    gap: 0;
+    .tab-btn {
+        border-radius: 0;
+        border: 0;
+        font-size: 14px;
+        font-weight: 700;
+        font-family: $body-font;
+        background: $border-color;
+        padding: 21px 30px;
+        color: $title-color;
+        &:hover {
+            --theme-color: var(--th-border-color);
+        }
+        &.active {
+            background: $theme-color;
+            color: $white-color;
+            &:hover {
+                background: $theme-color;
+                --theme-color: inherit;
+                color: $white-color;
+            }
+        }
+    }
+}
+.price-card {
+    position: relative;
+    z-index: 2;
+    border: 1px solid $border-color;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+    transition: 0.4s;
+    .price-title-wrap {
+        background: $smoke-color3;
+        padding: 30px;
+        min-width: 265px;
+    }
+    .box-title {
+        margin-bottom: -0.15em;
+        font-size: 30px;
+        font-weight: 500;
+    }
+    .price-card_text {
+        margin-bottom: 37px;
+        font-size: 18px;
+    }
+    .price-card_price {
+        font-size: 64px;
+        font-weight: 600;
+        margin-bottom: -0.3em;
+        color: $theme-color;
+        .currency {
+            font-size: 24px;
+            font-weight: 500;
+            position: relative;
+            top: -23px;
+            margin-right: 5px;
+        }
+        .duration {
+            font-size: 16px;
+            font-weight: 500;
+            font-family: $title-font;
+            color: $body-color;
+        }
+    }
+    .price-card_content {
+        flex: auto;
+        background: $smoke-color3;
+        padding: 30px;
+        .checklist {
+            li {
+                &.unavailable {
+                    i {
+                        color: $light-color;
+                    }
+                }
+            }
+        }
+    }
+    .th-btn {
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+    &:hover {
+        box-shadow: 0px 6px 30px rgba(0, 0, 0, 0.07);
+        border-color: $white-color;
+    }
+    @include lg {
+        display: block;
+        .price-title-wrap {
+            padding-bottom: 0;
+        }
+    }
+    @include vxs {
+        padding: 15px;
+        .price-title-wrap {
+            padding: 25px 25px 0;
+        }
+        .price-card_content {
+            padding: 25px;
+        }
+        .box-title {
+            font-size: 24px;
+        }
+        .price-card_price {
+            font-size: 50px;
+        }
+    }
+}
+
+
+/* Pricing Card 2---------------------------------- */
+.pricing-bg-shape2-1 {
+    @include xxl {
+        display: none;
+    }
+}
+.pricing-bg-shape2-2 {
+    @include xxl {
+        width: 590px;
+    }
+    @include ml {
+        width: 540px;
+    }
+    @include xl {
+        width: 480px;
+    }
+    @include lg {
+        display: none;
+    }
+}
+.price-card2 {
+    padding: 40px;
+    background: rgba(71, 74, 83, 0.48);
+    border: 1px solid #5C6672;
+    backdrop-filter: blur(10px);
+    border-radius: 30px;
+    .price-card_title {
+        font-size: 24px;
+        font-weight: 500;
+        color: $white-color;
+        margin-top: -0.3em;
+        margin-bottom: 10px;
+    }
+    .price-card_price {
+        font-size: 65px;
+        font-weight: 600;
+        font-family: $title-font;
+        color: $theme-color;
+        display: inline-flex;
+        align-items: end;
+        margin-bottom: 19px;
+        span {
+            font-size: 16px;
+            font-weight: 500;
+            color: $white-color;
+            transform: translate(0, -20px);
+        }
+        .currency {            
+            margin-right: 5px;
+            position: relative;
+            top: -18px;
+            font-size: 24px;
+            font-weight: 500;
+            color: $theme-color;
+        }
+        .price-card_text {
+            margin-left: 3px;
+        }
+    }
+    .price-card_content {
+        background: $title-color;
+        padding: 30px;
+        border-radius: 30px;
+        margin-bottom: 40px;
+        .checklist {
+            li {
+                color: $white-color;
+                font-size: 16px;
+                font-weight: 400;
+                font-family: $body-font;
+                line-height: inherit;
+                align-items: start;
+                i {
+                    position: relative;
+                    top: 4px;
+                }
+                &:not(:last-child) {
+                    margin-bottom: 11px;
+                }
+            }
+        }
+    }
+    @include lg {
+        .price-card_price {
+            font-size: 55px;
+            .currency {
+                top: -8px;
+            }
+        }
+    }
+    @include md {
+        .price-card_content {
+            padding: 25px;
+            border-radius: 20px;
+        }
+    }
+    @include xs {
+        padding: 35px;
+        border-radius: 20px;
+        .price-card_price {
+            font-size: 45px;
+            margin-bottom: 15px;
+            .currency {
+                top: -8px;
+            }
+            span {
+                transform: translate(0, -10px);
+            }
+        }
+        .price-card_content {
+            margin-bottom: 30px;
+        }
+    }
+    @include vxs {
+        padding: 35px 25px;
+    }
+}
+

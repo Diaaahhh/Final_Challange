@@ -1,0 +1,103 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+//Call to action 1---------------------------------------
+
+.cta-area-1 {
+	position: relative;
+}
+
+.cta-bg-1-1 {
+	position: absolute;
+	right: 0;
+    z-index: 1;
+}
+
+
+.cta-bg-1-1-wrap {
+  position: relative;
+}
+.cta-bg-1-1-wrap:before {
+  content: "";
+  position: absolute;
+  background: var(--theme-color3);
+  z-index: -1;
+  border-radius: 0;
+  border-radius: 50%;
+  top: -345px;
+  right: -226px;
+  height: 1194px;
+  width: 1194px;
+}
+
+.cta-1-shape-trangle {
+	position: absolute;
+	clip-path: polygon(64% 58%, 101% 5%, 106% 103%, 15% 106%, 38% 87%);
+	background: var(--theme-color2);
+	width: 700px;
+	height: 517px;
+	right: 0;
+	bottom: -6px;
+}
+.cta-wrap1 {
+	padding: 160px 0 120px;
+    select:focus, .form-control:focus, 
+    .form-select:focus, textarea:focus, 
+        input:focus {
+        outline: 0;
+        box-shadow: none;
+        border-color: var(--th-border-color);
+        background-color: var(--white-color);
+    }
+    .th-btn {
+        padding: 20px 32px;
+    }
+}
+
+@include md {
+    .cta-wrap1 {
+        padding: 0px 0 0;
+    }
+    .cta-area-1 {
+        padding: 80px 0 50px;
+    }
+}
+
+@media (max-width:425px) {
+    .newsletter-form {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        gap: 10px;
+        -webkit-box-align: center;
+        -ms-flex-align: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .cta-1-shape-trangle {
+        height: 417px;
+    }
+}
+
+//Call to action 2---------------------------------------
+
+.cta-card-2-wrap {
+    padding: 30px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    @include vxs {
+        flex-direction: column;
+    }
+    .card-content {
+        flex: 1;
+    }
+    .card-thumb {
+        flex: 1.2;
+    }
+    img {
+        padding-bottom: 25px;
+    }
+}
+

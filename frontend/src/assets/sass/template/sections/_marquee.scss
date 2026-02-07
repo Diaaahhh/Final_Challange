@@ -1,0 +1,79 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Marquee Area ---------------------------------- */
+.marquee-slider1 {
+    margin: 0 -50px;
+    .swiper-wrapper {
+        transition-timing-function: linear;
+    }
+    .swiper-slide {
+        width: auto;
+    }
+}
+.marquee-card{
+    margin-bottom: 0;
+    padding: 31px 0;
+    display: inline-block;
+    a {
+        font-size: 64px;
+        font-weight: 600;
+        font-family: $title-font;
+        color: $white-color;
+        letter-spacing: 0.25em;
+        display: inline-block;
+        line-height: 1;
+    }
+    @include lg {
+        padding: 25px 0;
+        a {
+            font-size: 50px;
+        }
+    }
+    @include sm {
+        a {
+            font-size: 40px;
+            letter-spacing: 0.2em;
+        }
+    }
+    @include xs {
+        padding: 25px 0 20px;
+        a {
+            font-size: 24px;
+            letter-spacing: 0.2em;
+        }
+    }
+}
+
+/* Marquee Area 2---------------------------------- */
+.marquee-slider2 {
+    transform: rotate(-3deg);
+    margin: 50px -5px;
+    .swiper-wrapper {
+        transition-timing-function: linear;
+    }
+    .swiper-slide {
+        width: auto;
+    }
+    @include hd {
+        margin: 70px -5px;
+    }
+    @include xxl {
+        margin: 38px -5px;
+    }
+    @include xl {
+        margin: 31px -5px;
+    }
+    @include lg {
+        margin: 27px -5px;
+    }
+    @include md {
+        margin: 21px -5px;
+    }
+    @include sm {
+        margin: 16px -5px;
+    }
+    @include xs {
+        margin: 11px -5px;
+    }
+}

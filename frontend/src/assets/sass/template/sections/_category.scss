@@ -1,0 +1,308 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Category Card -------------------------------------*/
+.category-card {
+    background-color: $smoke-color;
+    padding: 40px 15px 45px 15px;
+    text-align: center;
+    transition: 0.4s ease-in-out;
+    border-radius: 150px 150px 0 0;
+    .cat-i-bottom {
+        position: absolute;
+        bottom: 0px;
+        left: 0;
+        width: 100%;
+    }
+    .box-shape {
+        position: absolute;
+        inset: 2px;
+        pointer-events: none;
+        background-size: 100% 100%;
+    }
+    .box-icon {
+        @include equal-size-lineHeight(120px);
+        margin: 0 auto 10px auto;
+    }
+    .box-title {
+        font-size: 20px;
+        margin-bottom: 2px;
+        transition: 0.1s;
+        a {
+            &:hover {
+                color: $title-color;
+            }
+        }
+    }
+    .box-subtitle {
+        font-size: 14px;
+        font-weight: 400;
+        color: #6C6C6C;
+        font-family: $body-font;
+        transition: 0.4s ease-in-out;
+    }
+    &:hover {
+        background-color: $theme-color2;
+        .box-title {
+            color: $white-color;
+        }
+        .box-subtitle {
+            color: $white-color;
+        }
+        .box-icon {
+            img {
+                transform: rotate(-20deg);
+            }
+        }
+    }
+}
+
+@media (max-width: 420px) {
+    .category-card .box-subtitle {
+        padding-bottom: 15px;
+    }
+}
+
+/* Category Box -------------------------------------*/
+.category-box {
+    text-align: center;
+    .box-icon {
+        @include equal-size-lineHeight(150px);
+        margin: 0 auto 20px auto;
+        border-radius: 999px;
+        position: relative;
+        z-index: 2;
+        &:before,
+        &:after {
+            content: '';
+            position: absolute;
+            border-radius: inherit;
+            z-index: -1;
+        }
+        &:before {
+            inset: 11px;
+            background-color: $white-color;
+            
+        }
+        &:after {
+            inset: 0;
+            border: 2px dashed $border-color;
+        }
+        @include vxs {
+            @include equal-size-lineHeight(130px);
+        }
+    }
+    .box-title {
+        font-size: 20px;
+        margin-bottom: 5px;
+        @include vxs {
+            font-size: 18px;
+        }
+    }
+    .box-text {
+        font-size: 14px;
+    }
+    &:hover {
+        .box-icon {
+            img {
+                transform: rotateY(180deg);
+            }
+            &:after {
+                border-color: $theme-color;
+                animation: spin 10s linear infinite;
+            }
+        }
+    }
+}
+
+
+/* Category Box 2-------------------------------------*/
+
+.cate-2-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px 60px;
+  .item {
+        display: flex;
+        gap: 20px 60px;
+        align-items: center;
+        
+        // &:nth-child(3) img {
+        //     display: none;
+        // }
+        // &:last-child img {
+        //     display: none;
+        // }
+    }
+    h3 a {
+        font-size: 54px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: transparent;
+        -webkit-text-stroke: 1px var(--title-color);
+        opacity: .6;
+        &:hover {
+            color: var(--title-color);
+            opacity: 1;
+        }
+    }
+}
+
+
+@include xxl {
+    .process-thumb-wrap .process-2-icon {
+        top: -20px;
+    }
+}
+@include xl {
+    .process-thumb-wrap .process-2-icon {
+        top: -38px;
+        right: -8px;
+    }
+}
+
+@include lg {
+    .cate-2-wrap h3 {
+        font-size: 40px;
+    }
+    .process-thumb-wrap .process-2-icon {
+        top: -20px;
+        right: 65px;
+    }
+}
+
+@include md {
+    .cate-2-wrap .item {
+        gap: 15px 20px;
+    }
+    .cate-2-wrap h3 {
+        font-size: 35px;
+    }
+    .cate-2-wrap .item img {
+        width: 37px;
+    }
+    .cate-2-wrap {
+        gap: 15px 30px;
+    }
+    .cate-2-wrap.stoke {
+        margin-top: 5px;
+    }
+    .process-thumb-wrap .process-2-icon {
+        top: -39px;
+        right: 12px;
+    }
+}
+
+@include sm {
+    .cate-2-wrap {
+        flex-wrap: wrap;
+    }
+    .cate-2-wrap {
+        gap: 0px 26px;
+    }
+    .cate-2-wrap h3 a {
+        font-size: 38px;
+    }
+}
+
+/* Category Box 3 -------------------------------------*/
+.category-sec-3 {
+	background: #FDE1B9;
+}
+
+
+.category-card.style-2 {
+  background: transparent;
+  padding: 0;
+  &:hover {
+    .box-title {
+        color: var(--theme-color2);
+    }
+    .box-icon {
+        background-color: var(--theme-color2);
+        
+        .actions {
+            visibility: visible;
+            opacity: 1;
+            right: 35px;
+        }
+    }
+  }
+  .box-icon {
+        width: auto;
+        height: auto;
+        background: var(--white-color);
+        padding: 40px;
+        border-radius: 181px 181px 0 0;
+        margin-bottom: 30px;
+        transition: .4s;
+    }
+    .box-title {
+        font-size: 28px;
+        &:hover {
+            color: var(--theme-color);
+        }
+    }
+    .box-subtitle {
+        font-size: 16px;
+        color: var(--theme-color2);
+        font-weight: 700;
+        margin: 0;
+        margin-bottom: 0px;
+        margin-bottom: -.4em;
+        padding-bottom: 15px;
+    }
+    .th-social {
+        justify-content: center;
+        margin-bottom: 18px;
+        gap: 8px;
+        color: var(--theme-color3);
+        font-size: 15px;
+    }
+    
+    .actions {
+        height: 60%;
+        position: absolute;
+        top: 40px;
+        right: 10px;
+        text-align: center;
+        z-index: 3;
+        opacity: 0;
+        visibility: hidden;
+        transition: 0.4s ease-in-out;
+        display: grid;
+        align-content: center;
+        width: 40px;
+        .icon-btn {
+            --btn-size: 46px;
+            font-size: 14px;
+            border-radius: 99px;
+            margin-bottom: 10px;
+            box-shadow: 0px 3px 10px rgba(0, 0, 0, 0.08);
+            background: var(--white-color);
+            border: 0;
+            color: var(--theme-color2);
+
+            &:hover {
+                background-color: $theme-color3;
+                color: $black-color;
+            }
+        }
+
+        > * {
+            margin: 0 0;
+
+            > a {
+                margin: 0;
+            }
+        }
+    }
+}
+
+
+.category-card.style-2 .product-price.price .woocommerce-Price-amount.amount {
+	font-size: 16px;
+	color: var(--theme-color2);
+	font-weight: 700;
+}

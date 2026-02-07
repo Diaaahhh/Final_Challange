@@ -1,0 +1,122 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* BMI area 1 ---------------------------------- */
+.bmi-area-1 {
+    padding-top: calc(183px + var(--section-space));
+    margin-top: -183px;
+    @include ml {
+        mask-image: none !important;
+    }
+    @include md {
+        padding-top: calc(183px + var(--section-space-mobile));
+    }
+}
+.bmi-calculator-form {
+    .form-group {
+        margin-bottom: 0;
+        select, 
+        .form-control, 
+        .form-select, 
+        textarea, 
+        input {
+            padding: 0 30px;
+        }
+    }
+    .th-btn {
+        padding: 0;
+        width: 100%;
+        min-width: auto;
+        input {
+            width: 100%;
+            padding: 21px 40px;
+            height: auto;
+            background: transparent;
+            color: inherit;
+            font-family: inherit;
+            text-transform: uppercase;
+            transition: none;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 0;
+            border: 0;
+        }
+    }
+}
+
+/* BMI area 2 ---------------------------------- */
+.bmi-table-wrap {
+    background: $black-color3;
+    border-radius: 30px;
+    padding: 60px;
+    .bmi-table-wrap-text {
+        margin-bottom: -0.4em;
+        color: $light-color;
+        span {
+            color: $white-color;
+            font-weight: 600;
+        }
+    }
+    @include xs {
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+}
+.bmi-table {
+    border: 0;
+    border-top: 1px solid $border-color6;
+    margin-bottom: 22px;
+    thead {
+        tr {
+            th {
+                border: 0;
+                border-left: 1px solid $border-color6;
+                font-size: 30px;
+                font-weight: 500;
+                font-family: $title-font;
+                color: $white-color;
+                padding: 26px 30px;
+                &:first-child {
+                    border-left: 0;
+                    padding-left: 0;
+                }
+                &:last-child {
+                    padding-right: 0;
+                }
+            }
+        }
+    }
+    tbody {
+        tr {
+            border-top: 1px solid $border-color6;
+            color: $light-color;
+            th {
+                border: 0;
+                color: $light-color;
+                font-weight: 400;
+                padding: 17px 30px;
+                padding-left: 0;
+            }
+            td {
+                border: 0;
+                border-left: 1px solid $border-color6;
+                padding: 17px 30px;
+                padding-right: 0;
+            }
+            &:last-child {
+                th {
+                    padding-bottom: 0;
+                }
+                td {
+                    padding-bottom: 0;
+                }
+            }
+        }
+    }
+    @include xs {
+        thead tr th {
+            font-size: 20px;
+        }
+    }
+}

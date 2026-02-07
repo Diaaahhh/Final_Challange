@@ -1,0 +1,116 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Feature card ---------------------------------- */
+
+.col-lg-4 {
+    &:nth-child(1) {
+        .feature-card {
+            .box-icon {
+                .feat-mask {
+                    background-color: var(--title-color);
+                }
+            }
+        }
+    }
+    &:nth-child(2) {
+        .feature-card {
+            padding-left: 20px;
+            @include xxl{
+                padding-left: 0;
+            }
+            .box-icon {
+                .feat-mask {
+                    background-color: var(--theme-color);
+                }
+            }
+        }
+    }
+    &:nth-child(3) {
+        .feature-card {
+            padding-left: 20px;
+            @include xxl{
+                padding-left: 0;
+            }
+            &:before {
+                display: none;
+            }
+            .box-icon {
+                .feat-mask {
+                    background-color: var(--theme-color3);
+                }
+            }
+        }
+    }
+}
+
+.feature-card {
+    overflow: hidden;
+    transition: 0.4s;
+    display: flex;
+    gap: 20px 24px;
+    align-items: center;
+    position: relative;
+    &::before {
+        content: "";
+        position: absolute;
+        right: 0;
+        width: 1px;
+        height: 80px;
+        border: 1px dashed #072F25;
+    }
+    .box-icon {
+            display: inline-block;
+            border-radius: 20px;
+            position: relative;
+            transition: 0.4s;
+            height: 80px;
+            width: 80px;
+            z-index: 2;
+            text-align: center;
+            line-height: 79px;
+        
+        .feat-mask {
+            position: absolute;
+            inset: 0;
+            height: 100%;
+            width: 100%;
+            background: var(--theme-color);
+            z-index: -1;
+            transition: 0.4s;;
+        }
+    }
+    .content {
+        flex: 1;
+    }
+    .box-title {
+        font-size: 24px;
+        font-weight: 500;
+        margin-bottom: 5px;
+        transition: 0.4s;
+    }
+    .box-text {
+        margin-bottom: -0.4em;
+        transition: 0.4s;
+        line-height: 1.625;
+    }
+    &:hover {
+        .box-icon {
+            img {
+                transform: rotateY(180deg);
+            }
+        }
+    }
+}
+
+@include lg {
+    .feature-card::before {
+        display: none;
+    }
+}
+
+@include sm {
+    .why-feature-list .why-feature-list-wrap {
+        width: 100%;
+    }
+}

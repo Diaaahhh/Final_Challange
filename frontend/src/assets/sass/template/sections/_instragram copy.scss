@@ -1,0 +1,132 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Insta css
+ ---------------------*/
+
+.insta-wrapper {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+.insta-wrapper .insta-item {
+    .thumb {
+        position: relative;
+        img {
+            width: 100%;
+            height: 100%;
+        }
+        .icon {
+            position: absolute;
+            left: 50%;
+            top: 60%;
+            transform: translate(-50%, -50%);
+            color: var(--white-color);
+            font-size: 24px;
+            opacity: 0;
+        }
+    }
+    &:nth-child(1) .thumb {
+        margin-top: -72px;
+        border-radius: 10px 180px 10px 10px;
+        img {
+            border-radius: 10px 180px 10px 10px;
+        }
+        &:before {
+            border-radius: 10px 180px 10px 10px; 
+        }
+    }
+    &:nth-child(2) .thumb {
+        margin-top: 40px;
+        border-radius: 180px 10px 10px 10px;
+        img {
+            border-radius: 180px 10px 10px 10px;
+        }
+        
+        &:before {
+            border-radius: 180px 10px 10px 10px;            
+        }
+    }
+    &:nth-child(3) .thumb {
+        border-radius: 50%;
+        img {
+            border-radius: 50%;
+        }
+        
+        &:before {
+            border-radius: 50%;            
+        }
+    }
+    &:nth-child(4) .thumb {
+        margin-top: 40px;
+        border-radius: 10px 10px 180px 180px;
+        img {
+            border-radius: 10px 10px 180px 180px;
+        }
+        
+        &:before {
+            border-radius: 10px 10px 180px 180px;            
+        }
+    }
+    &:nth-child(5) .thumb {
+        border-radius: 180px 10px 10px 10px;
+        img {
+            border-radius: 180px 10px 10px 10px;
+        }
+        
+        &:before {
+            border-radius: 180px 10px 10px 10px;            
+        }
+    }
+}
+
+.insta-wrapper .insta-item {
+    &:hover {
+        .thumb .icon {
+            top: 50%;
+            opacity: 1;
+        }
+        .thumb::before {
+            opacity: .6;
+        }
+    }
+    .thumb {
+        &:before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: var(--black-color);
+            opacity: 0;
+            transition: .4s;
+        }
+    }
+}
+
+
+@include md {
+    .insta-wrapper .insta-item:nth-child(1) .thumb {
+        margin-top: -5px;
+        border-radius: 10px 180px 10px 10px;
+    }
+}
+
+@include sm {
+    .insta-wrapper {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .insta-wrapper .insta-item:nth-child(1) .thumb {
+        margin-top: 0px;
+    }
+    .insta-wrapper .insta-item:nth-child(2) .thumb {
+        margin-top: 0px;
+    }
+    .insta-wrapper .insta-item:nth-child(4) .thumb {
+        margin-top: 0px;
+    }
+}
+@include vxs {
+    .insta-wrapper {
+        grid-template-columns: repeat(1, 1fr);
+    }
+}

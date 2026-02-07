@@ -2,11 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const db = require('./db'); // Import the db connection
-
+const axios = require('axios');
 const app = express();
-app.use(cors());
-app.use(express.json());
 
+// CORRECTION 7: Update CORS to allow credentials
+app.use(cors({
+  origin: "http://localhost:5173", // Your frontend URL
+  credentials: true
+}));
+
+app.use(express.json());
 
 // SIGNUP API
 app.post('/signup', async (req, res) => {
@@ -79,6 +84,7 @@ app.use('/api/reservation', reservationRoutes);
 
 // In server.js
 app.use(express.static('public')); // To serve images
+
 const aboutRoutes = require('./routes/write_about');
 app.use('/api/about', aboutRoutes);
 
@@ -95,14 +101,17 @@ app.use('/api', viewReviewRoute);
 const uploadHeroRoute = require('./routes/upload_hero');
 app.use('/api', uploadHeroRoute);
 
-const profileRoutes = require('./routes/Profile'); // Make sure filename matches exactly
+const profileRoutes = require('./routes/Profile'); 
 app.use('/api', profileRoutes);
 
 const settingsRoute = require('./routes/settings');
 app.use('/api/settings', settingsRoute);
 
 const branchesRoutes = require('./routes/branches'); 
-app.use('/api/branches', branchesRoutes); // This makes the URL http://localhost:8081/api/branches
+app.use('/api/branches', branchesRoutes); 
+
+const checkoutRoutes = require('./routes/checkout'); 
+app.use('/api/proxy', checkoutRoutes); 
 
 app.listen(8081, () => {
     console.log("Listening on port 8081");

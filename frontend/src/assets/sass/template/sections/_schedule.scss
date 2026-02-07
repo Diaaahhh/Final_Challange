@@ -1,0 +1,93 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Schedule area 1---------------------------------- */
+.schedule_table{ 
+    margin-bottom: 0px;
+    position: relative;
+    z-index: 3;
+    min-width: 1200px;
+    &>:not(:last-child)>:last-child>* {
+        border-bottom-color: $theme-color;
+    }
+ 
+    thead{
+        tr{ 
+            th {
+                border: 1px solid $theme-color;
+                background-color: $theme-color;
+                color: $white-color;
+                text-align: center;
+                font-size: 16px;
+                font-weight: 400;
+                font-family: $body-font;
+                padding: 15px;
+            }
+        }
+    }
+    tbody{
+        tr{
+            td{
+                width: 146px;
+                padding: 4px!important; 
+                border: 1px solid $border-color3;
+                text-align: center;
+                vertical-align: middle;
+                background: $black-color2;
+                color: $white-color;
+                .time{
+                    color: $light-color;
+                }
+                .schedule_item{ 
+                    margin: 0 auto;
+                    height: 112px; 
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-direction: column;
+                    background-color: transparent;
+                    .class_name{
+                        display: block;
+                        color: $white-color;
+                        text-align: center;  
+                        font-family: $title-font;
+                        font-size: 18px;
+                        font-weight: 500;
+                        margin-bottom: 5px;
+                    }
+                    .trainer_name{ 
+                        display: inline-block;
+                        color: $light-color;
+                        text-align: center;  
+                        font-family: $body-font;
+                        font-size: 14px;
+                        font-weight: 400;
+                        line-height: normal;
+                    } 
+
+                    &.active{  
+                        background-color: $theme-color;
+                        .trainer_name{
+                          color: $white-color;
+                        }
+                      }
+                }
+
+            }
+        }
+    }
+}
+
+/* Schedule area 2---------------------------------- */
+.schedule_table.style2 {
+    &>:not(:last-child)>:last-child>* {
+        border-bottom-color: $title-color;
+    }
+    thead tr th {
+        background: $title-color;
+        border-color: $title-color;
+    }
+    tbody tr td .schedule_item.active {
+        background: $border-color3;
+    }
+}

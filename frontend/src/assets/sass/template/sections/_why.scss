@@ -1,0 +1,92 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Why Choose Us Area ---------------------------------- */
+
+.why-sec-1 {
+	background: var(--theme-color2);
+    position: relative;
+}
+
+.why-feature-list {
+	margin: 0;
+	padding: 0;
+}
+.why-1-shape-trangle {
+	position: absolute;
+    clip-path: polygon(83% 42%, 100% 1%, 100% 50%, 98% 100%, 0 100%, 55% 73%);
+    background: var(--theme-color3);
+    width: 1385px;
+    height: 1042px;
+    right: 0;
+    bottom: -6px;
+    z-index: -1;
+}
+
+.why-feature-list {
+  padding-top: 20px;
+  .why-feature-list-wrap {
+    list-style: none;
+    display: flex;
+    gap: 15px 20px;
+    width: 77%;
+    margin-bottom: 35px;
+        &:hover {
+            .icon .feat-mask {
+                background: var(--theme-color);
+            }
+            .icon  img {
+                filter: invert(1);
+                transform: rotateY(180deg);
+            }
+        }
+        .icon {
+            position: relative;
+            display: inline-block;
+            transition: 0.4s;
+            height: 80px;
+            width: 80px;
+            z-index: 2;
+            text-align: center;
+            line-height: 79px;
+            .feat-mask {
+                position: absolute;
+                inset: 0;
+                height: 100%;
+                width: 100%;
+                background: var(--theme-color4);
+                z-index: -1;
+                transition: 0.4s;
+            }
+            img {
+                transition: .4s;
+            }
+        }
+    }
+    .why-feature-list-details {
+        flex: 1;
+        .feature-title {
+            font-size: 22px;
+            margin-bottom: 7px;
+            color: var(--white-color);
+        }
+        .feature-text {
+            color: var(--white-color);
+            margin: 0;
+        }
+    }
+}
+
+.why-img-box {
+  margin-right: -250px;
+}
+
+.why-feature-list .why-feature-list-wrap:last-child {
+	margin-bottom: 0;
+}
+
+@include md {
+    .why-1-shape-trangle {
+	display: none;
+}
+}

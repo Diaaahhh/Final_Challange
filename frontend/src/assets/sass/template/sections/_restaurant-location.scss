@@ -1,0 +1,92 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Restaurant location css
+ ---------------------------------*/
+
+.restaurant-location-sec-1 {
+	background: #FDE1B9;
+}
+
+
+.location-content {
+  border: 3px solid var(--white-color);
+  border-radius: 20px;
+  margin: 24px 0 24px 24px;
+  text-align: center;
+  padding: 85px 0 65px;
+  margin-left: -168px;
+  	.sec-title {
+		padding-bottom: 29px;
+	}
+	.box-text {
+		width: 40%;
+		margin: 0 auto 20px;
+	}
+	.line {
+		width: 2px;
+		height: 60px;
+		background: var(--theme-color3);
+		display: block;
+		margin: 0 auto 20px;
+	}
+	.opening p {
+		padding: 0;
+		margin: 0;
+	}
+	.opening {
+		padding-bottom: 30px;
+	}
+	.th-social {
+		justify-content: center;
+	}
+
+	.th-social a {
+		width: var(--icon-size, 40px);
+		height: var(--icon-size, 40px);
+		font-size: 16px;
+		color: var(--black-color);
+		border-color: var(--black-color);
+		&:hover {
+			background-color: var(--theme-color2);
+			border-color: var(--theme-color2);
+			color: var(--white-color);
+		}
+	}
+}
+
+.map-location {
+  margin-right: -291px;
+  margin-bottom: -7px;
+	iframe {
+		height: 615px;
+	}
+}
+
+
+@include lg {
+	.location-content {
+		margin-left: 0px;
+	}
+	.map-location {
+		margin-right: 0;
+		margin-bottom: -7px;
+	}
+}
+
+@include sm {
+	.location-content .box-text {
+		width: 60%;
+	}
+	.location-content {
+		padding: 50px 10px 45px;
+	}
+}
+
+
+@include vxs {
+	.location-content .box-text {
+		width: 95%;
+	}
+
+}

@@ -1,0 +1,140 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Brand 1 ---------------------------------- */
+.brand-wrap1 {
+    padding: 85px 148px 85px 85px;
+    margin-right: 180px;
+    clip-path: polygon(0 0, calc(100% - 100px) 0%, 100% 100%, 0 100%);
+    @include xxl {
+        margin-right: 150px;
+        padding: 75px 138px 75px 75px;
+    }
+    @include ml {
+        margin-right: 100px;
+    }
+    @include xl {
+        padding: 50px 100px 50px 50px;
+    }
+    @include md {
+        margin-right: 0;
+    }
+    @include sm {
+        clip-path: none;
+        padding: 50px 30px;
+    }
+    @include xs {
+        padding: 30px 15px;
+    }
+}
+.brand-box {
+    display: grid;
+    align-content: center;
+    text-align: center;
+    justify-content: center;
+    transition: 0.4s ease-in-out;
+    min-height: 80px;
+    img {
+        transition: 0.4s;
+    }
+    &:hover {
+        filter: none;
+        img {
+            transform: scale(0.95);
+        }
+    }
+}
+/* Brand 2 ---------------------------------- */
+.brand-area-2 {
+    padding: 0 40px;
+}
+.brand-box2 {
+    height: 80px;
+    overflow: hidden;
+    margin: auto;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    .original {
+        transition: all 0.7s ease-in-out;
+        transform: translateY(0%);
+    }
+    .hover-img {
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.7s ease-in-out;
+        transform: translateY(-100%);
+        position: absolute;
+        inset: 0;
+    }
+    &:hover {
+        img.original {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.7s ease-in-out;
+            transform: translateY(100%);
+        }
+        .hover-img {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+    }
+}
+
+/* Brand 3 ---------------------------------- */
+.brand-area-3 {
+    clip-path: polygon(0 175px, 100% 0%, 100% 100%, 0% 100%);
+}
+
+/* Brand 4 ---------------------------------- */
+.brand-area-4 {
+    border: 1px solid $border-color;
+    padding: 140px 0px 60px;
+    margin: -80px -45px 0;
+    border-radius: 50px;
+    position: relative;
+    .line-wrap {
+        position: absolute;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        z-index: 0;
+        .line {
+            position: relative;
+            width: 1px;
+            height: 100%;
+            display: inline-block;
+            background-color: $border-color;
+            &:first-child {
+                opacity: 0;
+            }
+            &:last-child {
+                opacity: 0;
+            }
+        }
+    }
+    @include ml {
+        margin: -80px 0 0;
+        padding: 140px 40px 60px;
+        .line-wrap {
+            display: none;
+        }
+    }
+    @include lg {
+        margin: -80px 0 0;
+        padding: 140px 30px 60px;
+    }
+    @include vxs {
+        border-radius: 40px;
+    }
+}

@@ -42,4 +42,28 @@ router.delete('/delete/:id', (req, res) => {
     });
 });
 
+// ... existing imports
+
+// 4. UPDATE RESERVATION (Add this new route)
+router.put('/update/:id', (req, res) => {
+    const { id } = req.params;
+    const { name, phone, guest_number, event_name, notes, date, time } = req.body;
+
+    const sql = `
+        UPDATE reservation 
+        SET name=?, phone=?, guest_number=?, event_name=?, notes=?, date=?, time=? 
+        WHERE id=?`;
+
+    const values = [name, phone, guest_number, event_name, notes, date, time, id];
+
+    db.query(sql, values, (err, result) => {
+        if (err) {
+            console.error("Update Error:", err);
+            return res.status(500).json({ error: "Failed to update reservation" });
+        }
+        res.json({ message: "Reservation updated successfully" });
+    });
+});
+
+module.exports = router;
 module.exports = router;

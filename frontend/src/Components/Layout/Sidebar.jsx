@@ -27,7 +27,7 @@ export default function Sidebar() {
   const menuItems = [
         { path: "/admin/branch_list", icon: FaStore, label: "All Stores" },
 
-    { path: "/admin/create-menu", icon: FaUtensils, label: "Create Menu" },
+    // { path: "/admin/create-menu", icon: FaUtensils, label: "Create Menu" },
     { path: "/admin/menu-list", icon: FaListUl, label: "Menu List" },
     { path: "/admin/reservation_view", icon: FaCalendarAlt, label: "Reservations"},
     { path: "/admin/write_about", icon: FaPenNib, label: "Write About" },

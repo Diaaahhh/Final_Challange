@@ -3,7 +3,7 @@ import axios from "axios";
 import { FaPen, FaImage, FaCloudUploadAlt, FaCheckCircle } from "react-icons/fa";
 
 export default function WriteAbout() {
-  const [heading, setHeading] = useState(""); // Added Heading State
+  const [heading, setHeading] = useState("");
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -26,7 +26,7 @@ export default function WriteAbout() {
     setSuccess(false);
 
     const formData = new FormData();
-    formData.append("heading", heading); // Append Heading
+    formData.append("heading", heading);
     formData.append("text", text);
     if (file) {
       formData.append("image", file);
@@ -38,10 +38,6 @@ export default function WriteAbout() {
       });
       setSuccess(true);
       alert("Content updated successfully!");
-      
-      // REMOVED: setText(""), setHeading(""), etc.
-      // The form will now remain filled.
-
     } catch (err) {
       console.error(err);
       alert("Failed to upload.");
@@ -62,14 +58,14 @@ export default function WriteAbout() {
            <p className="text-gray-400 text-sm mb-8 z-10">Update the story of your restaurant.</p>
 
            <div className="w-full aspect-square bg-gray-800 rounded-lg border-2 border-dashed border-gray-600 flex items-center justify-center relative overflow-hidden group">
-              {preview ? (
-                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-gray-500 flex flex-col items-center">
-                    <FaImage className="text-4xl mb-2 text-gray-600"/>
-                    <span className="text-xs">Image Preview</span>
-                </div>
-              )}
+             {preview ? (
+               <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+             ) : (
+               <div className="text-gray-500 flex flex-col items-center">
+                   <FaImage className="text-4xl mb-2 text-gray-600"/>
+                   <span className="text-xs">Image Preview</span>
+               </div>
+             )}
            </div>
         </div>
 
@@ -87,12 +83,13 @@ export default function WriteAbout() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 
-                {/* Heading Input (New) */}
+                {/* Heading Input */}
                 <div className="form-control">
                     <label className="label text-xs font-bold text-gray-500 uppercase mb-2">Heading</label>
                     <input 
                         type="text"
-                        className="input input-bordered w-full focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-white-700 px-4 py-2 border rounded-lg" 
+                        // FIXED: changed text-black-700 to text-gray-900
+                        className="input input-bordered w-full focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-900 bg-white px-4 py-2 border rounded-lg" 
                         placeholder="e.g. Our Culinary Journey"
                         value={heading}
                         onChange={(e) => setHeading(e.target.value)}
@@ -102,9 +99,11 @@ export default function WriteAbout() {
 
                 {/* Text Area */}
                 <div className="form-control">
+                    {/* FIXED: changed text-black-500 to text-gray-500 */}
                     <label className="label text-xs font-bold text-gray-500 uppercase mb-2">Write Something</label>
                     <textarea 
-                        className="textarea textarea-bordered h-32 w-full focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-white-700 p-3 border rounded-lg" 
+                        // FIXED: changed text-black-700 to text-gray-900
+                        className="textarea textarea-bordered h-32 w-full focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-900 bg-white p-3 border rounded-lg" 
                         placeholder="Tell your story here..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
@@ -120,7 +119,7 @@ export default function WriteAbout() {
                             type="file" 
                             accept="image/*"
                             onChange={handleFileChange}
-                            className="file-input file-input-ghost w-full file-input-sm text-sm text-gray-600"
+                            className="file-input file-input-ghost w-full file-input-sm text-sm text-gray-900"
                         />
                         <FaCloudUploadAlt className="absolute right-3 top-3 text-gray-400 pointer-events-none"/>
                     </div>

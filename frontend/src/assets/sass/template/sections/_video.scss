@@ -1,0 +1,52 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Video Area 1 -------------------------------*/
+.video-box1 {
+    position: relative;
+    .play-btn {
+        --icon-size: 100px;
+        --icon-font-size: 30px;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+    @include sm {
+        .play-btn {
+            --icon-size: 80px;
+            --icon-font-size: 24px;
+        }
+    }
+    @include xs {
+        .play-btn {
+            --icon-size: 60px;
+            --icon-font-size: 20px;
+        }
+    }
+    &.style2 {
+        img {
+            border-radius: 30px;
+            width: 100%;
+        }
+        .video-text {
+            font-size: 84px;
+            font-weight: 600;
+            font-family: $title-font;
+            color: $white-color;
+            opacity: 0.2;
+            position: absolute;
+            right: 30px;
+            top: 5px;
+            @include lg {
+                font-size: 60px;
+            }
+            @include md {
+                font-size: 40px;
+            }
+            @include xs {
+                font-size: 30px;
+            }
+        }
+    }
+}

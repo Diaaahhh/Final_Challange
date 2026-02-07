@@ -1,146 +1,241 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaUtensils, FaCoffee, FaTag } from 'react-icons/fa'; 
+import { FaUtensils, FaCoffee, FaImage, FaPlus, FaMinus } from 'react-icons/fa'; 
+import { useCart } from '../Cart/CartContext';
+
+const IMAGE_BASE_URL = "http://localhost:8081";
 
 export default function MenuUser() {
   const [categories, setCategories] = useState([]);
+  const [branches, setBranches] = useState([]); 
   const [activeCategory, setActiveCategory] = useState(null); 
+  const [selectedBranch, setSelectedBranch] = useState(null); 
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 1. Fetch Categories on Mount
+  // Use the global cart context
+  const { cartItems, handleAddToCart } = useCart();
+
   useEffect(() => {
-    axios.get("http://localhost:8081/api/menu-user/categories")
-      .then((res) => {
-        setCategories(res.data);
-        if (res.data.length > 0) {
-          handleCategoryClick(res.data[0]);
+    const fetchBranches = async () => {
+        try {
+            const branchRes = await axios.get("http://localhost:8081/api/menu-user/branches");
+            setBranches(branchRes.data);
+            if (branchRes.data.length > 0) {
+                setSelectedBranch(branchRes.data[0].branch_id); 
+            }
+        } catch (err) {
+            console.error("Error loading branches:", err);
         }
-      })
-      .catch((err) => console.error("Error loading categories:", err));
+    };
+    fetchBranches();
   }, []);
 
-  // 2. Handle Category Click
+  useEffect(() => {
+    if (!selectedBranch) return;
+    const fetchCategories = async () => {
+        try {
+            const res = await axios.get(`http://localhost:8081/api/menu-user/categories/${selectedBranch}`);
+            setCategories(res.data);
+            if (res.data.length > 0) {
+                handleCategoryClick(res.data[0]);
+            } else {
+                setMenuItems([]);
+                setActiveCategory(null);
+            }
+        } catch (err) {
+            console.error("Error loading categories:", err);
+            setCategories([]);
+        }
+    };
+    fetchCategories();
+  }, [selectedBranch]);
+
   const handleCategoryClick = async (category) => {
     setActiveCategory(category);
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8081/api/menu-user/items/${category.code}`);
+      const res = await axios.get(`http://localhost:8081/api/menu-user/items/${selectedBranch}/${category.id}`);
       setMenuItems(res.data);
     } catch (err) {
       console.error("Error loading items:", err);
+      setMenuItems([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // --- MODIFIED: Updates Global Context directly ---
+  const updateQuantity = (item, delta) => {
+    handleAddToCart(item, delta);
+  };
+
+  // Helper to get current quantity from global cart
+  const getQuantity = (itemId) => {
+    const item = cartItems.find(i => i.id === itemId);
+    return item ? item.quantity : 0;
+  };
+
+  const formatDescription = (rawInput) => {
+    if (!rawInput) return "No description available.";
+    if (Array.isArray(rawInput)) return rawInput.join(", ");
+    const strVal = String(rawInput);
+    try {
+      const parsed = JSON.parse(strVal);
+      if (Array.isArray(parsed)) return parsed.join(", ");
+      return strVal;
+    } catch (e) {
+      return strVal.replace(/[\[\]"]/g, "").replace(/,/g, ", ");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
-      
-      {/* Container */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8">
+      <div className="max-w-7xl mx-auto">
         
-        {/* === LEFT SIDEBAR: CATEGORIES === */}
-        <div className="md:col-span-3 lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden sticky top-8 border border-gray-100">
-                {/* Header: Black Background with Golden Text */}
-                <div className="p-6 bg-gray-900 text-white">
-                    <h2 className="text-xl font-bold flex items-center gap-2 text-amber-400">
-                        <FaUtensils /> 
-                        Our Menu
-                    </h2>
-                    <p className="text-xs text-amber-200/80 mt-1 uppercase tracking-widest">Select Category</p>
-                </div>
-                
-                <div className="flex flex-col">
-                    {categories.map((cat) => (
+        {/* BRANCH TABS UI */}
+        {branches.length > 0 && (
+            <div className="flex justify-center mb-8">
+                <div className="inline-flex items-center gap-2 overflow-x-auto p-2 bg-white rounded-2xl shadow-sm border border-gray-200">
+                    {branches.map((branch) => (
                         <button
-                            key={cat.code}
-                            onClick={() => handleCategoryClick(cat)}
-                            className={`
-                                text-left px-6 py-4 transition-all duration-300 border-b border-gray-100 last:border-0
-                                flex items-center justify-between group
-                                ${activeCategory?.code === cat.code 
-                                    ? "bg-amber-50 text-gray-900 border-l-4 border-l-amber-500 font-bold shadow-inner" 
-                                    : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"}
-                            `}
+                            key={branch.branch_id}
+                            onClick={() => setSelectedBranch(branch.branch_id)}
+                            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap
+                                ${String(selectedBranch) === String(branch.branch_id)
+                                    ? "bg-amber-500 text-white shadow-md transform scale-105"
+                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}
                         >
-                            <span className="text-sm uppercase tracking-wider">{cat.name}</span>
-                            {/* Golden Indicator Dot */}
-                            {(activeCategory?.code === cat.code) && (
-                                <span className="text-amber-500 text-lg">•</span>
-                            )}
+                            {branch.branch_name || branch.name}
                         </button>
                     ))}
-                    
-                    {categories.length === 0 && (
-                        <div className="p-6 text-gray-400 text-sm text-center">Loading Categories...</div>
-                    )}
                 </div>
             </div>
-        </div>
+        )}
 
-        {/* === RIGHT CONTENT: ITEMS LIST === */}
-        <div className="md:col-span-9 lg:col-span-9">
-            {activeCategory ? (
-                <div className="animate-fade-in-up">
-                    {/* Header: Black Text with Golden Underline Accent */}
-                    <div className="flex items-end gap-4 mb-8 border-b-2 border-gray-200 pb-4">
-                        <h1 className="text-4xl font-extrabold text-gray-900 uppercase tracking-tight">
-                            {activeCategory.name}
-                        </h1>
-                        <span className="text-amber-600 text-lg font-serif italic mb-1">Selection</span>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+            {/* LEFT SIDEBAR */}
+            <div className="md:col-span-3 lg:col-span-3">
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden sticky top-8 border border-gray-100">
+                    <div className="p-6 bg-gray-900 text-white">
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-amber-400">
+                            <FaUtensils /> Our Menu
+                        </h2>
                     </div>
+                    <div className="flex flex-col">
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                onClick={() => handleCategoryClick(cat)}
+                                className={`text-left px-6 py-4 transition-all duration-300 border-b border-gray-100 last:border-0 flex items-center justify-between group
+                                    ${activeCategory?.id === cat.id 
+                                        ? "bg-amber-50 text-gray-900 border-l-4 border-l-amber-500 font-bold shadow-inner" 
+                                        : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"}`}
+                            >
+                                <span className="text-sm uppercase tracking-wider">{cat.menu_name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
 
-                    {/* Items Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10">
-                        {loading ? (
-                            <div className="col-span-2 text-center py-20 text-gray-400">Loading delicious items...</div>
-                        ) : menuItems.length > 0 ? (
-                            menuItems.map((item) => (
-                                <div key={item.code} className="group relative">
-                                    {/* Item Header */}
-                                    <div className="flex justify-between items-baseline mb-2 border-b border-gray-300 border-dotted pb-1">
-                                        <h3 className="text-xl font-bold text-gray-800 group-hover:text-amber-600 transition-colors">
-                                            {item.name}
-                                        </h3>
-                                        {/* Golden Price */}
-                                        <span className="text-xl font-bold text-amber-600">
-                                            {Number(item.price).toLocaleString()} <span className="text-sm font-normal text-gray-500">Tk</span>
-                                        </span>
-                                    </div>
-
-                                    {/* Item Body */}
-                                    <p className="text-gray-600 text-sm leading-relaxed italic">
-                                        {item.description || "No description available."}
-                                    </p>
-                                    
-                                    {/* Item Footer: Code Badge */}
-                                    <div className="mt-2">
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
-                                            <FaTag className="text-[8px] text-amber-500" /> #{item.code}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="col-span-2 p-10 bg-white rounded-xl shadow-sm text-center border border-gray-100">
-                                <FaCoffee className="text-6xl text-gray-200 mx-auto mb-4"/>
-                                <h3 className="text-lg font-bold text-gray-400">No items found</h3>
-                                <p className="text-gray-400 text-sm">This category is currently empty.</p>
+            {/* RIGHT CONTENT */}
+            <div className="md:col-span-9 lg:col-span-9 flex flex-col gap-6">
+                {activeCategory ? (
+                    <div className="animate-fade-in-up">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 flex justify-between items-center">
+                            <div>
+                                <h1 className="text-3xl font-extrabold text-gray-900 uppercase tracking-tight">{activeCategory.menu_name}</h1>
+                                <span className="text-amber-600 font-serif italic text-sm">Delicious Selections</span>
                             </div>
-                        )}
+                            <div className="px-3 py-1 bg-gray-100 rounded-full text-xs font-bold text-gray-500">{menuItems.length} Items</div>
+                        </div>
+
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            {loading ? (
+                                <div className="col-span-2 text-center py-20 text-gray-400">Loading...</div>
+                            ) : menuItems.length > 0 ? (
+                                menuItems.map((item) => {
+                                    const isActive = Number(item.m_status) === 1;
+                                    const itemQty = getQuantity(item.id); // Get quantity from Context
+
+                                    return (
+                                        <div 
+                                            key={item.id} 
+                                            className={`group bg-white rounded-xl shadow-sm transition-all duration-300 border border-gray-100 flex p-4 gap-4 items-start relative
+                                                ${!isActive ? "opacity-60 grayscale bg-gray-50" : "hover:shadow-md"}`}
+                                        >
+                                            <div className="w-[85px] h-[85px] shrink-0 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                                                {item.m_image ? (
+                                                    <img src={`${IMAGE_BASE_URL}/${item.m_image}`} alt={item.m_menu_name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300"><FaImage /></div>
+                                                )}
+                                            </div>
+
+                                            <div className="flex-1 flex flex-col min-h-[85px]">
+                                                {/* TOP ROW */}
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="text-base font-bold text-gray-800">{item.m_menu_name}</h3>
+                                                        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded inline-block mb-1">
+                                                            #{item.m_menu_sl}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-base font-bold text-amber-600 whitespace-nowrap ml-2">
+                                                        {Number(item.m_price).toLocaleString()} <span className="text-xs font-normal text-gray-500">Tk</span>
+                                                    </span>
+                                                </div>
+
+                                                {/* MIDDLE ROW */}
+                                                <p className="text-gray-500 text-xs line-clamp-2 mb-2">
+                                                    {formatDescription(item.m_ingredient)}
+                                                </p>
+
+                                                {/* BOTTOM ROW */}
+                                                <div className="mt-auto flex items-center justify-between border-t border-dashed border-gray-100 pt-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`h-2 w-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                        <span className="text-[10px] uppercase font-bold text-gray-400">
+                                                            {isActive ? 'Available' : 'Out of Stock'}
+                                                        </span>
+                                                    </div>
+
+                                                    {isActive && (
+                                                        <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-200">
+                                                            <button 
+                                                                onClick={() => updateQuantity(item, -1)}
+                                                                className="p-1.5 rounded-md bg-white text-gray-600 hover:bg-amber-100 hover:text-amber-600 transition-colors shadow-sm"
+                                                            >
+                                                                <FaMinus size={10} />
+                                                            </button>
+                                                            
+                                                            <span className="text-sm font-bold min-w-[20px] text-center text-gray-800">
+                                                                {itemQty}
+                                                            </span>
+                                                            
+                                                            <button 
+                                                                onClick={() => updateQuantity(item, 1)}
+                                                                className="p-1.5 rounded-md bg-amber-500 text-white hover:bg-amber-600 shadow-sm transition-colors"
+                                                            >
+                                                                <FaPlus size={10} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="col-span-2 p-10 text-center"><FaCoffee className="text-4xl mx-auto mb-2 text-gray-200" /><p className="text-gray-400">No items found</p></div>
+                            )}
+                        </div>
                     </div>
-                </div>
-            ) : (
-                // Initial State
-                <div className="h-full flex items-center justify-center text-gray-400">
-                    <div className="text-center">
-                        <FaUtensils className="text-4xl text-gray-300 mx-auto mb-2"/>
-                        <p>Select a category to view the menu</p>
-                    </div>
-                </div>
-            )}
+                ) : (
+                    <div className="h-full flex items-center justify-center text-gray-400 min-h-[400px]">Select a category</div>
+                )}
+            </div>
         </div>
       </div>
     </div>

@@ -1,269 +1,224 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaUtensils, FaDollarSign, FaList, FaEdit, FaTrash, FaEye, FaSearch, FaSave, FaTimes } from 'react-icons/fa';
+import { FaUtensils, FaList, FaEye, FaFilter, FaCamera, FaCloudUploadAlt, FaCheck, FaTimes } from "react-icons/fa";
 
 export default function MenuList() {
   const [menuItems, setMenuItems] = useState([]);
-  const [categories, setCategories] = useState([]); // For Edit Dropdown
+  const [branches, setBranches] = useState([]);
+  const [categories, setCategories] = useState({}); // Mapping object: { id: "Name" }
+  const [selectedBranch, setSelectedBranch] = useState("All");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
-  // Selection State
-  const [checkedItems, setCheckedItems] = useState([]);
-  
+
   // Modal State
   const [openModal, setOpenModal] = useState(false);
-  const [modalMode, setModalMode] = useState("view"); // 'view' or 'edit'
-  
-  // Editing State
-  const [currentItem, setCurrentItem] = useState(null); // The original item data
-  const [editFormData, setEditFormData] = useState({
-    name: "",
-    categoryCode: "",
-    price: "",
-    description: ""
-  });
+  const [currentItem, setCurrentItem] = useState(null);
 
   // 1. Fetch Data on Load
   useEffect(() => {
-    fetchData();
+    fetchInitialData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [menuRes, catRes] = await Promise.all([
-        axios.get("http://localhost:8081/api/menu/list"),
-        axios.get("http://localhost:8081/api/categories")
-      ]);
-      setMenuItems(menuRes.data);
-      setCategories(catRes.data);
       setError("");
+
+      const [menuRes, branchRes, catRes] = await Promise.all([
+        axios.get("http://localhost:8081/api/menu/list"),
+        axios.get("http://localhost:8081/api/menu/branches"),
+        axios.get("http://localhost:8081/api/menu/categories") // New endpoint
+      ]);
+
+      // Set Menu Items
+      const menuPayload = menuRes.data;
+      setMenuItems(Array.isArray(menuPayload) ? menuPayload : []);
+
+      // Set Branches
+      const branchPayload = branchRes.data?.branches || branchRes.data;
+      setBranches(Array.isArray(branchPayload) ? branchPayload : []);
+
+      // Create a mapping object for Categories: { 14: "Burger", 12: "test" }
+      if (Array.isArray(catRes.data)) {
+        const catMap = {};
+        catRes.data.forEach(cat => {
+          catMap[cat.id] = cat.menu_name;
+        });
+        setCategories(catMap);
+      }
+
     } catch (err) {
       console.error("Error fetching data:", err);
-      setError("Failed to load menu data.");
+      setMenuItems([]);
+      setBranches([]);
+      setError("Failed to load external data. Check console.");
     } finally {
       setLoading(false);
     }
   };
 
-  // 2. Handle Selection
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setCheckedItems(menuItems.map((item) => item.id));
-    } else {
-      setCheckedItems([]);
+  // Helper to strip brackets and format list
+  const formatIngredients = (rawInput) => {
+    if (!rawInput) return "No details";
+    const strVal = String(rawInput);
+    try {
+      const parsed = JSON.parse(strVal);
+      if (Array.isArray(parsed)) return parsed.join(", ");
+      return strVal;
+    } catch (e) {
+      return strVal.replace(/[\[\]"]/g, "").replace(/,/g, ", ");
     }
   };
 
-  const handleSelectOne = (id) => {
-    if (checkedItems.includes(id)) {
-      setCheckedItems(checkedItems.filter((itemId) => itemId !== id));
-    } else {
-      setCheckedItems([...checkedItems, id]);
-    }
-  };
-
-  // 3. Modal Handlers
+  // Modal Handler
   const openViewModal = (item) => {
     setCurrentItem(item);
-    setModalMode("view");
     setOpenModal(true);
   };
 
-  // Inside MenuList.jsx
+  // --- FILTER LOGIC ---
+const filteredMenuItems = selectedBranch === "All"
+  ? menuItems
+  : menuItems.filter(item => {
+      if (!item.m_branch_id) return false; // Safety check
 
-  const openEditModal = (item) => {
-    setCurrentItem(item);
-    
-    // SAFETY CHECK: 
-    // If the item's category_id doesn't match any loaded category, 
-    // default to the first available category in the list.
-    const isValidCategory = categories.some(cat => cat.code === item.category_id);
-    const defaultCategory = categories.length > 0 ? categories[0].code : "";
-    
-    setEditFormData({
-      name: item.name,
-      // If valid, use it. If not, use the first one in the list.
-      categoryCode: isValidCategory ? item.category_id : defaultCategory, 
-      price: item.price,
-      description: item.description
+      // 1. Convert database value "1-2" into an array ["1", "2"]
+      // 2. Handle cases where it might just be "1" (single value)
+      const availableBranches = String(item.m_branch_id).split('-');
+
+      // 3. Check if the selected branch exists in that list
+      return availableBranches.includes(String(selectedBranch));
     });
-    
-    setModalMode("edit");
-    setOpenModal(true);
-  };
-
-  // 4. Update Functionality
-  const handleEditChange = (e) => {
-    setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
-  };
-
- // Inside MenuList.jsx
-
-  const handleUpdate = async () => {
-    try {
-      // Create a clean payload object
-      const payload = {
-        name: editFormData.name,
-        category_code: editFormData.categoryCode, // Ensure this matches backend expected key
-        price: editFormData.price,
-        description: editFormData.description
-      };
-
-      console.log("Sending Update Payload:", payload); // Debug log in Browser Console (F12)
-
-      await axios.put(`http://localhost:8081/api/menu/update/${currentItem.id}`, payload);
-      
-      alert("Item updated successfully!");
-      setOpenModal(false);
-      fetchData(); // Refresh the list to show changes
-    } catch (err) {
-      console.error("Update Failed:", err); // See full error in console
-      alert(`Failed to update item: ${err.response?.data?.error || err.message}`);
-    }
-  };
-
-  // 5. Delete Functionality
-  const handleDelete = async (ids) => {
-    if (!window.confirm(`Are you sure you want to delete ${ids.length} items?`)) return;
-
-    try {
-      await axios.post("http://localhost:8081/api/menu/delete", { ids: ids });
-      setMenuItems(menuItems.filter(item => !ids.includes(item.id)));
-      setCheckedItems(checkedItems.filter(id => !ids.includes(id))); // Clear deleted from selection
-    } catch (err) {
-      alert("Failed to delete items.");
-    }
-  };
 
   return (
-    <section className="space fadeinup">
-      <div className="card w-full bg-base-100 shadow-xl border border-base-200">
-        <div className="card-body p-6">
-          
-          {/* Header */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-            <div>
-                <h2 className="card-title text-2xl font-bold">
-                    <span className="text-theme"><FaUtensils className="inline mr-2"/></span>
-                    Menu List
-                </h2>
-                <p className="text-gray-500 text-sm mt-1">Manage your restaurant food items</p>
-            </div>
-            
-            <div className="flex gap-2 mt-4 md:mt-0">
-                <button className="btn btn-ghost btn-circle">
-                    <FaSearch />
-                </button>
-                {checkedItems.length > 0 && (
-                    <button 
-                        onClick={() => handleDelete(checkedItems)}
-                        className="btn btn-error text-white btn-sm animate-pulse"
-                    >
-                        <FaTrash className="mr-2"/> Delete ({checkedItems.length})
-                    </button>
-                )}
-            </div>
+    <div className="min-h-screen bg-[#0E1014] text-white pt-24 pb-12 px-4 font-['Inter']">
+      <div className="container mx-auto max-w-7xl">
+        
+        {/* --- PAGE HEADER --- */}
+        <div className="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-white/5 pb-6">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold uppercase text-white">
+              Food<span className="text-[#C59D5F]">Menu</span>
+            </h1>
           </div>
 
-          {error && <div className="alert alert-error text-white mb-4">{error}</div>}
-          
-          {/* Table */}
+          <div className="flex gap-3 mt-6 md:mt-0 items-center">
+            {/* BRANCH DROPDOWN */}
+            <div className="relative">
+                <FaFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                <select 
+                    value={selectedBranch}
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                    className="bg-[#1A1C21] border border-white/10 text-white pl-9 pr-4 py-2 rounded-lg text-sm font-bold focus:border-[#C59D5F] focus:outline-none appearance-none cursor-pointer min-w-[150px]"
+                >
+                    <option value="All">All Branches</option>
+                    
+                    {Array.isArray(branches) && branches.map((branch) => (
+                        <option key={branch.id} value={branch.branch_id}>
+                            {branch.branch_name}
+                        </option>
+                    ))}
+                </select>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="alert bg-red-900/20 border border-red-500 text-red-200 mb-6 flex items-center gap-3">
+            <FaList /> {error}
+          </div>
+        )}
+
+        {/* --- DATA TABLE --- */}
+        <div className="bg-[#1A1C21] rounded-xl border border-white/5 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
-            <table className="table table-zebra w-full">
-              <thead className="bg-base-200 uppercase text-xs">
-                <tr>
-                  <th className="w-12">
-                    <label>
-                      <input 
-                        type="checkbox" 
-                        className="checkbox checkbox-primary checkbox-sm"
-                        onChange={handleSelectAll}
-                        checked={menuItems.length > 0 && checkedItems.length === menuItems.length}
-                      />
-                    </label>
-                  </th>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Code</th>
-                  <th>Actions</th>
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-[#0E1014] text-gray-400 text-xs uppercase tracking-wider font-['Barlow_Condensed'] border-b border-white/5">
+                  <th className="p-4">Code</th>
+                  <th className="p-4">Item Name</th>
+                  <th className="p-4">Ingredients</th>
+                  <th className="p-4">Price</th>
+                  <th className="p-4 w-[200px]">Image</th> 
+                  <th className="p-4 text-right">Action</th>
                 </tr>
               </thead>
-              
-              <tbody>
+
+              <tbody className="divide-y divide-white/5">
                 {loading ? (
-                    <tr><td colSpan="6" className="text-center py-10">Loading Data...</td></tr>
-                ) : menuItems.length > 0 ? (
-                  menuItems.map((item) => (
-                    <tr key={item.id} className="hover">
-                      <th>
-                        <label>
-                          <input 
-                            type="checkbox" 
-                            className="checkbox checkbox-primary checkbox-sm"
-                            onChange={() => handleSelectOne(item.id)}
-                            checked={checkedItems.includes(item.id)}
-                          />
-                        </label>
-                      </th>
-                      
-                      <td className="font-bold">
-                        {item.name}
-                        <div className="text-xs text-gray-400 font-normal md:hidden truncate max-w-[100px]">
-                            {item.description}
-                        </div>
+                  <tr>
+                    <td colSpan="6" className="text-center py-12 text-[#C59D5F]">
+                      Loading Data...
+                    </td>
+                  </tr>
+                ) : filteredMenuItems.length > 0 ? (
+                  filteredMenuItems.map((item) => (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-white/5 transition-colors group"
+                    >
+                      <td className="p-4">
+                        <span className="text-gray-500 text-xs font-mono bg-black/30 px-2 py-1 rounded">
+                          {item.m_menu_sl}
+                        </span>
                       </td>
                       
-                      <td>
-                        <div className="badge badge-outline badge-primary capitalize">
-                            {item.category_name || "Uncategorized"}
+                      <td className="p-4">
+                        <div className="font-bold text-white font-['Barlow_Condensed'] text-lg tracking-wide">
+                          {item.m_menu_name}
                         </div>
-                      </td>
-                      
-                      <td className="font-mono text-success font-bold">
-                        BDT{Number(item.price).toFixed(2)}
+                        <div className="flex gap-2 mt-1">
+                             {/* UPDATED: Displays Category Name from map or ID as fallback */}
+                             <span className="text-[10px] bg-blue-900/30 text-blue-400 px-1.5 py-0.5 rounded border border-blue-900/50">
+                                Cat: {categories[item.category_id] || item.category_id || "Global"}
+                            </span>
+                            {item.m_branch_id ?''
+                            : (
+                                <span className="text-[10px] bg-green-900/30 text-green-400 px-1.5 py-0.5 rounded border border-green-900/50">
+                                    Global
+                                </span>
+                            )}
+                        </div>
                       </td>
 
-                      <td>
-                        <span className="badge badge-ghost text-xs">{item.code}</span>
-                      </td>
-                      
-                      <td>
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={() => openViewModal(item)}
-                                className="btn btn-square btn-ghost btn-sm text-info tooltip" 
-                                data-tip="View Details"
-                            >
-                                <FaEye />
-                            </button>
-                            <button 
-                                onClick={() => openEditModal(item)}
-                                className="btn btn-square btn-ghost btn-sm text-warning tooltip" 
-                                data-tip="Edit"
-                            >
-                                <FaEdit />
-                            </button>
-                            <button 
-                                onClick={() => handleDelete([item.id])}
-                                className="btn btn-square btn-ghost btn-sm text-error tooltip" 
-                                data-tip="Delete"
-                            >
-                                <FaTrash />
-                            </button>
+                      <td className="p-4">
+                        <div
+                          className="text-xs text-gray-500 truncate max-w-[200px]"
+                          title={formatIngredients(item.m_ingredient)}
+                        >
+                          {formatIngredients(item.m_ingredient)}
                         </div>
+                      </td>
+
+                      <td className="p-4 font-mono text-white">
+                        <span className="text-[#C59D5F] mr-1">BDT</span>
+                        {Number(item.m_price).toFixed(2)}
+                      </td>
+
+                      <td className="p-4">
+                         <ImageUploadCell 
+                            item={item} 
+                            backendUrl="http://localhost:8081" 
+                         />
+                      </td>
+
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => openViewModal(item)}
+                          className="p-2 hover:text-[#C59D5F] transition-colors"
+                          title="View Details"
+                        >
+                          <FaEye />
+                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="text-center py-10 text-gray-400">
-                        <div className="flex flex-col items-center">
-                            <FaList className="text-4xl mb-2 opacity-20"/>
-                            No menu items found.
-                        </div>
+                    <td colSpan={6} className="text-center py-12 text-gray-500">
+                      <FaUtensils className="mx-auto text-4xl mb-3 opacity-20" />
+                      No menu items found {selectedBranch !== "All" && "for this branch"}.
                     </td>
                   </tr>
                 )}
@@ -273,117 +228,153 @@ export default function MenuList() {
         </div>
       </div>
 
-      {/* UNIVERSAL MODAL (Handles View & Edit) */}
-      <div className={`modal ${openModal ? "modal-open" : ""}`}>
-        <div className="modal-box relative">
-          <button 
-            onClick={() => setOpenModal(false)}
-            className="btn btn-sm btn-circle absolute right-2 top-2"
-          >✕</button>
-          
-          {currentItem && (
-            <>
-                <h3 className="text-lg font-bold border-b pb-2 mb-4">
-                    {modalMode === 'view' ? 'Item Details' : 'Edit Item'} 
-                    <span className="text-gray-400 text-sm font-normal ml-2">#{currentItem.code}</span>
-                </h3>
-                
-                {/* VIEW MODE */}
-                {modalMode === 'view' ? (
-                    <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <span className="text-xs uppercase text-gray-400 font-bold">Item Name</span>
-                                <p className="font-bold text-lg">{currentItem.name}</p>
-                            </div>
-                            <div>
-                                <span className="text-xs uppercase text-gray-400 font-bold">Price</span>
-                                <p className="font-bold text-success text-lg">
-                                    <FaDollarSign className="inline mb-1"/>
-                                    {Number(currentItem.price).toFixed(2)}
-                                </p>
-                            </div>
-                            <div>
-                                <span className="text-xs uppercase text-gray-400 font-bold">Category</span>
-                                <p className="badge badge-primary mt-1">{currentItem.category_name}</p>
-                            </div>
-                        </div>
-                        <div>
-                            <span className="text-xs uppercase text-gray-400 font-bold">Description</span>
-                            <p className="text-gray-600 bg-base-200 p-3 rounded-md mt-1 text-sm">
-                                {currentItem.description || "No description."}
-                            </p>
-                        </div>
-                        <div className="modal-action">
-                            <button className="btn btn-ghost" onClick={() => setOpenModal(false)}>Close</button>
-                            <button className="btn btn-primary" onClick={() => setModalMode('edit')}>
-                                <FaEdit className="mr-2"/> Edit This Item
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    // EDIT MODE
-                    <div className="flex flex-col gap-4">
-                        <div className="form-control">
-                            <label className="label"><span className="label-text">Name</span></label>
-                            <input 
-                                type="text" 
-                                name="name" 
-                                value={editFormData.name} 
-                                onChange={handleEditChange}
-                                className="input input-bordered w-full"
-                            />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="form-control">
-                                <label className="label"><span className="label-text">Category</span></label>
-                                <select 
-                                    name="categoryCode"
-                                    value={editFormData.categoryCode}
-                                    onChange={handleEditChange}
-                                    className="select select-bordered w-full"
-                                >
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.code}>{cat.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="form-control">
-                                <label className="label"><span className="label-text">Price</span></label>
-                                <input 
-                                    type="number" 
-                                    name="price" 
-                                    value={editFormData.price} 
-                                    onChange={handleEditChange}
-                                    className="input input-bordered w-full"
-                                />
-                            </div>
-                        </div>
+      {/* --- VIEW ONLY MODAL --- */}
+      {openModal && currentItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#1A1C21] w-full max-w-lg rounded-2xl shadow-2xl border border-white/10 relative overflow-hidden">
+            <div className="bg-[#0E1014] p-6 border-b border-white/5 flex justify-between items-center">
+              <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
+                Item Details
+              </h3>
+              <button
+                onClick={() => setOpenModal(false)}
+                className="text-gray-500 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
 
-                        <div className="form-control">
-                            <label className="label"><span className="label-text">Description</span></label>
-                            <textarea 
-                                name="description"
-                                value={editFormData.description}
-                                onChange={handleEditChange}
-                                className="textarea textarea-bordered h-24"
-                            ></textarea>
-                        </div>
+            <div className="p-6 space-y-4">
+              {currentItem.m_image && (
+                 <div className="w-full h-48 bg-black/50 rounded-lg mb-4 overflow-hidden border border-white/10">
+                    <img 
+                        src={`http://localhost:8081${currentItem.m_image}`} 
+                        alt="Menu" 
+                        className="w-full h-full object-cover"
+                    />
+                 </div>
+              )}
 
-                        <div className="modal-action">
-                            <button className="btn btn-ghost" onClick={() => setModalMode('view')}>Back</button>
-                            <button className="btn btn-success text-white" onClick={handleUpdate}>
-                                <FaSave className="mr-2"/> Save Changes
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </>
-          )}
+              <div>
+                <label className="text-xs text-gray-500 uppercase font-bold">
+                  Name
+                </label>
+                <p className="text-2xl font-['Barlow_Condensed'] text-white">
+                  {currentItem.m_menu_name}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase font-bold">
+                    Price
+                  </label>
+                  <p className="text-xl text-[#C59D5F] font-mono">
+                    BDT {Number(currentItem.m_price).toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 uppercase font-bold">
+                    Category
+                  </label>
+                  <p className="text-white font-mono">
+                    {categories[currentItem.category_id] || currentItem.category_id || "Global"}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-[#0E1014] p-4 rounded-lg border border-white/5">
+                <label className="text-xs text-gray-500 uppercase font-bold block mb-2">
+                  Ingredients
+                </label>
+                <p className="text-gray-300 text-sm leading-relaxed">
+                  {formatIngredients(currentItem.m_ingredient)}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="modal-backdrop" onClick={() => setOpenModal(false)}></div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 }
+
+// --- SUB-COMPONENT: HANDLES UPLOAD LOGIC PER ROW ---
+const ImageUploadCell = ({ item, backendUrl }) => {
+    const [preview, setPreview] = useState(item.m_image ? `${backendUrl}${item.m_image}` : null);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [uploadStatus, setUploadStatus] = useState("idle"); 
+
+    const handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreview(URL.createObjectURL(file)); 
+            setUploadStatus("idle"); 
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile) return;
+
+        setUploadStatus("uploading");
+        const formData = new FormData();
+        formData.append("image", selectedFile);
+        formData.append("m_menu_sl", item.m_menu_sl); 
+
+        try {
+            await axios.post(`${backendUrl}/api/menu/upload`, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            setUploadStatus("success");
+            setTimeout(() => setUploadStatus("idle"), 3000); 
+        } catch (err) {
+            console.error(err);
+            setUploadStatus("error");
+        }
+    };
+
+    return (
+        <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-black/40 border border-white/10 overflow-hidden flex-shrink-0 relative">
+                    {preview ? (
+                        <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-600">
+                            <FaCamera />
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                    <label className="cursor-pointer bg-white/5 hover:bg-white/10 px-2 py-1 rounded text-[10px] text-gray-300 transition-colors text-center border border-white/5">
+                        Choose
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleFileSelect}
+                        />
+                    </label>
+
+                    {selectedFile && (
+                        <button 
+                            onClick={handleUpload}
+                            disabled={uploadStatus === "uploading" || uploadStatus === "success"}
+                            className={`px-2 py-1 rounded text-[10px] flex items-center justify-center gap-1 transition-all ${
+                                uploadStatus === "success" ? "bg-green-600 text-white" : "bg-[#C59D5F] text-black hover:bg-[#b08d55]"
+                            }`}
+                        >
+                            {uploadStatus === "uploading" && "..."}
+                            {uploadStatus === "success" && <FaCheck />}
+                            {uploadStatus === "idle" && <><FaCloudUploadAlt /> Upload</>}
+                            {uploadStatus === "error" && <><FaTimes /> Retry</>}
+                        </button>
+                    )}
+                </div>
+            </div>
+            
+            {uploadStatus === "success" && <span className="text-[10px] text-green-400">Saved!</span>}
+            {uploadStatus === "error" && <span className="text-[10px] text-red-400">Failed</span>}
+        </div>
+    );
+};

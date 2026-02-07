@@ -1,0 +1,367 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Team global ---------------------------------- */
+.th-team {
+    position: relative;
+    .team-img {
+        position: relative;
+        overflow: hidden;
+        img {
+            width: 100%;
+            transition: 0.4s ease-in-out;
+        }
+    }
+    .team-desig {
+        font-size: 14px;
+        font-weight: 500;
+        display: block;
+        margin-bottom: -0.45em;
+        transition: 0.4s ease-in-out;
+        color: $theme-color;
+    }
+    .th-social {
+        transition: 0.4s ease-in-out;
+        a {
+            --icon-size: 34px;
+            background-color: $white-color;
+            color: $theme-color;
+            &:hover {
+                background-color: $theme-color;
+                color: $white-color;
+            }
+        }
+    }
+    .box-title {
+        margin-bottom: 0;
+    }
+}
+
+/* Team Card ---------------------------------- */
+
+.team-card {
+  text-align: center;
+    &:hover {
+        .team-social-hover {
+            bottom: 20px;
+            opacity: 1;
+            visibility: visible;
+        }
+        .img-wrap  {
+            background-color: var(--theme-color2);
+            
+            .team-1-bg-shape {
+                opacity: 1;
+                visibility: visible;
+            }
+        }
+
+        .img-wrap::before {
+            height: 30%;
+            opacity: 0.9;
+        }
+        
+        .team-1-bg-shape {
+            opacity: 1;
+            visibility: visible;
+        }
+    }
+
+    .img-wrap {
+        position: relative;
+        background: var(--smoke-color2);
+        padding: 30px 0 0 0;
+        border-radius: 200px 200px 0 0;
+        margin-bottom: 30px;
+        overflow: hidden;
+        transition: .4s;
+        &:before {
+            content: "";
+        	position: absolute;
+        	width: 100%;
+        	height: 0%;
+        	bottom: 0;
+        	left: 0;
+        	background: linear-gradient(to bottom, transparent, var(--theme-color2));
+        	opacity: 0;
+        	transition: .4s;
+        	z-index: 3;
+        }
+        .team-img {
+            position: relative;
+            z-index: 2;
+        }
+        .team-1-bg-shape {
+            position: absolute;
+            left: 0;
+            top: 20px;
+            z-index: -1;
+            padding: 20px;
+            opacity: 0;
+            visibility: hidden;
+        }
+    }
+}
+
+.team-social-hover {
+    background: var(--white-color);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 56px;
+    padding: 11px;
+    transition: .4s;
+    z-index: 3;
+    opacity: 0;
+    visibility: hidden;
+    .th-social {
+        gap: 13px;
+        a {
+            width: var(--icon-size, 34px);
+            height: var(--icon-size, 34px);
+            border-color: var(--th-border-color2);
+            color: var(--black-color);
+            font-size: 16px;
+            &:hover {
+                border-color: var(--theme-color3);
+                background-color: var(--theme-color3);
+                color: var(--title-color);
+            }
+        }
+    }
+}
+
+.team-card-content {
+    .box-title {
+        font-size: 28px;
+    }
+    .team-desig {
+        color: var(--body-color);
+        font-weight: 400;
+    }
+}
+
+.team-1-nth .col-xl-3 {
+    &:nth-child(1) .team-card {
+        margin-top: -147px;
+    }
+    &:nth-child(4) .team-card {
+        margin-top: -147px;
+    }
+}
+
+
+@include lg {
+    .team-1-nth .col-xl-3{
+        &:nth-child(1) .team-card {
+            margin-top: 0px;
+        }
+        &:nth-child(4) .team-card {
+            margin-top: 0px;
+        }
+    }
+
+}
+
+
+/* Team Card 2---------------------------------- */
+.team-card.style2 {
+    padding: 0;
+    background: transparent;
+    .img-wrap {
+        position: relative;
+        padding: 0;
+        margin-bottom: 0;
+        &:before {
+            display: none;
+        }        
+    }
+    .team-img {
+        margin-bottom: -70px;
+        border-radius: 0;
+        height: 326px;
+        position: relative;
+        z-index: 1;
+        background: transparent;
+        &:before {
+            content: '';
+            position: absolute;
+            background: $black-color;
+            border: 0;
+            inset: 60px 20px 0;
+            z-index: -1;
+            border-radius: 200px 200px 0 0;
+        }
+        img {
+            border-radius: 0;
+            transform: none;
+            width: auto;
+        }
+    }
+    .team-card-content {
+        padding: 64px 30px 52px;
+        transition: 0.4s;
+        position: relative;
+        z-index: 1;
+        margin-bottom: 20px;
+        .team-card-bg-shape {
+            position: absolute;
+            background-size: 100% 100%;
+            inset: 0;
+            z-index: -1;
+        }
+    }
+    .box-title {
+        font-size: 30px;
+        font-weight: 500;
+        a {
+            color: $white-color;
+            &:hover {
+                color: $theme-color;
+            }
+        }
+    }
+    .team-social-hover_btn {
+        bottom: 0;
+        border: 4px solid $black-color2;
+        line-height: 40px;
+    }
+    .th-social {
+        bottom: 0;
+        a {
+            border: 4px solid $black-color2;
+            line-height: 40px;
+            background: $title-color;
+            color: $white-color;
+            &:hover {
+                background: $theme-color;
+            }
+        }
+    }
+    &:hover {
+        .team-card-content {
+            border-top-color: $theme-color;
+        }
+    }
+    @include xl {
+        .box-title {
+            font-size: 24px;
+        }
+    }
+}
+
+/* Team Card 3---------------------------------- */
+
+
+/* Team Details ---------------------------------- */
+.about-card-img {
+    position: relative;
+    border-radius: 400px 400px 0 0;
+    background: var(--smoke-color2);
+    padding: 35px 130px 0 120px;
+    img {
+        width: 100%;
+    }
+    .th-social {
+        text-align: center;
+        margin-top: -20px;
+        a {
+            --icon-size: 40px;
+            border-radius: 50%;
+            background: $white-color;
+            box-shadow: 0px 10px 50px rgba(0, 0, 0, 0.08);
+            &:hover {
+                background: $theme-color;
+            }
+        }
+    }
+}
+
+.team-details-about-info {
+    .box-title {
+        font-size: 28px;
+        padding-bottom: 12px;
+        position: relative;
+        margin-bottom: 20px;
+        &:before {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            background: var(--th-border-color);
+            height: 1px;
+            width: 300px;
+        }
+    }
+    .contact-feature2 {
+        box-shadow: none;
+        padding: 0;
+        margin-bottom: 15px;
+        &:hover {
+            .box-icon {
+                background: var(--theme-color);
+            }
+        }
+        .box-icon {
+            width: 56px;
+            height: 56px;
+            line-height: 56px;
+            border-radius: 100%;
+            text-align: center;
+            color: var(--white-color);
+            background-color: var(--theme-color2);
+            transition: .4s;
+        }
+        .media-body {
+            .contact-feature_label {
+                font-size: 18px;
+            }
+            .contact-feature_link {
+                font-size: 18px;
+            }
+        }
+    }
+    .th-social a {
+        border-color: var(--title-color);
+        color: var(--title-color);
+        --icon-size: 34px;
+        font-size: 14px;
+        &:hover {
+            background-color: var(--theme-color2);
+            border-color: var(--theme-color2);
+            color: var(--theme-color4);
+        }
+    }
+}
+
+.experience-wrap {
+  margin-top: 30px;
+  .experience-title {
+        font-size: 38px;
+        text-align: center;
+        color: var(--theme-color2);
+        .number {
+            color: var(--theme-color);
+        }
+    }
+}
+
+.about-title {
+	font-size: 38px;
+}
+
+@include xs {
+    .about-card-img {
+        padding: 35px 70px 0 70px;
+    }
+    .signature-dishes-thumb {
+        text-align: center;
+    }
+}
+
+@include vxs {
+    .about-card-img {
+        padding: 25px 25px 0 25px;
+    }
+}

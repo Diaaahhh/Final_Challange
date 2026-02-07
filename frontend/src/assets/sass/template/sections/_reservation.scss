@@ -1,0 +1,94 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+// Reservation 01 ---------------------------------------
+.reservation-table-area {
+    border-radius: 60px;
+    position: relative;
+    z-index: 1;
+    &::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 604px;
+        height: 100%;
+        background-color: var(--theme-color2);
+        top: 0;
+        border-radius: 60px;
+        z-index: -1;
+    }
+}
+.res-2-shape {
+    height: 330px;
+    width: 330px;
+    position: absolute;
+    top: -81px;
+    right: -170px;
+    border: 50px solid var(--theme-color3);
+    transform: rotate(39deg);
+}
+
+.reservation-thumb {
+    img {
+        border-radius: 50px;
+    }
+}
+
+
+.res-form-wrap {
+    .form-group {
+        margin-bottom: 24px;
+        input {
+            border: 1px solid #A3BAAC;
+        }
+    }
+    .button-wrap {
+        margin-bottom: 30px;
+    }
+     .bottom-text {
+        margin: 0;
+        color: var(--theme-color2);
+    }
+}
+
+
+@include lg {
+    .reservation-table-area::before {
+        width: 450px;
+    }
+}
+
+@include md {
+    .reservation-table-area::before {
+        display: none;
+    }
+}
+
+@include sm {
+    .reservation-table-area::before {
+       display: none;
+    }
+}
+
+@include xs {
+    .reservation-table-area {
+        border-radius: 30px;
+    }
+    .reservation-thumb img {
+        border-radius: 25px;
+    }
+}
+
+// Reservation 01 ---------------------------------------
+.reservation-table-area.style-2::before {
+	display: none;
+}
+
+.res-form-wrap.style-2 select, 
+.res-form-wrap.style-2 .form-control, 
+.res-form-wrap.style-2 .form-select, 
+.res-form-wrap.style-2 textarea, 
+.res-form-wrap.style-2 input {
+	border: 1px solid #19522F42;
+    background-color: var(--whit-color);
+}

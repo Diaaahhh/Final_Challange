@@ -1,0 +1,144 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Counter 1 ---------------------------------- */
+.counter-card {
+    text-align: center;
+    &-wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        .divider {
+            height: 100px;
+            border: 2px solid $border-color4;
+            &:last-of-type {
+                display: none;
+            }
+        }
+    }
+    
+    .box-number {
+        font-size: 84px;
+        color: $white-color;
+        font-weight: 600;
+        margin-bottom: 2px;
+        margin-top: -0.3em;
+        .counter-number {
+            color: $white-color;
+        }
+        .counter-sign {
+            font-weight: 300;            
+        }
+    }
+    .box-text {
+        font-weight: 400;
+        color: $light-color;
+    }
+}
+@include lg {
+    .counter-card {
+        &-wrap {
+            .divider {
+                height: 90px;
+                border: 1px solid $black-color6;
+            }
+        }
+        .box-number {
+            font-size: 60px;
+        }
+    }
+}
+@include md {
+    .counter-card {
+        .box-number {
+            font-size: 40px;
+        }
+    }
+}
+@include sm {
+    .counter-card {
+        flex: 50%;
+        padding-left: 10px;
+        padding-right: 10px;
+        &-wrap {
+            flex-wrap: wrap;
+            position: relative;
+            .divider {
+                display: none;
+            }
+        }        
+        &:nth-child(1),
+        &:nth-child(3) {
+            padding-bottom: 50px;
+        }
+    }
+}
+@include vxs {
+    .counter-card .box-text {
+        font-size: 14px;
+    }
+}
+
+/* Counter 2 ---------------------------------- */
+.counter-card-wrap2 {
+    border-bottom: 1px solid $border-color;
+    border-left: 1px solid $border-color;
+    display: flex;
+    flex-wrap: wrap;
+    @include md {
+        border-bottom: 0;
+    }
+}
+.counter-card.style2 {
+    text-align: center;
+    padding: 106px 25px;
+    width: 25%;
+    border-right: 1px solid $border-color;
+    .box-number {
+        color: $title-color;
+        font-size: 80px;
+        .counter-number {
+            color: $title-color;
+        }
+    }
+    .box-text {
+        color: $body-color;
+        font-size: 18px;
+        font-family: $title-font;
+    }
+    @include lg {
+        .box-number {
+            font-size: 60px;
+        }
+    }
+    @include md {
+        width: 50%;
+        border-bottom: 1px solid $border-color;
+        padding: 80px 25px;
+        .box-number {
+            font-size: 50px;
+        }
+    }
+    @include sm {
+        padding: 60px 25px;
+        .box-number {
+            font-size: 40px;
+        }
+    }
+    @include xs {
+        width: 100%;
+        flex: auto;
+    }
+} 
+
+/* Counter 3 ---------------------------------- */
+.counter-card-wrap3 {
+    border-top: 1px solid $border-color;
+    border-bottom: 1px solid $border-color;
+    border-left: 1px solid $border-color;
+    display: flex;
+    flex-wrap: wrap;
+    @include md {
+        border-bottom: 0;
+    }
+}

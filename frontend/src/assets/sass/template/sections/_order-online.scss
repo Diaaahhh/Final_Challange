@@ -1,0 +1,118 @@
+@use 'base/variable' as *;
+@use 'base/mixin' as *;
+
+/* Order Online 1 ---------------------------------- */
+.order-online-container-wrap {
+  padding: 60px 100px;
+  margin-left: -100px;
+  margin-right: -100px;
+  position: relative;
+  overflow: hidden;
+  &:before {
+    content: "";
+    position: absolute;
+    height: 300px;
+    width: 60%;
+    background: var(--theme-color4);
+    border-radius: 120px;
+    left: 0;
+    z-index: -1;
+    top: 32px;
+}
+&::after {
+    content: "";
+    position: absolute;
+    height: 300px;
+    width: 70%;
+    background: var(--theme-color4);
+    border-radius: 120px;
+    right: 5px;
+    z-index: -2;
+    bottom: 22px;
+    }
+}
+
+.order-bg-thumb {
+	position: absolute;
+	inset: 0;
+	background: var(--title-color);
+	z-index: -1;
+}
+
+.order-shape-long {
+	position: absolute;
+	bottom: 8px;
+	right: 0;
+    z-index: -1;
+}
+
+.delivery-item-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 24px;
+  .item {
+        border: 3px solid var(--theme-color3);
+        border-radius: 10px;
+        padding: 24px;
+        border-top: 1px solid var(--theme-color3);
+        border-left: 1px solid var(--theme-color3);
+        .box-title {
+            color: var(--white-color);
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .box-text {
+            color: var(--white-color);
+        }
+        &:first-child {
+            border-color: var(--theme-color2);
+        }
+        &.order {
+            border: 0;
+            padding: 0;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            .th-btn {
+                text-transform: uppercase;
+                padding: 26px 60px;
+                &:hover {
+                    background: var(--theme-color2);
+                }
+            }
+        }
+    }
+}
+
+
+@include lg {
+    .order-online-container-wrap {
+        padding: 145px 100px;
+        overflow: hidden;
+    }
+    .order-shape-long {
+        position: absolute;
+        bottom: 12px;
+        right: -48px;
+        z-index: -1;
+    }
+    .order-online-container-wrap::before {
+        width: 88%;
+    }
+    .order-online-container-wrap::after {
+        width: 90%;
+        bottom: 5px;
+    }
+}
+
+@include xs {
+    .delivery-item-wrap {
+        grid-template-columns: 1fr;
+    }
+    .order-online-container-wrap::before {
+        width: 101%;
+        top: 10px;
+    }
+}
