@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useCart } from '../Cart/CartContext'; 
+import api from '../../api';
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export default function Checkout() {
         try {
           const parsedUser = JSON.parse(storedUser);
           if (parsedUser.id) {
-            const res = await axios.get(`http://localhost:8081/api/user/${parsedUser.id}`);
+            const res = await api.get(`/user/${parsedUser.id}`);
             const userData = res.data;
             setFormData({
               cust_name: userData.name || '',
@@ -85,7 +85,7 @@ export default function Checkout() {
     };
 
     try {
-        const response = await axios.post("http://localhost:8081/api/proxy/place-order", orderPayload);
+        const response = await api.post("/api/proxy/place-order", orderPayload);
         
         // Flexible success check
         if(response.data.success || response.data.status === 200 || response.data.customer_id) {

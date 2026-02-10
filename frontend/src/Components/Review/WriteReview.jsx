@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { FaStar } from "react-icons/fa"; 
+import api from "../../api";
 
 export default function WriteReview() {
   const [rating, setRating] = useState(0);
@@ -18,7 +18,7 @@ export default function WriteReview() {
     }
 
     try {
-      await axios.post("http://localhost:8081/api/write-review", {
+      await api.post("/write-review", {
         name,
         review_text: reviewText,
         rating,

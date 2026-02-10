@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
 import "cally"; 
 import {
   FaCalendarAlt,
@@ -11,6 +10,7 @@ import {
   FaPen,
   FaCheckCircle,
 } from "react-icons/fa";
+import api from "../../api";
 
 export default function Reservation() {
   const [formData, setFormData] = useState({
@@ -65,7 +65,7 @@ export default function Reservation() {
     }
     setLoading(true);
     try {
-      await axios.post("http://localhost:8081/api/reservation/create", formData);
+      await api.post("/reservation/create", formData);
       setSuccess(true);
       setFormData({
         name: "", phone: "", guest_number: "", event_name: "Others..",

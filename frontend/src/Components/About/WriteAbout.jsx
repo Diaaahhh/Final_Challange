@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { FaPen, FaImage, FaCloudUploadAlt, FaCheckCircle } from "react-icons/fa";
-
+import api from '../../api'
 export default function WriteAbout() {
   const [heading, setHeading] = useState("");
   const [text, setText] = useState("");
@@ -33,7 +32,7 @@ export default function WriteAbout() {
     }
 
     try {
-      await axios.post("http://localhost:8081/api/about/create", formData, {
+      await api.post("/about/create", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setSuccess(true);

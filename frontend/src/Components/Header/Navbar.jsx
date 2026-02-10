@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios'; 
+// import {IMAGE_BASE_URL} from '../../config'
 import { 
   FaMapMarkerAlt, FaEnvelopeOpen, FaClock, FaPhoneAlt, 
   FaFacebookF, FaTwitter, FaWhatsapp, FaBars, FaShoppingCart 
 } from 'react-icons/fa'; 
+import api from '../../api';
+import { IMAGE_BASE_URL } from '../../config';
 
 export default function Navbar() {
   const [isSticky, setIsSticky] = useState(false);
@@ -32,7 +34,7 @@ export default function Navbar() {
 
       // Fetch the latest user data (including photoUrl) from the database
       if (parsedUser.id) {
-          axios.get(`http://localhost:8081/api/user/${parsedUser.id}`)
+          api.get(`/user/${parsedUser.id}`)
             .then(res => {
                 const freshUserData = res.data;
                 setUser(prev => ({ ...prev, ...freshUserData }));
@@ -54,7 +56,7 @@ export default function Navbar() {
   // Helper to get Image URL (Backend Port 8081)
   const getPhotoUrl = (url) => {
     if (!url) return "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-    return `http://localhost:8081${url}`;
+    return `${IMAGE_BASE_URL}${url}`;
   };
 
   return (

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { FaUtensils, FaCoffee, FaImage, FaPlus, FaMinus } from 'react-icons/fa'; 
 import { useCart } from '../Cart/CartContext';
+import api from "../../api";
+import { IMAGE_BASE_URL } from "../../config";
 
-const IMAGE_BASE_URL = "http://localhost:8081";
+
 
 export default function MenuUser() {
   const [categories, setCategories] = useState([]);
@@ -19,7 +20,7 @@ export default function MenuUser() {
   useEffect(() => {
     const fetchBranches = async () => {
         try {
-            const branchRes = await axios.get("http://localhost:8081/api/menu-user/branches");
+            const branchRes = await api.get("/menu-user/branches");
             setBranches(branchRes.data);
             if (branchRes.data.length > 0) {
                 setSelectedBranch(branchRes.data[0].branch_id); 
@@ -35,7 +36,7 @@ export default function MenuUser() {
     if (!selectedBranch) return;
     const fetchCategories = async () => {
         try {
-            const res = await axios.get(`http://localhost:8081/api/menu-user/categories/${selectedBranch}`);
+            const res = await api.get(`/menu-user/categories/${selectedBranch}`);
             setCategories(res.data);
             if (res.data.length > 0) {
                 handleCategoryClick(res.data[0]);
@@ -55,7 +56,7 @@ export default function MenuUser() {
     setActiveCategory(category);
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8081/api/menu-user/items/${selectedBranch}/${category.id}`);
+      const res = await api.get(`/menu-user/items/${selectedBranch}/${category.id}`);
       setMenuItems(res.data);
     } catch (err) {
       console.error("Error loading items:", err);

@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-// Optional: Import a default image if you have one
-// import DefaultHeroBG from '../../assets/img/HeroBG.png'; 
+import api from '../../api';
+import { IMAGE_BASE_URL } from '../../config'; // 1. Import the config
 
 export default function Hero() {
   const [heroData, setHeroData] = useState(null);
 
   useEffect(() => {
-    axios.get('http://localhost:8081/api/get-hero')
+    api.get('/get-hero')
       .then(res => {
         if(res.data) {
           setHeroData(res.data);
@@ -16,9 +15,9 @@ export default function Hero() {
       .catch(err => console.log(err));
   }, []);
 
-  // Logic: Use DB image if available, otherwise return null
+  // 2. FIX: Use IMAGE_BASE_URL + '/uploads/'
   const bgImage = heroData && heroData.image 
-    ? `http://localhost:8081/uploads/${heroData.image}`
+    ? `${IMAGE_BASE_URL}/uploads/${heroData.image}`
     : null; 
 
   return (
@@ -28,7 +27,7 @@ export default function Hero() {
       style={{ 
         position: 'relative', 
         width: '100%', 
-        minHeight: '100vh', // Full screen height
+        minHeight: '100vh', 
         overflow: 'hidden' 
       }}
     >
@@ -53,7 +52,7 @@ export default function Hero() {
               style={{ 
                 width: '100%', 
                 height: '100%', 
-                objectFit: 'cover',   // CRITICAL: Ensures image crops nicely on mobile
+                objectFit: 'cover',   
                 objectPosition: 'center' 
               }} 
             />
@@ -65,7 +64,7 @@ export default function Hero() {
                     left: 0, 
                     width: '100%', 
                     height: '100%', 
-                    // backgroundColor: 'rgba(0,0,0,0.6)' // Darkens image for better text readability
+                    backgroundColor: 'rgba(0,0,0,0.4)' // Added slight darkness for readability
                 }}
             ></div>
         </div>
@@ -81,7 +80,7 @@ export default function Hero() {
         className="position-relative text-center text-white px-4" 
         style={{ 
             zIndex: 1, 
-            maxWidth: '1200px', // Prevents text from stretching too wide on huge screens
+            maxWidth: '1200px', 
             width: '100%' 
         }}
       >
@@ -89,7 +88,6 @@ export default function Hero() {
             <h1 
                 className="fw-bold" 
                 style={{ 
-                    // clamp(min, preferred, max) -> Makes font fluidly responsive
                     fontSize: 'clamp(2.5rem, 6vw, 5rem)', 
                     textShadow: '2px 2px 8px rgba(0,0,0,0.7)',
                     lineHeight: '1.2'

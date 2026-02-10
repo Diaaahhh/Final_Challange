@@ -1,38 +1,52 @@
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const db = require('./db'); // Import the db connection
+const db = require('./db'); 
 const axios = require('axios');
+
 const app = express();
 
-// CORRECTION 7: Update CORS to allow credentials
+// --- CRASH REPORTER (Keeps your site alive & logs errors) ---
+const logFile = path.join(__dirname, 'crash_log.txt');
+function writeLog(err) {
+    const timestamp = new Date().toISOString();
+    const msg = `\n[${timestamp}] CRASH REPORT:\nError: ${err.message}\nStack: ${err.stack}\n----------------------\n`;
+    try { fs.appendFileSync(logFile, msg); } catch (e) {}
+}
+process.on('uncaughtException', (err) => { writeLog(err); process.exit(1); });
+process.on('unhandledRejection', (reason) => { writeLog(reason instanceof Error ? reason : new Error(JSON.stringify(reason))); });
+// -----------------------------------------------------------
+
+// 1. MIDDLEWARE
 app.use(cors({
-  origin: "http://localhost:5173", // Your frontend URL
-  credentials: true
+    origin: [
+        "https://demo.khabartable.com",      // Your Live Frontend
+        "https://khabartable.com",           // Your Main Frontend (if different)
+        "http://localhost:5173",             // <--- ALLOW VITE LOCALHOST
+        "http://localhost:3000"              // (Optional) Allow other local ports
+    ], 
+    credentials: true
 }));
-
 app.use(express.json());
+app.use(express.static('public')); // Serve images
 
-// SIGNUP API
+// 2. HEALTH CHECK (Keep this so you can always verify the server is up)
+app.get('/', (req, res) => {
+    res.send('SERVER IS WORKING! (API Ready)');
+});
+
+// 3. AUTH ROUTES (Login/Signup)
 app.post('/signup', async (req, res) => {
     const { name, email, password } = req.body;
-
-    // 1. Check if Email already exists
     const checkEmailQuery = "SELECT * FROM users WHERE email = ?";
-
     db.query(checkEmailQuery, [email], async (err, data) => {
         if (err) return res.status(500).json({ error: "Database error" });
+        if (data.length > 0) return res.status(409).json({ message: "Email already exists" });
 
-        if (data.length > 0) {
-            // Email already exists
-            return res.status(409).json({ message: "Email already exists" });
-        }
-
-        // 2. Hash the password for security
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-
-        // 3. Insert User (Role defaults to 1 in DB, so we don't need to send it)
         const insertQuery = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
 
         db.query(insertQuery, [name, email, hashedPassword], (err, data) => {
@@ -42,77 +56,40 @@ app.post('/signup', async (req, res) => {
     });
 });
 
-
-// LOGIN API
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
-
     const sql = "SELECT * FROM users WHERE email = ?";
-
     db.query(sql, [email], async (err, data) => {
         if (err) return res.status(500).json({ error: "Database error" });
+        if (data.length === 0) return res.status(404).json({ message: "User not found" });
 
-        // 1. Check if email exists
-        if (data.length === 0) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        // 2. Compare Password (hashed)
         const user = data[0];
         const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
-        if (!isMatch) {
-            return res.status(401).json({ message: "Invalid credentials" });
-        }
-
-        // 3. Success - Send back user info (excluding password)
-        const { password: _, ...userData } = user; // Remove password from response
+        const { password: _, ...userData } = user;
         return res.status(200).json({ message: "Login successful", user: userData });
     });
 });
 
-const createMenuRoutes = require('./routes/create_menu'); 
-app.use('/api', createMenuRoutes);
-
+// 4. API ROUTES
+// Ensure all these files exist in your 'routes' folder
+app.use('/api', require('./routes/create_menu'));
 app.use('/api/menu', require('./routes/menu_list'));
-
-const menuUserRoutes = require('./routes/menu_user');
-
-const reservationRoutes = require('./routes/reservation');
-app.use('/api/reservation', reservationRoutes);
-
-
-// In server.js
-app.use(express.static('public')); // To serve images
-
-const aboutRoutes = require('./routes/write_about');
-app.use('/api/about', aboutRoutes);
-
-app.use('/api/menu-user', menuUserRoutes);
-
+app.use('/api/menu-user', require('./routes/menu_user'));
+app.use('/api/reservation', require('./routes/reservation'));
+app.use('/api/about', require('./routes/write_about'));
 app.use('/api/view-about', require('./routes/view_about'));
+app.use('/api', require('./routes/write_review'));
+app.use('/api', require('./routes/view_review'));
+app.use('/api', require('./routes/upload_hero'));
+app.use('/api', require('./routes/Profile')); 
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/branches', require('./routes/branches'));
+app.use('/api/proxy', require('./routes/checkout'));
 
-const writeReviewRoute = require('./routes/write_review');
-app.use('/api', writeReviewRoute);
-
-const viewReviewRoute = require('./routes/view_review');
-app.use('/api', viewReviewRoute);
-
-const uploadHeroRoute = require('./routes/upload_hero');
-app.use('/api', uploadHeroRoute);
-
-const profileRoutes = require('./routes/Profile'); 
-app.use('/api', profileRoutes);
-
-const settingsRoute = require('./routes/settings');
-app.use('/api/settings', settingsRoute);
-
-const branchesRoutes = require('./routes/branches'); 
-app.use('/api/branches', branchesRoutes); 
-
-const checkoutRoutes = require('./routes/checkout'); 
-app.use('/api/proxy', checkoutRoutes); 
-
-app.listen(8081, () => {
-    console.log("Listening on port 8081");
+// 5. START SERVER
+const PORT = process.env.PORT || 3000; 
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });

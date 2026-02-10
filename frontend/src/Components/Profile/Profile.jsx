@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaBuilding, FaSave, FaCity, FaMap, FaCamera } from 'react-icons/fa';
+import api from '../../api';
+import { IMAGE_BASE_URL } from '../../config';
+
 
 const Profile = () => {
   // --- STATE ---
@@ -35,8 +37,8 @@ const Profile = () => {
         }
 
         const [userRes, districtRes] = await Promise.all([
-          axios.get(`http://localhost:8081/api/user/${localUser.id}`),
-          axios.get('http://localhost:8081/api/districts')
+          api.get(`/user/${localUser.id}`),
+          api.get('/districts')
         ]);
 
         const userData = userRes.data;
@@ -59,11 +61,11 @@ const Profile = () => {
 
         // Set Preview Image if exists
         if(userData.photoUrl) {
-            setPreviewImage(`http://localhost:8081${userData.photoUrl}`);
+            setPreviewImage(`${ IMAGE_BASE_URL }${userData.photoUrl}`);
         }
 
         if (userData.district_id) {
-            const thanaRes = await axios.get(`http://localhost:8081/api/thanas/${userData.district_id}`);
+            const thanaRes = await api.get(`/thanas/${userData.district_id}`);
             setThanas(thanaRes.data);
         }
 
@@ -109,7 +111,7 @@ const Profile = () => {
     setThanas([]); 
     if (newDistrictId) {
         try {
-            const res = await axios.get(`http://localhost:8081/api/thanas/${newDistrictId}`);
+            const res = await api.get(`/thanas/${newDistrictId}`);
             setThanas(res.data);
         } catch (error) { console.error(error); }
     }
@@ -136,7 +138,7 @@ const Profile = () => {
             dataPayload.append('photo', formData.photo);
         }
 
-        const res = await axios.put('http://localhost:8081/api/user/update', dataPayload, {
+        const res = await api.put('/user/update', dataPayload, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         

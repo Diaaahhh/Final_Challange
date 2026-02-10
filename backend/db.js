@@ -1,18 +1,23 @@
 const mysql = require('mysql2');
 
-const db = mysql.createConnection({
+// Create the connection configuration
+const dbConfig = {
     host: "localhost",
-    user: "root",       // Your MySQL username
-    password: "",       // Your MySQL password
-    database: "restaurant" // Your database name
-});
+    user: "khabarta_pos",      // Ensure this matches cPanel > MySQL Databases
+    password: "khabarta_pos",  // Ensure this matches the user password
+    database: "khabarta_pos"   // Ensure this matches cPanel > MySQL Databases
+};
 
+const db = mysql.createConnection(dbConfig);
+
+// Connect and handle errors gracefully
 db.connect((err) => {
     if (err) {
-        console.error('Error connecting to MySQL:', err);
-    } else {
-        console.log('Connected to MySQL Database');
+        console.error('❌ Database connection failed: ' + err.stack);
+        // We do NOT throw an error here, so the server can still start
+        return;
     }
+    console.log('✅ Connected to MySQL Database as id ' + db.threadId);
 });
 
 module.exports = db;

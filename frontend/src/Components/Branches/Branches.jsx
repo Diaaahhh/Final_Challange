@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FaStore, FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaInfoCircle } from 'react-icons/fa';
+import api from '../../api';
 
 export default function Branches() {
   const [branches, setBranches] = useState([]);
@@ -8,7 +8,7 @@ export default function Branches() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    axios.get('http://localhost:8081/api/branches')
+    api.get('/branches')
       .then(res => {
         const payload = res.data;
         console.log("Full API Payload:", payload); // Debugging

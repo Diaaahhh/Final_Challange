@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaUtensils, FaList, FaEye, FaFilter, FaCamera, FaCloudUploadAlt, FaCheck, FaTimes } from "react-icons/fa";
+import api from "../../api";
+import { IMAGE_BASE_URL } from "../../config"; // 1. Imported Config
 
 export default function MenuList() {
   const [menuItems, setMenuItems] = useState([]);
@@ -26,9 +28,9 @@ export default function MenuList() {
       setError("");
 
       const [menuRes, branchRes, catRes] = await Promise.all([
-        axios.get("http://localhost:8081/api/menu/list"),
-        axios.get("http://localhost:8081/api/menu/branches"),
-        axios.get("http://localhost:8081/api/menu/categories") // New endpoint
+        api.get("/menu/list"),
+        api.get("/menu/branches"),
+        api.get("/menu/categories") // New endpoint
       ]);
 
       // Set Menu Items
@@ -197,10 +199,10 @@ const filteredMenuItems = selectedBranch === "All"
                       </td>
 
                       <td className="p-4">
-                         <ImageUploadCell 
-                            item={item} 
-                            backendUrl="http://localhost:8081" 
-                         />
+                          <ImageUploadCell 
+                             item={item} 
+                             backendUrl={IMAGE_BASE_URL} /* 2. Fixed Prop */
+                          />
                       </td>
 
                       <td className="p-4 text-right">
@@ -248,7 +250,7 @@ const filteredMenuItems = selectedBranch === "All"
               {currentItem.m_image && (
                  <div className="w-full h-48 bg-black/50 rounded-lg mb-4 overflow-hidden border border-white/10">
                     <img 
-                        src={`http://localhost:8081${currentItem.m_image}`} 
+                        src={`${IMAGE_BASE_URL}${currentItem.m_image}`} /* 3. Fixed Image Source */
                         alt="Menu" 
                         className="w-full h-full object-cover"
                     />

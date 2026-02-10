@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import { IMAGE_BASE_URL } from '../../config';
 export default function Signup() {
   const navigate = useNavigate();
   
@@ -28,7 +28,7 @@ export default function Signup() {
 
     try {
       // API CALL
-      const res = await axios.post('http://localhost:8081/signup', formData);
+      const res = await axios.post('${ IMAGE_BASE_URL }/signup', formData);
       
       if(res.status === 200) {
         toast.success("Account created successfully!", {

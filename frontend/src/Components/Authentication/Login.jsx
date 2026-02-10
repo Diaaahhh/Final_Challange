@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import {IMAGE_BASE_URL} from "../../config"
 export default function Login() {
   const navigate = useNavigate();
 
@@ -25,7 +25,7 @@ export default function Login() {
     }
 
     try {
-      const res = await axios.post('http://localhost:8081/login', formData);
+      const res = await axios.post('${IMAGE_BASE_URL}/login', formData);
 
       if (res.status === 200) {
         // 1. SAVE USER LOGIN STATUS

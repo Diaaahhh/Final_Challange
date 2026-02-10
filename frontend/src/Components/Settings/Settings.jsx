@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FaBuilding, FaSave, FaGlobe } from 'react-icons/fa';
+import api from '../../api';
 
 export default function Settings() {
   const [companyCode, setCompanyCode] = useState('');
@@ -9,7 +9,7 @@ export default function Settings() {
 
   // 1. Fetch existing code on load
   useEffect(() => {
-    axios.get('http://localhost:8081/api/settings')
+    api.get('/settings')
       .then(res => {
         if(res.data && res.data.company_code) {
             setCompanyCode(res.data.company_code);
@@ -28,7 +28,7 @@ export default function Settings() {
     setSaving(true);
 
     try {
-      await axios.post('http://localhost:8081/api/settings/update', { company_code: companyCode });
+      await api.post('/settings/update', { company_code: companyCode });
       alert("Company Code saved successfully!");
     } catch (error) {
       console.error("Error saving settings", error);

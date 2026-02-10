@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import {
   FaTrash,
   FaCalendarAlt,
@@ -12,6 +11,7 @@ import {
   FaEdit,
   FaSave,
 } from "react-icons/fa";
+import api from "../../api";
 
 export default function ReservationView() {
   const [reservations, setReservations] = useState([]);
@@ -41,7 +41,7 @@ export default function ReservationView() {
 
   const fetchReservations = async () => {
     try {
-      const res = await axios.get("http://localhost:8081/api/reservation");
+      const res = await api.get("/reservation");
       setReservations(res.data);
       setLoading(false);
     } catch (err) {
@@ -85,8 +85,8 @@ export default function ReservationView() {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(
-        `http://localhost:8081/api/reservation/update/${editFormData.id}`,
+      await api.put(
+        `/reservation/update/${editFormData.id}`,
         editFormData
       );
 
@@ -108,7 +108,7 @@ export default function ReservationView() {
     if (!window.confirm("Are you sure you want to delete this reservation?"))
       return;
     try {
-      await axios.delete(`http://localhost:8081/api/reservation/delete/${id}`);
+      await api.delete(`/reservation/delete/${id}`);
       setReservations((prev) => prev.filter((item) => item.id !== id));
       alert("Reservation deleted successfully");
     } catch (err) {

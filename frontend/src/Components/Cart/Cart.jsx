@@ -1,8 +1,9 @@
 import React from 'react';
 import { useCart } from './CartContext';
 import { FaTrashAlt, FaPlus, FaMinus } from 'react-icons/fa';
+import { IMAGE_BASE_URL } from '../../config';
 
-const IMAGE_BASE_URL = "http://localhost:8081";
+// const IMAGE_BASE_URL = "https://backend.khabartable.com";
 
 export default function Cart() {
   const { cartItems, handleAddToCart, removeFromCart, cartTotal } = useCart();

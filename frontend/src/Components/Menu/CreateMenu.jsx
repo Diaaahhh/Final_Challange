@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { FaUtensils, FaList, FaEdit, FaCheckCircle, FaExclamationTriangle, FaPlus, FaSave } from 'react-icons/fa';
+import api from '../../api';
 
 export default function CreateMenu() {
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function CreateMenu() {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get('http://localhost:8081/api/categories');
+      const res = await api.get('/categories');
       setCategories(res.data);
     } catch (err) {
       console.error("Failed to fetch categories", err);
@@ -44,7 +44,7 @@ export default function CreateMenu() {
     if (newCategoryName.trim() === "") return;
 
     try {
-      const res = await axios.post('http://localhost:8081/api/categories/add', {
+      const res = await api.post('/categories/add', {
         name: newCategoryName
       });
 
@@ -84,7 +84,7 @@ export default function CreateMenu() {
 
       if(!payload.category_code) throw new Error("Please select a category first.");
 
-      await axios.post('http://localhost:8081/api/menu/add', payload);
+      await api.post('/menu/add', payload);
 
       setStatus({ type: 'success', message: 'Menu item added successfully!' });
       setSingleForm({ name: '', categoryCode: '', price: '', description: '', image: null });

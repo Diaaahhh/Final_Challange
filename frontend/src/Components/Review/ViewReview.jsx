@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { FaStar, FaTimes, FaEye } from "react-icons/fa";
+import api from "../../api";
 
 export default function ViewReview() {
   const [reviews, setReviews] = useState([]);
@@ -12,7 +12,7 @@ export default function ViewReview() {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const res = await axios.get("http://localhost:8081/api/view-reviews");
+        const res = await api.get("/view-reviews");
         setReviews(res.data);
       } catch (err) {
         console.error("Error fetching reviews:", err);

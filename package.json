@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "multer": "^2.0.2",
-    "react-datepicker": "^9.1.0"
-  }
-}

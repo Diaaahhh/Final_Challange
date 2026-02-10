@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
 import { Link } from "react-router-dom"; // Import Link for navigation
 import { FaUtensils, FaQuoteLeft } from "react-icons/fa";
-
+import api from '../../api'
+import { IMAGE_BASE_URL } from "../../config";
 export default function ViewAbout({ isHome = false }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -10,7 +10,7 @@ export default function ViewAbout({ isHome = false }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get("http://localhost:8081/api/view-about");
+        const res = await api.get("/view-about");
         setData(res.data);
       } catch (err) {
         console.error("Error fetching about content:", err);
@@ -31,7 +31,7 @@ export default function ViewAbout({ isHome = false }) {
   }
 
   const imageUrl = data?.image 
-    ? `http://localhost:8081/uploads/${data.image}` 
+    ? `${ IMAGE_BASE_URL }/uploads/${data.image}` 
     : "https://via.placeholder.com/600x400?text=Restaurant+Ambience";
 
   // --- LOGIC: Truncate text ONLY if isHome is true ---
