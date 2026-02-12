@@ -3,7 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+// CHANGE 1: Import IMAGE_BASE_URL
 import { IMAGE_BASE_URL } from '../../config';
+
 export default function Signup() {
   const navigate = useNavigate();
   
@@ -20,15 +22,14 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Basic Validation
     if(!formData.name || !formData.email || !formData.password) {
         toast.warning("Please fill in all fields", { theme: "dark" });
         return;
     }
 
     try {
-      // API CALL
-      const res = await axios.post('${ IMAGE_BASE_URL }/signup', formData);
+      // CHANGE 2: Use IMAGE_BASE_URL (Root) + /signup
+      const res = await axios.post(`${IMAGE_BASE_URL}/signup`, formData);
       
       if(res.status === 200) {
         toast.success("Account created successfully!", {
@@ -36,19 +37,16 @@ export default function Signup() {
             position: "top-center"
         });
         
-        // Wait 2 seconds for toast to show, then navigate
         setTimeout(() => {
             navigate('/login');
         }, 2000);
       }
       
     } catch (err) {
-      // Handle Errors
       if (err.response && err.response.status === 409) {
-        // 409 is the code we set in backend for Duplicate Email
         toast.error("Email already exists! Please login.", {
             theme: "dark",
-            style: { border: "1px solid #ff4d4d" } // Red border for emphasis
+            style: { border: "1px solid #ff4d4d" }
         });
       } else {
         console.log(err);
@@ -58,20 +56,12 @@ export default function Signup() {
   };
 
   return (
-    /* 1. MAIN BACKGROUND */
     <div className="flex items-center justify-center min-h-screen bg-[#0E1014] relative overflow-hidden font-['Inter']">
-      
-      {/* Toast Container (Required for toasts to show) */}
       <ToastContainer />
-
-      {/* Background decoration */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-[#C59D5F]/10 rounded-full blur-[100px]"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-[#C59D5F]/5 rounded-full blur-[100px]"></div>
 
-      {/* 2. CARD CONTAINER */}
       <div className="w-full max-w-md p-8 bg-[#1F2125] border border-white/10 rounded-[4px] shadow-2xl relative z-10 mx-4">
-        
-        {/* HEADER */}
         <div className="text-center mb-8">
           <h2 className="text-4xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider mb-2">
             Create <span className="text-[#C59D5F]">Account</span>
@@ -80,68 +70,35 @@ export default function Signup() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* Name Input */}
           <div className="form-control">
             <label className="label pl-0">
               <span className="label-text font-['Barlow_Condensed'] uppercase tracking-wide text-[#C59D5F] font-bold">Full Name</span>
             </label>
-            <input 
-              type="text" 
-              name="name"
-              placeholder="John Doe" 
-              className="input w-full bg-[#0E1014] border border-white/10 text-white focus:outline-none focus:border-[#C59D5F] rounded-[4px] h-12 transition-colors placeholder:text-gray-600" 
-              onChange={handleChange}
-            />
+            <input type="text" name="name" placeholder="Enter your name" className="input w-full bg-[#0E1014] border border-white/10 text-white focus:outline-none focus:border-[#C59D5F] rounded-[4px] h-12 transition-colors placeholder:text-gray-600" onChange={handleChange} />
           </div>
 
-          {/* Email Input */}
           <div className="form-control">
             <label className="label pl-0">
               <span className="label-text font-['Barlow_Condensed'] uppercase tracking-wide text-[#C59D5F] font-bold">Email Address</span>
             </label>
-            <input 
-              type="email" 
-              name="email"
-              placeholder="email@example.com" 
-              className="input w-full bg-[#0E1014] border border-white/10 text-white focus:outline-none focus:border-[#C59D5F] rounded-[4px] h-12 transition-colors placeholder:text-gray-600" 
-              onChange={handleChange}
-            />
+            <input type="email" name="email" placeholder="Enter your email address" className="input w-full bg-[#0E1014] border border-white/10 text-white focus:outline-none focus:border-[#C59D5F] rounded-[4px] h-12 transition-colors placeholder:text-gray-600" onChange={handleChange} />
           </div>
 
-          {/* Password Input */}
           <div className="form-control">
             <label className="label pl-0">
               <span className="label-text font-['Barlow_Condensed'] uppercase tracking-wide text-[#C59D5F] font-bold">Password</span>
             </label>
-            <input 
-              type="password" 
-              name="password"
-              placeholder="••••••••" 
-              className="input w-full bg-[#0E1014] border border-white/10 text-white focus:outline-none focus:border-[#C59D5F] rounded-[4px] h-12 transition-colors placeholder:text-gray-600" 
-              onChange={handleChange}
-            />
+            <input type="password" name="password" placeholder="••••••••" className="input w-full bg-[#0E1014] border border-white/10 text-white focus:outline-none focus:border-[#C59D5F] rounded-[4px] h-12 transition-colors placeholder:text-gray-600" onChange={handleChange} />
           </div>
 
-          {/* Submit Button */}
           <div className="mt-8">
-            <button className="btn w-full bg-[#C59D5F] hover:bg-white hover:text-[#0E1014] text-white border-none font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-lg rounded-[4px] transition-all duration-300">
-              Sign Up
-            </button>
+            <button className="btn w-full bg-[#C59D5F] hover:bg-white hover:text-[#0E1014] text-white border-none font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-lg rounded-[4px] transition-all duration-300">Sign Up</button>
           </div>
-
         </form>
 
-        {/* Footer / Login Link */}
         <div className="mt-8 text-center pt-6 border-t border-white/10">
-          <p className="text-gray-400 text-sm">
-            Already have an account?{' '}
-            <Link to="/login" className="text-[#C59D5F] font-bold hover:text-white transition-colors uppercase font-['Barlow_Condensed'] tracking-wide ml-1">
-              Login Here
-            </Link>
-          </p>
+          <p className="text-gray-400 text-sm">Already have an account? <Link to="/login" className="text-[#C59D5F] font-bold hover:text-white transition-colors uppercase font-['Barlow_Condensed'] tracking-wide ml-1">Login Here</Link></p>
         </div>
-
       </div>
     </div>
   );

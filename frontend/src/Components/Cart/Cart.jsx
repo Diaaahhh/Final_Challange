@@ -13,7 +13,7 @@ export default function Cart() {
   const grandTotal = cartTotal + SHIPPING_COST;
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="container mx-auto p-4 md:p-8 bg-white min-h-screen"> 
       {cartItems.length === 0 ? (
         <div className="text-center py-20 text-gray-500 text-xl">
             Your cart is empty.
