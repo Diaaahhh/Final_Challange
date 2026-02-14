@@ -57,7 +57,7 @@ export default function Hero() {
               }} 
             />
             {/* Dark Overlay */}
-            <div 
+            {/* <div 
                 style={{ 
                     position: 'absolute', 
                     top: 0, 
@@ -66,7 +66,7 @@ export default function Hero() {
                     height: '100%', 
                     backgroundColor: 'rgba(0,0,0,0.4)' // Added slight darkness for readability
                 }}
-            ></div>
+            ></div> */}
         </div>
       ) : (
         // Fallback gray background

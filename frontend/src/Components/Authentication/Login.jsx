@@ -38,6 +38,7 @@ export default function Login() {
 
       if (res.status === 200 && res.data.user) {
         localStorage.setItem('user', JSON.stringify(res.data.user));
+        sessionStorage.setItem('justLoggedIn', 'true');
 
         toast.success("Welcome back!", {
             theme: "dark",

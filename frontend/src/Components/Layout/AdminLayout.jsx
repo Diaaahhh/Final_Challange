@@ -6,7 +6,8 @@ import Navbar from './Navbar';
 
 export default function AdminLayout() {
   return (
-    <div className="flex h-screen bg-[#0E1014] text-white font-['Inter']">
+    /* Changed bg-[#0E1014] to bg-[#F8FAFC] (Ghost White) and text-white to text-[#1E293B] (Dark Charcoal) */
+    <div className="flex h-screen bg-[#F8FAFC] text-[#1E293B] font-['Inter']">
       
       {/* 1. LEFT SIDE: Sidebar (Fixed) */}
       <Sidebar />
@@ -18,7 +19,8 @@ export default function AdminLayout() {
         <Navbar />
 
         {/* B. Main Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-[#1A1C21]">
+        {/* Changed bg-[#1A1C21] to bg-[#FFFFFF] (Pure White) for the content area */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto p-6 bg-[#ffffff]">
           <Outlet />
         </main>
 

@@ -108,7 +108,7 @@ const Footer = () => {
           <div className="text-center lg:text-right">
             <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Sister Concerns</h3>
             <ul className="space-y-3">
-              {['IGL Web Ltd.', 'Felna Digital Marketing Agency', 'Felna Online', 'IGL Host LLC'].map((item, i) => (
+              {['IGL Group', 'Felna Digital Marketing Agency', 'Felna Online', 'IGL Host LLC'].map((item, i) => (
                 <li key={i}><a href="#" className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg">{item}</a></li>
               ))}
             </ul>

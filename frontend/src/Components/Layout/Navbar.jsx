@@ -27,37 +27,33 @@ export default function Navbar() {
   // 3. Handle Logout Logic
 
 
-  return (
+return (
     <header className="relative w-full z-50 font-['Inter']">
-     
-     
-
-      {/* MAIN NAVBAR */}
-      <div className={`transition-all duration-300 border-b border-white/5 ${isSticky ? 'fixed top-0 left-0 w-full bg-[#0E1014] shadow-lg py-2' : 'relative bg-[#0E1014] py-4'}`}>
+      {/* MAIN NAVBAR - Changed bg to #FFFFFF and text to #1E293B */}
+      <div className={`transition-all duration-300 border-b border-[#E2E8F0] ${isSticky ? 'fixed top-0 left-0 w-full bg-white shadow-md py-2' : 'relative bg-white py-4'}`}>
         <div className="container mx-auto px-4">
           <div className="navbar p-0 min-h-[auto] flex justify-between items-center">
             
-            {/* LOGO */}
+            {/* LOGO - Text changed to Charcoal */}
             <div className="navbar-start w-auto mr-8">
               <Link to="/" className="group flex flex-col items-center leading-none">
                 <h2 className="text-4xl font-['Barlow_Condensed'] font-extrabold uppercase italic tracking-wider">
-                  <span className="text-white group-hover:text-[#C59D5F] transition-colors">Khabar</span>
-                  <span className="text-[#C59D5F] group-hover:text-white transition-colors">Table</span>
+                  <span className="text-[#1E293B] group-hover:text-[#C59D5F] transition-colors"></span>
+                  <span className="text-[#C59D5F] group-hover:text-[#1E293B] transition-colors"></span>
                 </h2>
-                <p className="text-xs font-['Inter'] tracking-[0.4em] text-gray-500 uppercase mt-1 group-hover:tracking-[0.5em] transition-all duration-300">
-                  .com
-                </p>
+                <p className="text-xs font-['Inter'] tracking-[0.4em] text-[#64748B] uppercase mt-1"></p>
               </Link>
             </div>
+          </div>
+        </div>
+      </div>
 
             {/* DESKTOP MENU */}
            
 
             {/* NAVBAR END: Buttons */}
            
-          </div>
-        </div>
-      </div>
+          
 
       {/* MOBILE MENU OVERLAY */}
       {isMobileMenuOpen && (

@@ -68,6 +68,7 @@ export default function MenuUser() {
 
   // --- MODIFIED: Updates Global Context directly ---
   const updateQuantity = (item, delta) => {
+    
     handleAddToCart(item, delta);
   };
 
