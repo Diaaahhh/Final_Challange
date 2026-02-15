@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import "cally"; // Import the custom element
+import "cally"; 
 import {
   FaTrash,
   FaCalendarAlt,
@@ -10,7 +10,8 @@ import {
   FaEye,
   FaEdit,
   FaSave,
-  FaBookOpen
+  FaBookOpen,
+  FaTimes
 } from "react-icons/fa";
 import api from "../../api";
 
@@ -202,9 +203,9 @@ export default function ReservationView() {
                       <td className="p-4 text-[#64748B] text-xs max-w-[180px] truncate italic">{res.notes || "No special requests"}</td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-1">
-                            <button onClick={() => handleView(res)} className="p-2 text-[#64748B] hover:text-[#C59D5F]"><FaEye /></button>
-                            <button onClick={() => handleEditClick(res)} className="p-2 text-[#64748B] hover:text-blue-600"><FaEdit /></button>
-                            <button onClick={() => handleDelete(res.id)} className="p-2 text-[#64748B] hover:text-red-500"><FaTrash /></button>
+                            <button onClick={() => handleView(res)} className="p-2 text-[#64748B] hover:text-[#C59D5F] transition-colors"><FaEye /></button>
+                            <button onClick={() => handleEditClick(res)} className="p-2 text-[#64748B] hover:text-blue-600 transition-colors"><FaEdit /></button>
+                            <button onClick={() => handleDelete(res.id)} className="p-2 text-[#64748B] hover:text-red-500 transition-colors"><FaTrash /></button>
                         </div>
                       </td>
                     </tr>
@@ -222,16 +223,66 @@ export default function ReservationView() {
         </div>
       </div>
 
-      {/* --- DETAILS MODAL (Omitted for brevity, kept same as your code) --- */}
-      {/* ... code from your snippet ... */}
+      {/* --- DETAILS MODAL --- */}
+      {openModal && selectedRes && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1E293B]/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-[#E2E8F0] relative overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-[#F1F5F9] p-6 border-b border-[#E2E8F0] flex justify-between items-center">
+              <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-[#1E293B] uppercase tracking-wider">Booking Details</h3>
+              <button onClick={() => setOpenModal(false)} className="text-[#64748B] hover:text-[#1E293B]"><FaTimes /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <label className="text-xs text-[#64748B] uppercase font-bold">Customer Name</label>
+                  <p className="text-3xl font-['Barlow_Condensed'] text-[#1E293B] font-bold">{selectedRes.name}</p>
+                </div>
+                <div className="text-right">
+                  <label className="text-xs text-[#64748B] uppercase font-bold">Phone</label>
+                  <p className="text-lg text-[#C59D5F] font-mono font-bold">{selectedRes.phone}</p>
+                </div>
+              </div>
 
-      {/* --- EDIT MODAL WITH CALLY CALENDAR --- */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-[#F8FAFC] p-4 rounded-lg border border-[#E2E8F0]">
+                  <label className="text-xs text-[#64748B] uppercase font-bold block mb-1">Date & Time</label>
+                  <p className="text-[#1E293B] font-bold flex items-center gap-2">
+                    <FaCalendarAlt className="text-[#C59D5F]" /> {formatDateDDMMYY(selectedRes.date)} @ {selectedRes.time}
+                  </p>
+                </div>
+                <div className="bg-[#F8FAFC] p-4 rounded-lg border border-[#E2E8F0]">
+                  <label className="text-xs text-[#64748B] uppercase font-bold block mb-1">Guests</label>
+                  <p className="text-[#1E293B] font-bold flex items-center gap-2">
+                    <FaUsers className="text-[#C59D5F]" /> {selectedRes.guest_number} People
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-[#F8FAFC] p-4 rounded-lg border border-[#E2E8F0]">
+  <label className="text-xs text-[#64748B] uppercase font-bold block mb-2">Special Notes</label>
+  {/* Added max-height and overflow-y-auto for the scroller */}
+  <div className="max-h-[60px] overflow-y-auto pr-2">
+    <p className="text-[#475569] text-sm leading-relaxed italic break-words">
+      {selectedRes.notes ? `"${selectedRes.notes}"` : "No special instructions provided."}
+    </p>
+  </div>
+</div>
+              
+              <button onClick={() => setOpenModal(false)} className="w-full bg-[#1E293B] text-white font-bold py-3 rounded-xl hover:bg-[#C59D5F] transition-colors uppercase tracking-widest text-sm font-['Barlow_Condensed']">
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- EDIT MODAL --- */}
       {openEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1E293B]/60 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-[#E2E8F0] relative overflow-visible">
             <div className="bg-[#F1F5F9] p-6 border-b border-[#E2E8F0] flex justify-between items-center">
               <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-[#1E293B] uppercase tracking-wider">Modify Reservation</h3>
-              <button onClick={() => setOpenEditModal(false)} className="text-[#64748B] hover:text-[#1E293B]">✕</button>
+              <button onClick={() => setOpenEditModal(false)} className="text-[#64748B] hover:text-[#1E293B]"><FaTimes /></button>
             </div>
             <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -246,7 +297,6 @@ export default function ReservationView() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {/* Custom Styled Date Picker */}
                 <div className="relative" ref={calendarContainerRef}>
                   <label className="text-xs font-bold text-[#64748B] uppercase">Date</label>
                   <button
@@ -264,7 +314,7 @@ export default function ReservationView() {
                         ref={calendarRef}
                         className="cally"
                         value={editFormData.date}
-                        min={new Date().toISOString().split("T")[0]} // Disables past dates
+                        min={new Date().toISOString().split("T")[0]}
                       >
                         <svg slot="previous" width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
                         <svg slot="next" width="16" height="16" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
@@ -274,22 +324,20 @@ export default function ReservationView() {
                   )}
                 </div>
 
-              <div className="flex flex-col">
-  <label className="text-xs font-bold text-[#64748B] uppercase">Time</label>
-  <div className="relative mt-1">
-    {/* Golden Clock Icon */}
-    <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C59D5F] z-10" />
-    
-    <input
-      required
-      type="time"
-      name="time"
-      value={editFormData.time}
-      onChange={handleEditChange}
-      className="w-full bg-[#F1F5F9] border border-[#E2E8F0] p-2 pl-10 rounded-lg outline-none text-[#1E293B] focus:border-[#C59D5F] transition-colors"
-    />
-  </div>
-</div>
+                <div className="flex flex-col">
+                  <label className="text-xs font-bold text-[#64748B] uppercase">Time</label>
+                  <div className="relative mt-1">
+                    <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C59D5F] z-10" />
+                    <input
+                      required
+                      type="time"
+                      name="time"
+                      value={editFormData.time}
+                      onChange={handleEditChange}
+                      className="w-full bg-[#F1F5F9] border border-[#E2E8F0] p-2 pl-10 rounded-lg outline-none text-[#1E293B] focus:border-[#C59D5F] transition-colors"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>

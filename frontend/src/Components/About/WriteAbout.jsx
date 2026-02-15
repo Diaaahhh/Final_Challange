@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FaPen, FaImage, FaCloudUploadAlt, FaCheckCircle } from "react-icons/fa";
-import api from '../../api'
+import api from '../../api';
+
 export default function WriteAbout() {
   const [heading, setHeading] = useState("");
   const [text, setText] = useState("");
@@ -46,23 +47,26 @@ export default function WriteAbout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 font-sans">
-      <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#F8FAFC] text-[#1E293B] flex items-center justify-center p-6 font-['Inter']">
+      <div className="max-w-4xl w-full bg-white rounded-xl shadow-sm border border-[#E2E8F0] overflow-hidden flex flex-col md:flex-row">
         
-        {/* Left Side: Visual/Preview */}
-        <div className="bg-gray-900 md:w-2/5 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
-           <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500 rounded-full opacity-10 blur-3xl"></div>
+        {/* Left Side: Visual/Preview - Styled to match the dark contrast of the Modal/Header theme */}
+        <div className="bg-[#1E293B] md:w-2/5 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
+           {/* Abstract decoration similar to the 'Gold' accent */}
+           <div className="absolute top-0 right-0 w-32 h-32 bg-[#C59D5F] rounded-full opacity-10 blur-3xl"></div>
            
-           <h2 className="text-2xl font-bold text-amber-500 mb-4 z-10">About Us Content</h2>
-           <p className="text-gray-400 text-sm mb-8 z-10">Update the story of your restaurant.</p>
+           <h2 className="text-3xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider mb-2 z-10">
+             About <span className="text-[#C59D5F]">Us</span>
+           </h2>
+           <p className="text-[#94A3B8] text-sm mb-8 z-10 font-medium tracking-wide">Update the story of your restaurant.</p>
 
-           <div className="w-full aspect-square bg-gray-800 rounded-lg border-2 border-dashed border-gray-600 flex items-center justify-center relative overflow-hidden group">
+           <div className="w-full aspect-square bg-[#0F172A] rounded-xl border border-[#334155] border-dashed flex items-center justify-center relative overflow-hidden group shadow-inner">
              {preview ? (
                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
              ) : (
-               <div className="text-gray-500 flex flex-col items-center">
-                   <FaImage className="text-4xl mb-2 text-gray-600"/>
-                   <span className="text-xs">Image Preview</span>
+               <div className="text-[#64748B] flex flex-col items-center">
+                   <FaImage className="text-4xl mb-2 text-[#475569]"/>
+                   <span className="text-xs uppercase font-bold tracking-wider">Image Preview</span>
                </div>
              )}
            </div>
@@ -70,25 +74,24 @@ export default function WriteAbout() {
 
         {/* Right Side: Form */}
         <div className="md:w-3/5 p-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <FaPen className="text-amber-600"/> Edit Content
+            <h3 className="text-2xl font-['Barlow_Condensed'] font-bold text-[#1E293B] uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-[#E2E8F0] pb-4">
+                <FaPen className="text-[#C59D5F]"/> Edit Content
             </h3>
 
             {success && (
-                <div className="mb-4 bg-green-50 text-green-700 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                <div className="mb-6 bg-green-50 border border-green-100 text-green-700 px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
                     <FaCheckCircle/> Saved successfully!
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
                 
                 {/* Heading Input */}
-                <div className="form-control">
-                    <label className="label text-xs font-bold text-gray-500 uppercase mb-2">Heading</label>
+                <div>
+                    <label className="text-xs font-bold text-[#64748B] uppercase block mb-1">Heading</label>
                     <input 
                         type="text"
-                        // FIXED: changed text-black-700 to text-gray-900
-                        className="input input-bordered w-full focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-900 bg-white px-4 py-2 border rounded-lg" 
+                        className="w-full bg-[#F1F5F9] border border-[#E2E8F0] p-3 rounded-lg outline-none text-[#1E293B] font-bold focus:border-[#C59D5F] transition-colors placeholder-[#94A3B8]" 
                         placeholder="e.g. Our Culinary Journey"
                         value={heading}
                         onChange={(e) => setHeading(e.target.value)}
@@ -97,12 +100,10 @@ export default function WriteAbout() {
                 </div>
 
                 {/* Text Area */}
-                <div className="form-control">
-                    {/* FIXED: changed text-black-500 to text-gray-500 */}
-                    <label className="label text-xs font-bold text-gray-500 uppercase mb-2">Write Something</label>
+                <div>
+                    <label className="text-xs font-bold text-[#64748B] uppercase block mb-1">Write Something</label>
                     <textarea 
-                        // FIXED: changed text-black-700 to text-gray-900
-                        className="textarea textarea-bordered h-32 w-full focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-900 bg-white p-3 border rounded-lg" 
+                        className="w-full bg-[#F1F5F9] border border-[#E2E8F0] p-3 rounded-lg outline-none text-[#1E293B] text-sm focus:border-[#C59D5F] transition-colors placeholder-[#94A3B8] h-32 leading-relaxed" 
                         placeholder="Tell your story here..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
@@ -111,23 +112,23 @@ export default function WriteAbout() {
                 </div>
 
                 {/* File Upload */}
-                <div className="form-control">
-                    <label className="label text-xs font-bold text-gray-500 uppercase mb-2">Upload Image</label>
-                    <div className="relative border border-gray-300 rounded-lg p-2 bg-gray-50 hover:bg-white transition-colors">
+                <div>
+                    <label className="text-xs font-bold text-[#64748B] uppercase block mb-1">Upload Image</label>
+                    <div className="relative bg-[#F1F5F9] border border-[#E2E8F0] rounded-lg p-2 hover:bg-[#E2E8F0] transition-colors group">
                         <input 
                             type="file" 
                             accept="image/*"
                             onChange={handleFileChange}
-                            className="file-input file-input-ghost w-full file-input-sm text-sm text-gray-900"
+                            className="block w-full text-sm text-[#64748B] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-bold file:uppercase file:bg-[#1E293B] file:text-white hover:file:bg-[#C59D5F] file:transition-colors cursor-pointer"
                         />
-                        <FaCloudUploadAlt className="absolute right-3 top-3 text-gray-400 pointer-events-none"/>
+                        <FaCloudUploadAlt className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] text-xl pointer-events-none group-hover:text-[#C59D5F] transition-colors"/>
                     </div>
                 </div>
 
                 <button 
                     type="submit" 
                     disabled={loading}
-                    className="btn w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-lg shadow-md transition-all"
+                    className="w-full mt-2 bg-[#C59D5F] hover:bg-[#b08d55] text-white font-bold py-3 rounded-xl transition-all flex justify-center items-center gap-2 uppercase tracking-widest font-['Barlow_Condensed'] shadow-md hover:shadow-lg disabled:opacity-70"
                 >
                     {loading ? "Saving..." : "Update Content"}
                 </button>
