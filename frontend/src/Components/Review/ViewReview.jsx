@@ -45,6 +45,14 @@ export default function ViewReview() {
     return text.length > limit ? text.substring(0, limit) + "..." : text;
   };
 
+  // Helper to format date as DD/MM/YY
+  const formatDateDDMMYY = (dateString) => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#1E293B] pt-24 pb-12 px-4 font-['Inter']">
       <div className="container mx-auto max-w-7xl">
@@ -101,7 +109,7 @@ export default function ViewReview() {
                     <tr key={review.id} className="hover:bg-[#F8FAFC] transition-colors group">
                       {/* Date */}
                       <td className="p-4 text-sm text-[#64748B] font-mono whitespace-nowrap align-middle">
-                        {new Date(review.created_at).toLocaleDateString()}
+                        {formatDateDDMMYY(review.created_at)}
                       </td>
                       
                       {/* Name */}
@@ -169,7 +177,7 @@ export default function ViewReview() {
                 <div className="text-right">
                   <label className="text-xs text-[#64748B] uppercase font-bold">Date</label>
                   <p className="text-sm text-[#C59D5F] font-mono font-bold mt-1">
-                    {new Date(selectedReview.created_at).toLocaleDateString()}
+                    {formatDateDDMMYY(selectedReview.created_at)}
                   </p>
                 </div>
               </div>

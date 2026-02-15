@@ -1,5 +1,11 @@
 import React from "react";
-import { Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 
 // Import Components
 import Navbar from "./Components/Header/Navbar";
@@ -7,7 +13,7 @@ import Hero from "./Components/Hero/Hero";
 import Signup from "./Components/Authentication/Signup";
 import Login from "./Components/Authentication/Login";
 import Footer from "./Components/Footer/Footer";
-import { CartProvider } from './Components/Cart/CartContext';
+import { CartProvider } from "./Components/Cart/CartContext";
 // Admin Imports
 import AdminLayout from "./Components/Layout/AdminLayout";
 import MenuList from "./Components/Menu/MenuList";
@@ -22,10 +28,11 @@ import UploadHero from "./Components/Hero/UploadHero";
 import Address from "./Components/Contact/Address";
 import Map from "./Components/Contact/Map";
 import Profile from "./Components/Profile/Profile";
-import Settings from "./Components/Settings/Settings"
+import Settings from "./Components/Settings/Settings";
 import Branches from "./Components/Branches/Branches";
 import Cart from "./Components/Cart/Cart";
 import Checkout from "./Components/Cart/Checkout";
+import TableLayout from "./Components/Table/TableLayout";
 
 // --- ADMIN PROTECTION GUARD ---
 const AdminGuard = ({ children }) => {
@@ -47,7 +54,7 @@ const AdminGuard = ({ children }) => {
 const HomeDecision = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
-  
+
   // We use useEffect to handle the redirect safely
   React.useEffect(() => {
     const justLoggedIn = sessionStorage.getItem("justLoggedIn");
@@ -55,7 +62,7 @@ const HomeDecision = () => {
     if (user && user.role == 0 && justLoggedIn) {
       // 1. Remove the flag immediately
       sessionStorage.removeItem("justLoggedIn");
-      
+
       // 2. Redirect to admin
       navigate("/admin", { replace: true });
     }
@@ -99,7 +106,9 @@ function App() {
           path="/address"
           element={
             <div className="min-h-screen flex items-center justify-center pt-20">
-              <h1 className="text-3xl font-bold"><Address /></h1>
+              <h1 className="text-3xl font-bold">
+                <Address />
+              </h1>
             </div>
           }
         />
@@ -117,7 +126,9 @@ function App() {
           path="/map"
           element={
             <div className="min-h-screen flex items-center justify-center pt-20">
-              <h1 className="text-3xl font-bold"><Map /></h1>
+              <h1 className="text-3xl font-bold">
+                <Map />
+              </h1>
             </div>
           }
         />
@@ -136,7 +147,8 @@ function App() {
           <Route path="write_about" element={<WriteAbout />} />
           <Route path="view_review" element={<ViewReview />} />
           <Route path="upload_hero" element={<UploadHero />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="settings" element={<Settings />} /> 
+          <Route path="table" element={<TableLayout />} />
         </Route>
       </Routes>
 

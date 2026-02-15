@@ -34,6 +34,8 @@ export default function Sidebar() {
     { path: "/admin/view_review", icon: FaComments, label: "Reviews" },
     { path: "/admin/upload_hero", icon: FaImage, label: "Upload Hero" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
+        { path: "/admin/table", icon: FaCog, label: "Table Layout" },
+
   ];
 
 return (

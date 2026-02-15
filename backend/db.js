@@ -1,11 +1,18 @@
 const mysql = require('mysql2');
 
 // Create the connection configuration
+// const dbConfig = {
+//     host: "localhost",
+//     user: "khabarta_pos",      
+//     password: "khabarta_pos",  
+//     database: "khabarta_pos"   
+// };
+// Create the connection configuration
 const dbConfig = {
     host: "localhost",
-    user: "khabarta_pos",      // Ensure this matches cPanel > MySQL Databases
-    password: "khabarta_pos",  // Ensure this matches the user password
-    database: "khabarta_pos"   // Ensure this matches cPanel > MySQL Databases
+    user: "root",      
+    password: "" ,  
+    database: "restaurant"   
 };
 
 const db = mysql.createConnection(dbConfig);

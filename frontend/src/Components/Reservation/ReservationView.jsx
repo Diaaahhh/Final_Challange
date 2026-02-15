@@ -3,7 +3,7 @@ import "cally";
 import {
   FaTrash,
   FaCalendarAlt,
-  FaClock,
+  FaClock, // Kept imported for the Table row display (if needed later)
   FaPhone,
   FaUsers,
   FaGlassCheers,
@@ -11,7 +11,9 @@ import {
   FaEdit,
   FaSave,
   FaBookOpen,
-  FaTimes
+  FaTimes,
+  FaUtensils,
+  FaMapMarkerAlt 
 } from "react-icons/fa";
 import api from "../../api";
 
@@ -23,11 +25,14 @@ export default function ReservationView() {
   const [openEditModal, setOpenEditModal] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   
+  // --- Floor Plan State (Optional) ---
+  const [floorPlan, setFloorPlan] = useState([]);
+  
   const calendarRef = useRef(null);
   const calendarContainerRef = useRef(null);
 
   const [editFormData, setEditFormData] = useState({
-    id: "", name: "", phone: "", guest_number: "", event_name: "", notes: "", date: "", time: "",
+    id: "", name: "", phone: "", guest_number: "", event_name: "", notes: "", date: "", time: "", table_number: ""
   });
 
   // Close calendar when clicking outside
@@ -83,6 +88,7 @@ export default function ReservationView() {
       notes: res.notes || "",
       date: formattedDate,
       time: formattedTime,
+      table_number: res.table_number || "" 
     });
     setOpenEditModal(true);
   };
@@ -172,13 +178,14 @@ export default function ReservationView() {
                   <th className="p-4">Customer Details</th>
                   <th className="p-4">Event Type</th>
                   <th className="p-4">Schedule</th>
+                  <th className="p-4">Table No</th>
                   <th className="p-4">Notes</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
                 {loading ? (
-                  <tr><td colSpan="5" className="text-center py-12 text-[#C59D5F]">Loading Reservations...</td></tr>
+                  <tr><td colSpan="6" className="text-center py-12 text-[#C59D5F]">Loading Reservations...</td></tr>
                 ) : reservations.length > 0 ? (
                   reservations.map((res) => (
                     <tr key={res.id} className="hover:bg-[#F8FAFC] transition-colors group">
@@ -197,9 +204,22 @@ export default function ReservationView() {
                           <span className="text-[#1E293B] font-mono text-sm font-bold flex items-center gap-2">
                             <FaCalendarAlt className="text-[#C59D5F]" /> {formatDateDDMMYY(res.date)}
                           </span>
-                          <span className="text-[#64748B] text-xs flex items-center gap-2"><FaClock /> {res.time}</span>
+                          <span className="text-[#64748B] text-xs flex items-center gap-2">{res.time}</span>
                         </div>
                       </td>
+                      <td className="p-4">
+                        {res.table_number ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-sm border border-amber-200">
+                              <FaUtensils size={10} />
+                            </div>
+                            <span className="text-sm font-bold text-[#1E293B]">{res.table_number}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">Not Assigned</span>
+                        )}
+                      </td>
+                      
                       <td className="p-4 text-[#64748B] text-xs max-w-[180px] truncate italic">{res.notes || "No special requests"}</td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-1">
@@ -212,7 +232,7 @@ export default function ReservationView() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="text-center py-12 text-[#64748B]">
+                    <td colSpan={6} className="text-center py-12 text-[#64748B]">
                       <FaBookOpen className="mx-auto text-4xl mb-3 opacity-20" /> No reservations found.
                     </td>
                   </tr>
@@ -258,15 +278,22 @@ export default function ReservationView() {
                 </div>
               </div>
 
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+                 <label className="text-xs text-amber-600 uppercase font-bold block mb-1">Assigned Table(s)</label>
+                 <div className="flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-amber-500" />
+                    <span className="text-xl font-bold text-[#1E293B]">{selectedRes.table_number || "None"}</span>
+                 </div>
+              </div>
+
               <div className="bg-[#F8FAFC] p-4 rounded-lg border border-[#E2E8F0]">
-  <label className="text-xs text-[#64748B] uppercase font-bold block mb-2">Special Notes</label>
-  {/* Added max-height and overflow-y-auto for the scroller */}
-  <div className="max-h-[60px] overflow-y-auto pr-2">
-    <p className="text-[#475569] text-sm leading-relaxed italic break-words">
-      {selectedRes.notes ? `"${selectedRes.notes}"` : "No special instructions provided."}
-    </p>
-  </div>
-</div>
+                <label className="text-xs text-[#64748B] uppercase font-bold block mb-2">Special Notes</label>
+                <div className="max-h-[60px] overflow-y-auto pr-2">
+                  <p className="text-[#475569] text-sm leading-relaxed italic break-words">
+                    {selectedRes.notes ? `"${selectedRes.notes}"` : "No special instructions provided."}
+                  </p>
+                </div>
+              </div>
               
               <button onClick={() => setOpenModal(false)} className="w-full bg-[#1E293B] text-white font-bold py-3 rounded-xl hover:bg-[#C59D5F] transition-colors uppercase tracking-widest text-sm font-['Barlow_Condensed']">
                 Close View
@@ -304,7 +331,8 @@ export default function ReservationView() {
                     onClick={() => setShowCalendar(!showCalendar)}
                     className="w-full mt-1 bg-[#F1F5F9] border border-[#E2E8F0] p-2 rounded-lg text-left text-[#1E293B] font-medium flex items-center gap-2"
                   >
-                    <FaCalendarAlt className="text-[#C59D5F]" />
+                    {/* CHANGED: Color from text-[#C59D5F] to text-[#1E293B] */}
+                    <FaCalendarAlt className="text-[#1E293B]" />
                     {editFormData.date ? formatDateDDMMYY(editFormData.date) : "Select Date"}
                   </button>
 
@@ -327,16 +355,31 @@ export default function ReservationView() {
                 <div className="flex flex-col">
                   <label className="text-xs font-bold text-[#64748B] uppercase">Time</label>
                   <div className="relative mt-1">
-                    <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C59D5F] z-10" />
+                    {/* REMOVED: Golden Clock Icon */}
                     <input
                       required
                       type="time"
                       name="time"
                       value={editFormData.time}
                       onChange={handleEditChange}
-                      className="w-full bg-[#F1F5F9] border border-[#E2E8F0] p-2 pl-10 rounded-lg outline-none text-[#1E293B] focus:border-[#C59D5F] transition-colors"
+                      className="w-full bg-[#F1F5F9] border border-[#E2E8F0] p-2 rounded-lg outline-none text-[#1E293B] focus:border-[#C59D5F] transition-colors"
                     />
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#64748B] uppercase">Assigned Table(s)</label>
+                <div className="relative mt-1">
+                    <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-[#C59D5F] z-10" />
+                    <input 
+                        type="text" 
+                        name="table_number" 
+                        value={editFormData.table_number} 
+                        onChange={handleEditChange} 
+                        className="w-full bg-[#F1F5F9] border border-[#E2E8F0] p-2 pl-10 rounded-lg outline-none text-[#1E293B] focus:border-[#C59D5F]"
+                        placeholder="e.g. 1, 2"
+                    />
                 </div>
               </div>
 

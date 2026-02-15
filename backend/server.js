@@ -87,6 +87,8 @@ app.use('/api', require('./routes/Profile'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/branches', require('./routes/branches'));
 app.use('/api/proxy', require('./routes/checkout'));
+const tableLayoutRoutes = require('./routes/table_layout');
+app.use('/api/tables', tableLayoutRoutes);
 
 // 5. START SERVER
 const PORT = process.env.PORT || 3000; 
