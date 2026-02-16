@@ -39,14 +39,14 @@ const Address = () => {
     <FaHome /> Dhaka Office
   </h2>
 
-  <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--body-color)" }}>
+  <p className="mb-4 text-sm leading-relaxed"  style={{ color: "#000000" }}>
     House # 33A (4th Floor), Road # 4, Dhanmondi, Dhaka-1205, Bangladesh
   </p>
 
   <ul className="space-y-3 text-sm">
     <li className="flex items-center gap-3">
       <FaPhoneAlt style={{ color: "#C59D5F" }} />
-      <a href="tel:+8801814445932" className="hover:underline">
+      <a href="tel:+8801814445932" className="hover:underline" style={{ color: "#000000" }}>
         +880-1814-445932
       </a>
     </li>
@@ -58,6 +58,7 @@ const Address = () => {
         target="_blank"
         rel="noopener noreferrer"
         className="hover:underline"
+        style={{ color: "#000000" }}
       >
         +880-1958-666999
       </a>
@@ -66,13 +67,13 @@ const Address = () => {
     <li className="flex items-center gap-3">
       <FaEnvelope style={{ color: "#C59D5F" }} />
       <div>
-        <a href="mailto:sales@iglweb.com" className="block hover:underline">
+        <a href="mailto:sales@iglweb.com" className="block hover:underline" style={{ color: "#000000" }}>
           sales@iglweb.com
         </a>
-        <a href="mailto:support@iglweb.com" className="block hover:underline">
+        <a href="mailto:support@iglweb.com" className="block hover:underline" style={{ color: "#000000" }}>
           support@iglweb.com
         </a>
-        <a href="mailto:accounts@iglweb.com" className="block hover:underline">
+        <a href="mailto:accounts@iglweb.com" className="block hover:underline" style={{ color: "#000000" }}>
           accounts@iglweb.com
         </a>
       </div>
@@ -85,6 +86,7 @@ const Address = () => {
         target="_blank"
         rel="noopener noreferrer"
         className="hover:underline"
+        style={{ color: "#000000" }}
       >
         iglweb.com
       </a>
@@ -103,7 +105,7 @@ const Address = () => {
     <FaHome /> Chittagong Office
   </h2>
 
-  <p className="mb-4 text-sm leading-relaxed" style={{ color: "var(--body-color)" }}>
+  <p className="mb-4 text-sm leading-relaxed" style={{ color: "#000000" }}>
     House # 201 (3rd Floor), Gulbagh Residential Area-2, Access Road,
     Agarabad, Chittagong, Bangladesh
   </p>
@@ -111,7 +113,7 @@ const Address = () => {
   <ul className="space-y-3 text-sm">
     <li className="flex items-center gap-3">
       <FaPhoneAlt style={{ color: "#C59D5F" }} />
-      <a href="tel:+8801814445932" className="hover:underline">
+      <a href="tel:+8801814445932" className="hover:underline" style={{ color: "#000000" }}>
         +880-1814-445932
       </a>
     </li>
@@ -123,6 +125,7 @@ const Address = () => {
         target="_blank"
         rel="noopener noreferrer"
         className="hover:underline"
+        style={{ color: "#000000" }}
       >
         +880-1958-666999
       </a>
@@ -135,6 +138,7 @@ const Address = () => {
         target="_blank"
         rel="noopener noreferrer"
         className="hover:underline"
+        style={{ color: "#000000" }}
       >
         iglweb.com
       </a>

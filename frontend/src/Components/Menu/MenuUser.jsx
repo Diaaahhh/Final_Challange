@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaUtensils, FaCoffee, FaImage, FaPlus, FaMinus } from "react-icons/fa";
+import { FaUtensils, FaCoffee, FaImage, FaPlus, FaMinus, FaStore } from "react-icons/fa";
 import { useCart } from "../Cart/CartContext";
 import api from "../../api";
 import { IMAGE_BASE_URL } from "../../config";
@@ -11,27 +11,34 @@ export default function MenuUser() {
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // --- Branch Modal State ---
+  const [showBranchModal, setShowBranchModal] = useState(true);
+  const [loadingBranches, setLoadingBranches] = useState(true);
 
   // Use the global cart context
   const { cartItems, handleAddToCart } = useCart();
 
+  // 1. Fetch Branches on Component Mount
   useEffect(() => {
     const fetchBranches = async () => {
       try {
+        setLoadingBranches(true);
         const branchRes = await api.get("/menu-user/branches");
         setBranches(branchRes.data);
-        if (branchRes.data.length > 0) {
-          setSelectedBranch(branchRes.data[0].branch_id);
-        }
       } catch (err) {
         console.error("Error loading branches:", err);
+      } finally {
+        setLoadingBranches(false);
       }
     };
     fetchBranches();
   }, []);
 
+  // 2. Fetch Categories when Branch is Selected
   useEffect(() => {
     if (!selectedBranch) return;
+    
     const fetchCategories = async () => {
       try {
         const res = await api.get(`/menu-user/categories/${selectedBranch}`);
@@ -66,13 +73,17 @@ export default function MenuUser() {
     }
   };
 
-  // --- MODIFIED: Updates Global Context directly ---
-  const updateQuantity = (item, delta) => {
-    
-    handleAddToCart(item, delta);
+  const handleBranchSelect = (branchId) => {
+    setSelectedBranch(branchId);
+    setShowBranchModal(false); 
   };
 
-  // Helper to get current quantity from global cart
+  // --- MODIFIED: Pass branchId to Context ---
+  const updateQuantity = (item, delta) => {
+    // selectedBranch is the current active branch ID from state
+    handleAddToCart(item, delta, selectedBranch);
+  };
+
   const getQuantity = (itemId) => {
     const item = cartItems.find((i) => i.id === itemId);
     return item ? item.quantity : 0;
@@ -92,30 +103,77 @@ export default function MenuUser() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto">
-        {/* BRANCH TABS UI */}
-        {branches.length > 0 && (
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex items-center gap-2 overflow-x-auto p-2 bg-white rounded-2xl shadow-sm border border-gray-200">
-              {branches.map((branch) => (
-                <button
-                  key={branch.branch_id}
-                  onClick={() => setSelectedBranch(branch.branch_id)}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 whitespace-nowrap
-                                ${
-                                  String(selectedBranch) ===
-                                  String(branch.branch_id)
-                                    ? "bg-amber-500 text-white shadow-md transform scale-105"
-                                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                                }`}
-                >
-                  {branch.branch_name || branch.name}
-                </button>
-              ))}
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans relative">
+      
+      {/* --- BRANCH SELECTION MODAL --- */}
+      {showBranchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="bg-[#0E1014] p-6 text-center border-b border-gray-800">
+              <h2 className="text-2xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
+                Select A <span className="text-[#C59D5F]">Branch</span>
+              </h2>
+              <p className="text-gray-400 text-xs mt-2">Choose a location to view the menu</p>
+            </div>
+            
+            <div className="p-6">
+              {loadingBranches ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <span className="loading loading-spinner text-[#C59D5F] loading-lg"></span>
+                  <p className="text-gray-500 text-sm mt-3 font-bold">Loading Locations...</p>
+                </div>
+              ) : branches.length > 0 ? (
+                <div className="grid gap-3">
+                  {branches.map((branch) => (
+                    <button
+                      key={branch.id}
+                      onClick={() => handleBranchSelect(branch.branch_id)}
+                      className="group flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-[#C59D5F] hover:bg-amber-50 transition-all duration-200 text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-[#C59D5F] transition-colors">
+                          <FaStore className="text-gray-500 group-hover:text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-800 group-hover:text-[#C59D5F] text-lg">
+                            {branch.branch_name}
+                          </h3>
+                          <p className="text-xs text-gray-500">{branch.name}</p>
+                        </div>
+                      </div>
+                      <span className="text-gray-300 group-hover:text-[#C59D5F] text-xl">→</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No branches available at the moment.</p>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* --- MAIN MENU CONTENT --- */}
+      <div className={`max-w-7xl mx-auto transition-opacity duration-500 ${showBranchModal ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'}`}>
+        
+        {/* Branch Info Header */}
+        <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2">
+             <FaStore className="text-[#C59D5F]" />
+             <span className="text-gray-500 text-sm">Viewing Menu For:</span>
+             <span className="font-bold text-gray-800 uppercase">
+               {branches.find(b => b.branch_id === selectedBranch)?.branch_name || "Selected Branch"}
+             </span>
+          </div>
+          <button 
+            onClick={() => setShowBranchModal(true)}
+            className="text-xs font-bold text-[#000000] hover:underline uppercase tracking-wide"
+          >
+            Choose another branch
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           {/* LEFT SIDEBAR */}
@@ -123,20 +181,19 @@ export default function MenuUser() {
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden sticky top-8 border border-gray-100">
               <div className="p-6 bg-gray-900 text-white">
                 <h2 className="text-xl font-bold flex items-center gap-2 text-amber-400">
-                  <FaUtensils /> Our Menu
+                  <FaUtensils /> Categories
                 </h2>
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col max-h-[60vh] overflow-y-auto">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => handleCategoryClick(cat)}
                     className={`text-left px-6 py-4 transition-all duration-300 border-b border-gray-100 last:border-0 flex items-center justify-between group
-                                    ${
-                                      activeCategory?.id === cat.id
-                                        ? "bg-amber-50 text-gray-900 border-l-4 border-l-amber-500 font-bold shadow-inner"
-                                        : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"
-                                    }`}
+                      ${activeCategory?.id === cat.id
+                        ? "bg-amber-50 text-gray-900 border-l-4 border-l-amber-500 font-bold shadow-inner"
+                        : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"
+                      }`}
                   >
                     <span className="text-sm uppercase tracking-wider">
                       {cat.menu_name}
@@ -167,19 +224,19 @@ export default function MenuUser() {
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   {loading ? (
-                    <div className="col-span-2 text-center py-20 text-gray-400">
-                      Loading...
+                    <div className="col-span-2 text-center py-20 flex flex-col items-center">
+                      <span className="loading loading-spinner text-[#C59D5F] loading-lg"></span>
                     </div>
                   ) : menuItems.length > 0 ? (
                     menuItems.map((item) => {
                       const isActive = Number(item.m_status) === 1;
-                      const itemQty = getQuantity(item.id); // Get quantity from Context
+                      const itemQty = getQuantity(item.id);
 
                       return (
                         <div
                           key={item.id}
                           className={`group bg-white rounded-xl shadow-sm transition-all duration-300 border border-gray-100 flex p-4 gap-4 items-start relative
-                                                ${!isActive ? "opacity-60 grayscale bg-gray-50" : "hover:shadow-md"}`}
+                            ${!isActive ? "opacity-60 grayscale bg-gray-50" : "hover:shadow-md"}`}
                         >
                           <div className="w-[85px] h-[85px] shrink-0 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                             {item.m_image ? (
@@ -199,7 +256,7 @@ export default function MenuUser() {
                             {/* TOP ROW */}
                             <div className="flex justify-between items-start">
                               <div>
-                                <h3 className="text-base font-bold text-gray-800">
+                                <h3 className="text-base font-bold text-gray-800 line-clamp-1">
                                   {item.m_menu_name}
                                 </h3>
                                 <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded inline-block mb-1">
@@ -208,9 +265,7 @@ export default function MenuUser() {
                               </div>
                               <span className="text-base font-bold text-amber-600 whitespace-nowrap ml-2">
                                 {Number(item.m_price).toLocaleString()}{" "}
-                                <span className="text-xs font-normal text-gray-500">
-                                  Tk
-                                </span>
+                                <span className="text-xs font-normal text-gray-500">Tk</span>
                               </span>
                             </div>
 
@@ -222,9 +277,7 @@ export default function MenuUser() {
                             {/* BOTTOM ROW */}
                             <div className="mt-auto flex items-center justify-between border-t border-dashed border-gray-100 pt-2">
                               <div className="flex items-center gap-2">
-                                <div
-                                  className={`h-2 w-2 rounded-full ${isActive ? "bg-green-500" : "bg-red-500"}`}
-                                ></div>
+                                <div className={`h-2 w-2 rounded-full ${isActive ? "bg-green-500" : "bg-red-500"}`}></div>
                                 <span className="text-[10px] uppercase font-bold text-gray-400">
                                   {isActive ? "Available" : "Out of Stock"}
                                 </span>
@@ -265,8 +318,9 @@ export default function MenuUser() {
                 </div>
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-400 min-h-[400px]">
-                Select a category
+              <div className="h-full flex flex-col items-center justify-center text-gray-400 min-h-[400px] border-2 border-dashed border-gray-200 rounded-xl">
+                <FaUtensils className="text-4xl mb-4 opacity-20" />
+                <p>Select a category to view items</p>
               </div>
             )}
           </div>

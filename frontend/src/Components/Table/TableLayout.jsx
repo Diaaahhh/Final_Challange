@@ -285,8 +285,8 @@ export default function TableLayout() {
           <div className="bg-white rounded-2xl w-full max-w-md p-6">
             <div className="flex justify-between mb-6"><h2 className="text-2xl font-bold uppercase">New Table</h2><button onClick={() => setIsTableModalOpen(false)}><FaTimes/></button></div>
             <form onSubmit={confirmAddTable} className="space-y-4">
-              <div><label className="block text-xs font-bold uppercase mb-1">Number</label><input type="text" required value={newTableData.table_number} onChange={e=>setNewTableData({...newTableData, table_number: e.target.value})} className="w-full border rounded-lg p-3"/></div>
-              <div><label className="block text-xs font-bold uppercase mb-1">Capacity</label><input type="number" required value={newTableData.capacity} onChange={e=>setNewTableData({...newTableData, capacity: e.target.value})} className="w-full border rounded-lg p-3"/></div>
+              <div><label className="block text-xs font-bold uppercase mb-1">Number</label><input type="text" required value={newTableData.table_number} onChange={e=>setNewTableData({...newTableData, table_number: e.target.value})}  className="w-full border rounded-lg p-3" style={{ backgroundColor: "#ffffff" }}/></div>
+              <div><label className="block text-xs font-bold uppercase mb-1">Capacity</label><input type="number" required value={newTableData.capacity} onChange={e=>setNewTableData({...newTableData, capacity: e.target.value})} className="w-full border rounded-lg p-3" style={{ backgroundColor: "#ffffff" }}/></div>
               <div><label className="block text-xs font-bold uppercase mb-1">Shape</label>
                <div className="flex gap-4">
                  <button type="button" onClick={()=>setNewTableData({...newTableData, shape:'square'})} className={`flex-1 p-3 border rounded-lg ${newTableData.shape==='square'?'bg-gray-100 border-black':''}`}>Square</button>
@@ -305,7 +305,9 @@ export default function TableLayout() {
           <div className="bg-white rounded-2xl w-full max-w-md p-6">
             <div className="flex justify-between mb-6"><h2 className="text-2xl font-bold uppercase">Add Element</h2><button onClick={() => setIsOtherModalOpen(false)}><FaTimes/></button></div>
             <form onSubmit={confirmAddOther} className="space-y-4">
-              <div><label className="block text-xs font-bold uppercase mb-1">Label</label><input type="text" required value={newOtherData.label} onChange={e=>setNewOtherData({...newOtherData, label: e.target.value})} className="w-full border rounded-lg p-3"/></div>
+              <div><label className="block text-xs font-bold uppercase mb-1">Label</label>
+              <input type="text" required value={newOtherData.label} onChange={e=>setNewOtherData({...newOtherData, label: e.target.value})} className="w-full border rounded-lg p-3" style={{ backgroundColor: "#ffffff" }}/>
+              </div>
               <div><label className="block text-xs font-bold uppercase mb-1">Shape</label>
                <div className="flex gap-4">
                  <button type="button" onClick={()=>setNewOtherData({...newOtherData, shape:'square'})} className={`flex-1 p-3 border rounded-lg ${newOtherData.shape==='square'?'bg-gray-100 border-black':''}`}>Square</button>

@@ -5,38 +5,52 @@ const CartContext = createContext();
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  // FIX: Initialize state directly from localStorage to prevent overwriting
   const [cartItems, setCartItems] = useState(() => {
     const savedCart = localStorage.getItem('siteCart');
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
-  // Now we only need ONE useEffect: To save changes to LocalStorage
   useEffect(() => {
     localStorage.setItem('siteCart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const handleAddToCart = (product, delta) => {
+  // --- MODIFIED: Handle Branch Conflict ---
+  const handleAddToCart = (product, delta, branchId) => {
     setCartItems(prev => {
+      // 1. Check for Branch Conflict
+      // If cart has items, check if the new item belongs to the same branch
+      if (prev.length > 0) {
+        const currentBranchId = prev[0].branchId; // Get branch from first item
+        
+        // If branch IDs don't match, user is switching branches.
+        // Clear cart and start fresh with new item.
+        if (String(currentBranchId) !== String(branchId)) {
+          // If delta is positive (adding), we replace cart. 
+          // If removing (-1) from a different branch, we likely shouldn't do anything or just return empty.
+          // Assuming this function is mostly triggered by "Add" or "Plus" on the menu page:
+          if (delta > 0) {
+             // alert("Cart cleared because you switched branches."); // Optional UX feedback
+             return [{ ...product, quantity: 1, branchId }];
+          }
+          return prev; // Should not happen often if UI is consistent
+        }
+      }
+
+      // 2. Standard Cart Logic (Same Branch)
       const existing = prev.find(item => item.id === product.id);
       
       if (existing) {
-        // Calculate new quantity
         const newQty = existing.quantity + delta;
-        
-        // If quantity goes to 0 or less, remove item
         if (newQty <= 0) {
           return prev.filter(item => item.id !== product.id);
         }
-
-        // Otherwise update quantity
         return prev.map(item => 
           item.id === product.id ? { ...item, quantity: newQty } : item
         );
       } else {
-        // If adding (delta > 0) and item doesn't exist, push new item
         if (delta > 0) {
-          return [...prev, { ...product, quantity: 1 }];
+          // Ensure we store branchId with the item
+          return [...prev, { ...product, quantity: 1, branchId }];
         }
         return prev;
       }
@@ -48,7 +62,11 @@ export const CartProvider = ({ children }) => {
   };
 
   // Calculate Subtotal
-  const cartTotal = cartItems.reduce((acc, item) => acc + (Number(item.m_price) * item.quantity), 0);
+  const cartTotal = cartItems.reduce((total, item) => {
+    // Ensure price is treated as a number
+    const price = parseFloat(item.m_price) || 0; 
+    return total + (price * item.quantity);
+  }, 0);
 
   return (
     <CartContext.Provider value={{ cartItems, handleAddToCart, removeFromCart, cartTotal }}>
