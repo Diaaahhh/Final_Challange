@@ -111,7 +111,9 @@ export default function MenuList() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-[#F1F5F9] text-[#64748B] text-xs uppercase tracking-wider font-['Barlow_Condensed'] border-b border-[#E2E8F0]">
+                <tr className="bg-[#F1F5F9] text-[#000000] text-xs uppercase tracking-wider font-['Barlow_Condensed'] border-b border-[#E2E8F0]">
+                  {/* --- 1. NEW SL COLUMN HEADER --- */}
+                  <th className="p-4 w-12 text-center">SL</th>
                   <th className="p-4">Code</th>
                   <th className="p-4">Item Name</th>
                   <th className="p-4">Ingredients</th>
@@ -124,14 +126,20 @@ export default function MenuList() {
               <tbody className="divide-y divide-[#E2E8F0]">
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-12 text-[#C59D5F]">Loading Data...</td>
+                    <td colSpan="7" className="text-center py-12 text-[#C59D5F]">Loading Data...</td>
                   </tr>
                 ) : filteredMenuItems.length > 0 ? (
-                  filteredMenuItems.map((item) => (
+                  filteredMenuItems.map((item, index) => (
                     /* Row Hover: Ghost White (#F8FAFC) */
                     <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors group">
+                      
+                      {/* --- 2. NEW SL COLUMN CELL --- */}
+                      <td className="p-4 text-center font-bold text-[#1E293B] text-sm">
+                        {index + 1}
+                      </td>
+
                       <td className="p-4">
-                        <span className="text-[#64748B] text-xs font-mono bg-[#F1F5F9] px-2 py-1 rounded border border-[#E2E8F0]">
+                        <span className="text-[#000000] text-xs font-mono bg-[#F1F5F9] px-2 py-1 rounded border border-[#E2E8F0]">
                           {item.m_menu_sl}
                         </span>
                       </td>
@@ -145,7 +153,7 @@ export default function MenuList() {
                            </span>
                         </div>
                       </td>
-                      <td className="p-4 text-[#64748B] text-xs truncate max-w-[200px]" title={formatIngredients(item.m_ingredient)}>
+                      <td className="p-4 text-[#000000] text-sm truncate max-w-[200px]" title={formatIngredients(item.m_ingredient)}>
                         {formatIngredients(item.m_ingredient)}
                       </td>
                       <td className="p-4 font-mono text-[#1E293B]">
@@ -164,7 +172,7 @@ export default function MenuList() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-[#64748B]">
+                    <td colSpan={7} className="text-center py-12 text-[#000000]">
                       <FaUtensils className="mx-auto text-4xl mb-3 opacity-20" />
                       No menu items found.
                     </td>
@@ -219,14 +227,26 @@ export default function MenuList() {
 const ImageUploadCell = ({ item, backendUrl }) => {
     const [preview, setPreview] = useState(item.m_image ? `${backendUrl}${item.m_image}` : null);
     const [selectedFile, setSelectedFile] = useState(null);
-    const [uploadStatus, setUploadStatus] = useState("idle"); 
+    const [uploadStatus, setUploadStatus] = useState("idle");
 
     const handleFileSelect = (e) => {
         const file = e.target.files[0];
+        
+        // 200KB LIMIT LOGIC
+        const MAX_SIZE = 200 * 1024; // 200 KB in bytes
+
         if (file) {
+            // Check size
+            if (file.size > MAX_SIZE) {
+                alert(`File is too large (${(file.size / 1024).toFixed(1)} KB). Please upload an image under 200 KB.`);
+                e.target.value = ""; // Reset the input so they can try again
+                return;
+            }
+
+            // Proceed if size is okay
             setSelectedFile(file);
-            setPreview(URL.createObjectURL(file)); 
-            setUploadStatus("idle"); 
+            setPreview(URL.createObjectURL(file));
+            setUploadStatus("idle");
         }
     };
 
@@ -235,11 +255,11 @@ const ImageUploadCell = ({ item, backendUrl }) => {
         setUploadStatus("uploading");
         const formData = new FormData();
         formData.append("image", selectedFile);
-        formData.append("m_menu_sl", item.m_menu_sl); 
+        formData.append("m_menu_sl", item.m_menu_sl);
         try {
             await axios.post(`${backendUrl}/api/menu/upload`, formData, { headers: { "Content-Type": "multipart/form-data" } });
             setUploadStatus("success");
-            setTimeout(() => setUploadStatus("idle"), 3000); 
+            setTimeout(() => setUploadStatus("idle"), 3000);
         } catch (err) {
             setUploadStatus("error");
         }
@@ -252,15 +272,19 @@ const ImageUploadCell = ({ item, backendUrl }) => {
                     {preview ? <img src={preview} alt="Preview" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-[#64748B]"><FaCamera /></div>}
                 </div>
                 <div className="flex flex-col gap-1">
-                    <label className="cursor-pointer bg-[#F8FAFC] hover:bg-[#F1F5F9] px-2 py-1 rounded text-[10px] text-[#475569] transition-colors text-center border border-[#E2E8F0]">
+                    <label className="cursor-pointer bg-[#F8FAFC] hover:bg-[#F1F5F9] px-2 py-1 rounded text-[15px] text-[#000000] transition-colors text-center border border-[#E2E8F0]">
                         Choose
                         <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
                     </label>
+                    
+                    {/* INSTRUCTION TEXT */}
+                    {!selectedFile && <span className="text-[10px] text-black text-center leading-tight">Max 200KB</span>}
+
                     {selectedFile && (
                         <button 
                             onClick={handleUpload}
                             disabled={uploadStatus === "uploading" || uploadStatus === "success"}
-                            className={`px-2 py-1 rounded text-[10px] flex items-center justify-center gap-1 transition-all ${uploadStatus === "success" ? "bg-green-600 text-white" : "bg-[#C59D5F] text-white hover:bg-[#b08d55]"}`}
+                            className={`px-2 py-1 rounded text-[15px] flex items-center justify-center gap-1 transition-all ${uploadStatus === "success" ? "bg-green-600 text-white" : "bg-[#C59D5F] text-white hover:bg-[#b08d55]"}`}
                         >
                             {uploadStatus === "uploading" ? "..." : uploadStatus === "success" ? <FaCheck /> : <><FaCloudUploadAlt /> Upload</>}
                         </button>

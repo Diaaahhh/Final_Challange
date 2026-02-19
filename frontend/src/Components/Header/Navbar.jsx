@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-// import {IMAGE_BASE_URL} from '../../config'
 import { 
   FaMapMarkerAlt, FaEnvelopeOpen, FaClock, FaPhoneAlt, 
   FaFacebookF, FaTwitter, FaWhatsapp, FaBars, FaShoppingCart 
 } from 'react-icons/fa'; 
 import api from '../../api';
 import { IMAGE_BASE_URL } from '../../config';
+import { useCart } from '../Cart/CartContext'; // <--- 1. Import useCart
 
 export default function Navbar() {
   const [isSticky, setIsSticky] = useState(false);
@@ -14,6 +14,9 @@ export default function Navbar() {
   
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
+
+  // <--- 2. Get Cart Data & Functions ---
+  const { cartItems, openCart } = useCart(); 
 
   // 1. Handle Scroll Effect
   useEffect(() => {
@@ -127,7 +130,7 @@ export default function Navbar() {
 
                 <li tabIndex={0} className="dropdown dropdown-hover group">
                   <span className="hover:text-[#C59D5F] p-0 bg-transparent cursor-pointer">Contact</span>
-                  <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-52 text-sm mt-4 border-t-4 border-[#C59D5F]">
+                  <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-52 text-sm mt-5 border-t-4 border-[#C59D5F]">
                     <li><Link to="/address" className="hover:text-[#C59D5F] hover:bg-transparent">Address</Link></li>
                     <li><Link to="/review" className="hover:text-[#C59D5F] hover:bg-transparent">Feedback</Link></li>
                     <li><Link to="/map" className="hover:text-[#C59D5F] hover:bg-transparent">Location Map</Link></li>
@@ -157,7 +160,7 @@ export default function Navbar() {
                   {/* Dropdown Content */}
                   <ul 
                     tabIndex={0} 
-                    className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-40 text-sm mt-4 border-t-4 border-[#C59D5F] font-['Barlow_Condensed'] uppercase font-bold before:absolute before:-top-4 before:left-0 before:h-4 before:w-full before:content-['']"
+                    className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-40 text-sm mt-2 border-t-4 border-[#C59D5F] font-['Barlow_Condensed'] uppercase font-bold before:absolute before:-top-4 before:left-0 before:h-4 before:w-full before:content-['']"
                   >
                     <li>
                         <Link to="/profile" className="hover:text-[#C59D5F] hover:bg-transparent">
@@ -187,14 +190,19 @@ export default function Navbar() {
                 </Link>
               )}
 
-              {/* === CART BUTTON === */}
-              <Link 
-                to="/cart" 
-                className="btn btn-ghost btn-circle text-white hover:text-[#C59D5F] mr-2 hidden xl:flex items-center justify-center transition-colors"
+              {/* === CART BUTTON (Modified to Sidebar Trigger) === */}
+              <button 
+                onClick={openCart}
+                className="btn btn-ghost btn-circle text-white hover:text-[#C59D5F] mr-2 hidden xl:flex items-center justify-center transition-colors relative"
                 title="View Cart"
               >
                 <FaShoppingCart size={22} />
-              </Link>
+                {cartItems.length > 0 && (
+                  <span className="absolute top-0 right-0 bg-[#C59D5F] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                    {cartItems.length}
+                  </span>
+                )}
+              </button>
 
               <Link to="/reservation" className="btn bg-[#C59D5F] hover:bg-white hover:text-[#0E1014] text-white border-none rounded-[4px] px-7 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex transition-all duration-300">
                 Reserve a Table
@@ -243,7 +251,18 @@ export default function Navbar() {
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Home</Link>
               <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">About</Link>
               <Link to="/menu-user" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors">Menu</Link>
-              <Link to="/cart" onClick={() => setIsMobileMenuOpen(false)} className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors flex items-center gap-2">Cart <FaShoppingCart size={16} /></Link>
+              
+              {/* --- 4. MOBILE CART LINK (Changed to Button Trigger) --- */}
+              <button 
+                onClick={() => {
+                  openCart();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors flex items-center gap-2 text-left w-full uppercase font-['Barlow_Condensed'] text-lg tracking-wide"
+              >
+                Cart <FaShoppingCart size={16} /> 
+                {cartItems.length > 0 && <span className="text-[#C59D5F] font-bold">({cartItems.length})</span>}
+              </button>
               
               {user ? (
                  <button onClick={handleLogout} className="text-left border-b border-white/10 py-3 hover:text-[#C59D5F] transition-colors text-[#C59D5F]">Logout</button>

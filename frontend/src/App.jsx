@@ -14,6 +14,8 @@ import Signup from "./Components/Authentication/Signup";
 import Login from "./Components/Authentication/Login";
 import Footer from "./Components/Footer/Footer";
 import { CartProvider } from "./Components/Cart/CartContext";
+import CartSidebar from "./Components/Cart/CartSidebar"; // <--- 1. Import Sidebar
+
 // Admin Imports
 import AdminLayout from "./Components/Layout/AdminLayout";
 import MenuList from "./Components/Menu/MenuList";
@@ -87,7 +89,11 @@ function App() {
 
   return (
     <CartProvider>
+      {/* Navbar only shows if NOT auth/admin page */}
       {!shouldHideNavbarFooter && <Navbar />}
+      
+      {/* 2. Place Sidebar Here (Globally accessible, but controlled by context) */}
+      <CartSidebar /> 
 
       <Routes>
         {/* Role 0 redirected only on first entry after login, else allowed to view */}
@@ -99,7 +105,10 @@ function App() {
         <Route path="/reservation" element={<Reservation />} />
         <Route path="/about" element={<ViewAbout />} />
         <Route path="/profile" element={<Profile />} />
+        
+        {/* You can keep /cart as a fallback or remove it if you fully switch to sidebar */}
         <Route path="/cart" element={<Cart />} />
+        
         <Route path="/checkout" element={<Checkout />} />
 
         <Route

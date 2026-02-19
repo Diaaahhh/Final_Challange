@@ -10,33 +10,36 @@ export const CartProvider = ({ children }) => {
     return savedCart ? JSON.parse(savedCart) : [];
   });
 
+  // Sidebar Visibility State
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const toggleCart = () => setIsCartOpen(prev => !prev);
+  const closeCart = () => setIsCartOpen(false);
+  const openCart = () => setIsCartOpen(true);
+
   useEffect(() => {
     localStorage.setItem('siteCart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  // --- MODIFIED: Handle Branch Conflict ---
-  const handleAddToCart = (product, delta, branchId) => {
+  // --- MODIFIED: Handle Branch Conflict & Store Branch Name ---
+  // Added 'branchName' parameter to store it for display
+  const handleAddToCart = (product, delta, branchId, branchName) => {
+    
     setCartItems(prev => {
       // 1. Check for Branch Conflict
-      // If cart has items, check if the new item belongs to the same branch
       if (prev.length > 0) {
-        const currentBranchId = prev[0].branchId; // Get branch from first item
+        const currentBranchId = prev[0].branchId; 
         
-        // If branch IDs don't match, user is switching branches.
-        // Clear cart and start fresh with new item.
         if (String(currentBranchId) !== String(branchId)) {
-          // If delta is positive (adding), we replace cart. 
-          // If removing (-1) from a different branch, we likely shouldn't do anything or just return empty.
-          // Assuming this function is mostly triggered by "Add" or "Plus" on the menu page:
+          // If branch differs, clear cart and start fresh
           if (delta > 0) {
-             // alert("Cart cleared because you switched branches."); // Optional UX feedback
-             return [{ ...product, quantity: 1, branchId }];
+             return [{ ...product, quantity: delta, branchId, branchName }];
           }
-          return prev; // Should not happen often if UI is consistent
+          return prev; 
         }
       }
 
-      // 2. Standard Cart Logic (Same Branch)
+      // 2. Standard Cart Logic
       const existing = prev.find(item => item.id === product.id);
       
       if (existing) {
@@ -45,12 +48,11 @@ export const CartProvider = ({ children }) => {
           return prev.filter(item => item.id !== product.id);
         }
         return prev.map(item => 
-          item.id === product.id ? { ...item, quantity: newQty } : item
+          item.id === product.id ? { ...item, quantity: newQty, branchName } : item
         );
       } else {
         if (delta > 0) {
-          // Ensure we store branchId with the item
-          return [...prev, { ...product, quantity: 1, branchId }];
+          return [...prev, { ...product, quantity: delta, branchId, branchName }];
         }
         return prev;
       }
@@ -61,15 +63,23 @@ export const CartProvider = ({ children }) => {
     setCartItems(prev => prev.filter(item => item.id !== id));
   };
 
-  // Calculate Subtotal
   const cartTotal = cartItems.reduce((total, item) => {
-    // Ensure price is treated as a number
     const price = parseFloat(item.m_price) || 0; 
     return total + (price * item.quantity);
   }, 0);
 
   return (
-    <CartContext.Provider value={{ cartItems, handleAddToCart, removeFromCart, cartTotal }}>
+    <CartContext.Provider value={{ 
+        cartItems, 
+        handleAddToCart, 
+        removeFromCart, 
+        cartTotal,
+        isCartOpen,
+        toggleCart,
+        closeCart,
+        openCart,
+        setIsCartOpen // Export setter if needed directly
+    }}>
       {children}
     </CartContext.Provider>
   );

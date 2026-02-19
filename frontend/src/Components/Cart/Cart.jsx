@@ -50,11 +50,11 @@ export default function Cart() {
                         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1 w-fit">
                           <button 
                             onClick={() => handleAddToCart(item, -1, item.branchId)}
-                            className="p-2 bg-white rounded shadow-sm hover:text-red-500 transition-colors"
+                            className="p-2 bg-white text-gray-800 rounded shadow-sm hover:text-red-500 transition-colors"
                           >
                             <FaMinus size={10} />
                           </button>
-                          <span className="w-8 text-center font-bold text-sm">{item.quantity}</span>
+                          <span className="w-8 text-center text-gray-800 font-bold text-sm">{item.quantity}</span>
                           <button 
                             onClick={() => handleAddToCart(item, 1, item.branchId)}
                             className="p-2 bg-amber-500 text-white rounded shadow-sm hover:bg-amber-600 transition-colors"

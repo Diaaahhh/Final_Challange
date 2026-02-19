@@ -86,7 +86,14 @@ app.use('/api', require('./routes/upload_hero'));
 app.use('/api', require('./routes/Profile')); 
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/branches', require('./routes/branches'));
-app.use('/api/proxy', require('./routes/checkout'));
+
+// --- UPDATED CHECKOUT ROUTE MOUNTING ---
+// Changed from '/api/proxy' to '/api' because checkout.js now handles:
+// 1. /get-user-by-phone/:phone
+// 2. /proxy/place-order
+app.use('/api', require('./routes/checkout')); 
+
+app.use('/api', require('./routes/tables'));
 const tableLayoutRoutes = require('./routes/table_layout');
 app.use('/api/tables', tableLayoutRoutes);
 
