@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FaCloudUploadAlt, FaHeading } from "react-icons/fa";
+import { FaCloudUploadAlt, FaHeading, FaCheckCircle } from "react-icons/fa";
 import api from "../../api";
 
 export default function UploadHero() {
@@ -13,7 +13,6 @@ export default function UploadHero() {
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
     
-    // Create a preview URL for the image
     if (selectedFile) {
       setPreview(URL.createObjectURL(selectedFile));
     }
@@ -53,15 +52,17 @@ export default function UploadHero() {
   };
 
   return (
-    <section className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6 font-['Inter']">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-[#E2E8F0]">
+    <section className="min-h-screen bg-[#0D0D0D] flex items-center justify-center p-6 font-['Inter']">
+      <div className="w-full max-w-lg bg-[#111111] rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.6)] overflow-hidden border border-[#1E1E1E]">
         
         {/* Header */}
-        <div className="bg-[#F1F5F9] p-8 text-center border-b border-[#E2E8F0]">
-          <h2 className="text-3xl font-bold text-[#1E293B] font-['Barlow_Condensed'] uppercase tracking-wider">
-            Upload Hero Content
+        <div className="bg-[#0A0A0A] p-8 text-center border-b border-[#1E1E1E] relative overflow-hidden">
+          {/* Neon blue glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-20 bg-[#007BFF] opacity-5 blur-3xl rounded-full pointer-events-none"></div>
+          <h2 className="text-3xl font-bold text-white font-['Barlow_Condensed'] uppercase tracking-wider relative z-10">
+            Upload <span className="text-[#007BFF]">Hero</span> Content
           </h2>
-          <p className="text-[#64748B] text-sm mt-2 font-medium tracking-wide">
+          <p className="text-[#A0A0A0] text-sm mt-2 font-medium tracking-wide relative z-10">
             Add a new main banner to your website
           </p>
         </div>
@@ -71,25 +72,25 @@ export default function UploadHero() {
           
           {/* 1. Name Input */}
           <div className="space-y-2">
-            <label className="text-xs text-[#64748B] uppercase font-bold tracking-wide flex items-center gap-2">
-              <FaHeading className="text-[#C59D5F]" /> Hero Title / Name
+            <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-widest flex items-center gap-2">
+              <FaHeading className="text-[#007BFF]" /> Hero Title / Name
             </label>
             <input 
               type="text" 
               placeholder="Ex: The Flavor of Tradition"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#F8FAFC] text-[#1E293B] border border-[#E2E8F0] rounded-lg p-3 focus:outline-none focus:border-[#C59D5F] transition-colors placeholder-gray-400 font-medium"
+              className="w-full bg-[#1A1A1A] text-white border border-[#2A2A2A] rounded-lg p-3 focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-medium text-sm"
             />
           </div>
 
           {/* 2. Image Upload */}
           <div className="space-y-2">
-            <label className="text-xs text-[#64748B] uppercase font-bold tracking-wide flex items-center gap-2">
-              <FaCloudUploadAlt className="text-[#C59D5F]" /> Hero Image
+            <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-widest flex items-center gap-2">
+              <FaCloudUploadAlt className="text-[#007BFF]" /> Hero Image
             </label>
             
-            <div className="relative border-2 border-dashed border-[#CBD5E1] rounded-xl p-6 flex flex-col items-center justify-center hover:border-[#C59D5F] transition-colors cursor-pointer bg-[#F8FAFC] group">
+            <div className="relative border-2 border-dashed border-[#2A2A2A] rounded-xl p-6 flex flex-col items-center justify-center hover:border-[#007BFF] transition-all duration-300 cursor-pointer bg-[#1A1A1A] group hover:shadow-[0_0_20px_rgba(0,123,255,0.1)]">
               <input 
                 type="file" 
                 onChange={handleFileChange}
@@ -98,14 +99,16 @@ export default function UploadHero() {
               />
               
               {preview ? (
-                <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-sm border border-[#E2E8F0]">
+                <div className="relative w-full h-48 rounded-lg overflow-hidden shadow-sm border border-[#2A2A2A]">
                   <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                  {/* Neon overlay hint */}
+                  <div className="absolute inset-0 bg-[#007BFF] opacity-0 group-hover:opacity-5 transition-opacity"></div>
                 </div>
               ) : (
                 <div className="text-center">
-                  <FaCloudUploadAlt className="mx-auto text-4xl text-[#94A3B8] group-hover:text-[#C59D5F] transition-colors mb-3" />
-                  <p className="text-[#64748B] text-sm font-medium">Click to upload or drag and drop</p>
-                  <p className="text-[#94A3B8] text-xs mt-1">PNG, JPG up to 5MB</p>
+                  <FaCloudUploadAlt className="mx-auto text-5xl text-[#333] group-hover:text-[#007BFF] transition-colors mb-3" />
+                  <p className="text-[#A0A0A0] text-sm font-medium">Click to upload or drag and drop</p>
+                  <p className="text-[#555] text-xs mt-1">PNG, JPG up to 5MB</p>
                 </div>
               )}
             </div>
@@ -113,7 +116,12 @@ export default function UploadHero() {
 
           {/* Message Alert */}
           {message && (
-            <div className={`p-3 rounded-lg text-center text-sm font-bold border ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+            <div className={`p-3 rounded-lg text-center text-sm font-bold border flex items-center justify-center gap-2 ${
+              message.type === 'success' 
+                ? 'bg-[#007BFF]/10 text-[#007BFF] border-[#007BFF]/30' 
+                : 'bg-red-500/10 text-red-400 border-red-500/30'
+            }`}>
+              {message.type === 'success' && <FaCheckCircle />}
               {message.text}
             </div>
           )}
@@ -121,7 +129,7 @@ export default function UploadHero() {
           {/* Submit Button */}
           <button 
             type="submit" 
-            className="w-full bg-[#1E293B] hover:bg-[#C59D5F] text-white font-bold py-4 rounded-xl uppercase tracking-widest text-sm font-['Barlow_Condensed'] transition-all duration-300 shadow-md"
+            className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-4 rounded-xl uppercase tracking-widest text-sm font-['Barlow_Condensed'] transition-all duration-300 shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_35px_rgba(0,123,255,0.5)] transform active:scale-95"
           >
             Upload Hero
           </button>

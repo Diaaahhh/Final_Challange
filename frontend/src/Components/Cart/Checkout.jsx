@@ -232,7 +232,7 @@ export default function Checkout() {
     };
 
     try {
-        const response = await api.post("/place-order", orderPayload);
+        const response = await api.post("/save-customer-data", orderPayload);
         
         // Check if order was successful (handles both success and local_order flags)
         if(response.data.success || response.data.status === 200 || response.data.customer_id || response.data.local_order) {
@@ -479,25 +479,34 @@ export default function Checkout() {
                                 )}
                             </div>
                         ) : (
-                            // >>> PARCEL TEXT INPUT <<<
-                            <div>
-                                <label className="block text-gray-600 text-sm font-bold mb-2 uppercase tracking-wide">
-                                    Table No.
-                                </label>
-                                <input 
-                                    type="text" 
-                                    name="table_no" 
-                                    value={bookingData.table_no}
-                                    onChange={handleBookingDataChange}
-                                    placeholder="Enter Table Number"
-                                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700"
-                                />
-                                <p className="text-xs text-gray-400 mt-1">Please enter a valid table number for validation.</p>
-                            </div>
+                            // >>> PARCEL DROPDOWN <<<
+<div>
+    <label className="block text-gray-600 text-sm font-bold mb-2 uppercase tracking-wide">
+        Table No.
+    </label>
+    <select 
+        name="table_no" 
+        value={bookingData.table_no}
+        onChange={handleBookingDataChange}
+        className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700 cursor-pointer"
+    >
+        <option value="">-- Select a Table --</option>
+        {availableTables.length > 0 ? (
+            availableTables.map(t => (
+                <option key={t.id} value={t.table_no}>
+                    Table {t.table_no} {t.capacity ? `(${t.capacity} Seats)` : ''}
+                </option>
+            ))
+        ) : (
+            <option value="" disabled>No tables available</option>
+        )}
+    </select>
+    <p className="text-xs text-gray-400 mt-1">Please select a table for your parcel order.</p>
+</div>
                         )}
 
                         {/* --- COMMON FIELDS: Date & Time --- */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-gray-600 text-xs font-bold mb-2 uppercase tracking-wide">Date</label>
                                 <div className="relative">
@@ -525,7 +534,7 @@ export default function Checkout() {
                                     <FaClock className="absolute right-4 top-1/2 -translate-y-1/2 text-[#C59D5F] pointer-events-none" />
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Inline Cally Calendar Display */}
                         {showCalendar && (

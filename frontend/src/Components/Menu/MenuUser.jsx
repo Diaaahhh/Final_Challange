@@ -1,31 +1,26 @@
 import React, { useEffect, useState } from "react";
-import { FaUtensils, FaCoffee, FaImage, FaPlus, FaMinus, FaStore, FaCartPlus } from "react-icons/fa";
+// Add FaArrowLeft to your imports
+import { FaUtensils, FaCoffee, FaImage, FaPlus, FaMinus, FaStore, FaCartPlus, FaArrowLeft } from "react-icons/fa";
 import { useCart } from "../Cart/CartContext";
 import api from "../../api";
 import { IMAGE_BASE_URL } from "../../config";
+// Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
 // --- SUB-COMPONENT: Individual Menu Item Card ---
 const MenuItemCard = ({ item, branchId, branchName }) => {
-  // Destructure handlers
+  // ... (Keep the MenuItemCard exactly as it was)
   const { handleAddToCart, setIsCartOpen } = useCart();
   
-  // 1. Local state initialized to 0
   const [localQty, setLocalQty] = useState(0);
 
-  // 2. Handlers for local +/-
   const increment = () => setLocalQty(prev => prev + 1);
   const decrement = () => setLocalQty(prev => (prev > 0 ? prev - 1 : 0));
 
-  // 3. "Add to Cart" Handler
   const onAddToCart = () => {
     if (localQty > 0) {
-      // Pass branchName to context so it can be shown in sidebar
       handleAddToCart(item, localQty, branchId, branchName);
-      
-      // Reset local counter to 0 after adding
       setLocalQty(0); 
-      
-      // Open Sidebar
       if (setIsCartOpen) {
         setIsCartOpen(true);
       }
@@ -147,6 +142,9 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
 
 
 export default function MenuUser() {
+  // --- ADD NAVIGATE ---
+  const navigate = useNavigate();
+
   const [categories, setCategories] = useState([]);
   const [branches, setBranches] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
@@ -251,7 +249,16 @@ export default function MenuUser() {
       {showBranchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
-            <div className="bg-[#0E1014] p-6 text-center border-b border-gray-800">
+            <div className="bg-[#0E1014] p-6 text-center border-b border-gray-800 relative">
+              {/* --- ADD BACK BUTTON HERE --- */}
+              <button 
+                onClick={() => navigate(-1)} 
+                className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                title="Go Back"
+              >
+                <FaArrowLeft size={20} />
+              </button>
+              
               <h2 className="text-2xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
                 Select A <span className="text-[#C59D5F]">Branch</span>
               </h2>
