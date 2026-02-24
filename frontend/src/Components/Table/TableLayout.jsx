@@ -73,7 +73,7 @@ const DraggableItem = ({ item, updatePosition, updateSize, removeItem, rotateIte
                     {item.capacity} Seater
                   </span>
                   <span className="font-['Barlow_Condensed'] font-bold text-white leading-none text-lg">
-                    {item.table_number}
+                    Table no.{item.table_number}
                   </span>
                 </>
               ) : (

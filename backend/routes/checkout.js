@@ -15,45 +15,57 @@ const queryPromise = (sql, params = []) => {
 // ==========================================
 // 1. GET User by Phone Number
 // ==========================================
-router.get('/get-user-by-phone/:phone', (req, res) => {
+router.get('/get-user-by-phone/:phone', async (req, res) => {
     const phone = req.params.phone;
     if (!phone) return res.status(400).json({ message: "Phone number is required" });
 
-    const sqlUsers = "SELECT * FROM users WHERE phone = ?";
-    
-    db.query(sqlUsers, [phone], (errUsers, dataUsers) => {
-        if (errUsers) {
-            console.error("Database Error (users table):", errUsers);
-            return res.status(500).json({ message: "Internal Server Error" });
-        }
-        
-        if (dataUsers.length > 0) {
-            return res.status(200).json(dataUsers[0]);
-        } else {
-            const sqlCustomers = "SELECT * FROM customers WHERE phone = ?";
-            db.query(sqlCustomers, [phone], (errCustomers, dataCustomers) => {
-                if (errCustomers) {
-                    console.error("Database Error (customers table):", errCustomers);
-                    return res.status(500).json({ message: "Internal Server Error" });
-                }
-                if (dataCustomers.length > 0) {
-                    return res.status(200).json(dataCustomers[0]);
-                } else {
-                    return res.status(404).json({ message: "User not found" });
-                }
-            });
-        }
-    });
+    try {
+        const dataUsers = await queryPromise("SELECT * FROM users WHERE phone = ?", [phone]);
+        if (dataUsers.length > 0) return res.status(200).json(dataUsers[0]);
+
+        const dataCustomers = await queryPromise("SELECT * FROM customers WHERE phone = ?", [phone]);
+        if (dataCustomers.length > 0) return res.status(200).json(dataCustomers[0]);
+
+        return res.status(404).json({ message: "User not found" });
+    } catch (err) {
+        console.error("Database Error:", err);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
 });
 
 // ==========================================
-// 2. PLACE ORDER
+// GET OCCUPIED TABLES FROM QUEUE
+// ==========================================
+router.get('/get-occupied-tables/:company_id/:branch_id', async (req, res) => {
+    const { company_id, branch_id } = req.params;
+    try {
+        const occupiedSql = `
+            SELECT DISTINCT table_no 
+            FROM customer_order_queues 
+            WHERE company_id = ? 
+              AND branch_id = ? 
+              AND table_no IS NOT NULL 
+              AND table_no != 'Home delivery' 
+              AND table_no != 'Take a way'
+              AND table_no != 'Parcel'
+        `;
+        
+        const occupiedResults = await queryPromise(occupiedSql, [company_id, branch_id]);
+        const occupiedTableNumbers = occupiedResults.map(row => String(row.table_no).trim());
+        
+        res.status(200).json(occupiedTableNumbers);
+    } catch (error) {
+        console.error("Error fetching occupied tables:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// ==========================================
+// 2. PLACE ORDER (MAIN ENTRY)
 // ==========================================
 router.post('/save-customer-data', async (req, res) => {
     try {
         const { cust_name, phone, items } = req.body;
-
-        console.log("Received order request:", { cust_name, phone });
 
         if (!cust_name || !phone || !items || items.length === 0) {
             return res.status(400).json({ message: "Missing required order information." });
@@ -63,22 +75,17 @@ router.post('/save-customer-data', async (req, res) => {
         const branch_id = req.body.branch_id || (firstItem?.branchId || firstItem?.m_branch_id || 1);
         
         const settingsSql = "SELECT company_code FROM settings WHERE id = 1";
+        const settingsResult = await queryPromise(settingsSql);
 
-        db.query(settingsSql, async (err, result) => {
-            if (err || !result || result.length === 0) {
-                console.error("DB Error: Settings missing or error:", err);
-                return res.status(500).json({ 
-                    success: false, 
-                    error: "Failed to process request: Settings not found or database error." 
-                });
-            }
+        if (!settingsResult || settingsResult.length === 0) {
+            return res.status(500).json({ success: false, message: "Failed to process request: Settings not found." });
+        }
 
-            const companyCode = result[0].company_code;
-            console.log("Found settings - Company Code:", companyCode);
-            
-            // Start the checkout flow
-            checkAndCreateCustomer(req, res, companyCode, branch_id);
-        });
+        const companyCode = settingsResult[0].company_code;
+        
+        // Pass off to the async creation functions
+        await checkAndCreateCustomer(req, res, companyCode, branch_id);
+
     } catch (error) {
         console.error("Unexpected error in place-order:", error);
         res.status(500).json({ message: "Internal server error", error: error.message });
@@ -86,193 +93,162 @@ router.post('/save-customer-data', async (req, res) => {
 });
 
 // ==========================================
-// CUSTOMER CREATION LOGIC
+// CUSTOMER CREATION LOGIC (Refactored to Async)
 // ==========================================
-function checkAndCreateCustomer(req, res, companyCode, branch_id) {
-    const { cust_name, phone, address, email, is_logged_in } = req.body;
+async function checkAndCreateCustomer(req, res, companyCode, branch_id) {
+    try {
+        const { cust_name, phone, address, email, is_logged_in } = req.body;
 
-    const checkCustSql = `SELECT id FROM customers WHERE company_id = ? AND phone = ?`;
-
-    db.query(checkCustSql, [companyCode, phone], async (checkErr, checkRows) => {
-        if (checkErr) {
-            console.error("Customer Check Error:", checkErr);
-            return res.status(500).json({ success: false, message: "Database error during customer validation." });
-        }
+        const checkCustSql = `SELECT id, cust_id FROM customers WHERE company_id = ? AND phone = ?`;
+        const checkRows = await queryPromise(checkCustSql, [companyCode, phone]);
 
         if (!checkRows || checkRows.length === 0) {
             console.log("Customer not found. Creating new record...");
 
-            const descTableSql = "DESCRIBE customers";
-            db.query(descTableSql, (descErr, descResult) => {
-                if (descErr) {
-                    console.error("Error describing customers table:", descErr);
-                    return res.status(500).json({ success: false, message: "System Error: Table check failed." });
-                }
+            const descResult = await queryPromise("DESCRIBE customers");
+            const columns = descResult.map(col => col.Field);
 
-                const columns = descResult.map(col => col.Field);
-                const insertFields = [];
-                const insertValues = [];
-                const placeholders = [];
+            const insertFields = [];
+            const insertValues = [];
+            const placeholders = [];
 
-                if (columns.includes('company_id')) {
-                    insertFields.push('company_id');
-                    insertValues.push(companyCode);
-                    placeholders.push('?');
-                }
+            if (columns.includes('company_id')) {
+                insertFields.push('company_id');
+                insertValues.push(companyCode);
+                placeholders.push('?');
+            }
 
-                const otherFields = {
-                    'branch_id': branch_id,
-                    'name': cust_name,
-                    'phone': phone,
-                    'email': email,
-                    'address': address,
-                    'is_guest': is_logged_in ? 0 : 1,
-                    'created_at': 'NOW()',
-                    'updated_at': 'NOW()'
-                };
+            const otherFields = {
+                'branch_id': branch_id,
+                'name': cust_name,
+                'phone': phone,
+                'email': email || null,
+                'address': address || null,
+                'is_guest': is_logged_in ? 0 : 1,
+                'created_at': 'NOW()',
+                'updated_at': 'NOW()'
+            };
 
-                for (const [field, value] of Object.entries(otherFields)) {
-                    if (columns.includes(field) && !insertFields.includes(field)) {
-                        insertFields.push(field);
-                        if (value === 'NOW()') {
-                            insertValues.push('NOW()');
-                            placeholders.push('NOW()');
-                        } else {
-                            insertValues.push(value);
-                            placeholders.push('?');
-                        }
+            for (const [field, value] of Object.entries(otherFields)) {
+                if (columns.includes(field) && !insertFields.includes(field)) {
+                    insertFields.push(field);
+                    if (value === 'NOW()') {
+                        insertValues.push('NOW()');
+                        placeholders.push('NOW()');
+                    } else {
+                        // Ensure no undefined values sneak in
+                        insertValues.push(value !== undefined ? value : null);
+                        placeholders.push('?');
                     }
                 }
+            }
 
-                if (columns.includes('cust_id') && !insertFields.includes('cust_id')) {
-                    const maxIdSql = "SELECT MAX(cust_id) as maxId FROM customers WHERE company_id = ? AND branch_id = ?";
-                    db.query(maxIdSql, [companyCode, branch_id], (maxErr, maxRows) => {
-                        let nextCustId = 1;
-                        if (!maxErr && maxRows && maxRows[0] && maxRows[0].maxId) {
-                            nextCustId = maxRows[0].maxId + 1;
-                        }
-                        
-                        insertFields.unshift('cust_id');
-                        insertValues.unshift(nextCustId);
-                        placeholders.unshift('?');
-                        executeInsert();
-                    });
-                } else {
-                    executeInsert();
+            let nextCustId = null;
+            if (columns.includes('cust_id') && !insertFields.includes('cust_id')) {
+                const maxRows = await queryPromise("SELECT MAX(cust_id) as maxId FROM customers WHERE company_id = ?", [companyCode]);
+                nextCustId = 1;
+                if (maxRows && maxRows.length > 0 && maxRows[0].maxId) {
+                    nextCustId = parseInt(maxRows[0].maxId) + 1;
                 }
+                
+                insertFields.unshift('cust_id');
+                insertValues.unshift(nextCustId);
+                placeholders.unshift('?');
+            }
 
-                function executeInsert() {
-                    const insertSql = `INSERT INTO customers (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')})`;
+            const safeValues = insertValues.filter(v => v !== 'NOW()');
+            const insertSql = `INSERT INTO customers (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')})`;
+            
+            const insResult = await queryPromise(insertSql, safeValues);
+            
+            const finalCustId = nextCustId ? nextCustId : insResult.insertId;
+            await proceedToCreateOrder(req, res, companyCode, branch_id, finalCustId);
 
-                    db.query(insertSql, insertValues.filter(v => v !== 'NOW()'), (insErr, insResult) => {
-                        if (insErr) {
-                            console.error("Error creating customer:", insErr);
-                            return res.status(500).json({ success: false, message: "Failed to create customer record." });
-                        }
-                        
-                        console.log("New customer created successfully with ID:", insResult.insertId);
-                        // PROCEED TO CREATE ORDER
-                        proceedToCreateOrder(req, res, companyCode, branch_id, insResult.insertId);
-                    });
-                }
-            });
         } else {
             console.log("Customer exists. Proceeding to order.");
-            // PROCEED TO CREATE ORDER
-            proceedToCreateOrder(req, res, companyCode, branch_id, checkRows[0].id);
+            const existingCustId = checkRows[0].cust_id || checkRows[0].id;
+            await proceedToCreateOrder(req, res, companyCode, branch_id, existingCustId);
         }
-    });
+    } catch (err) {
+        console.error("Database Error during Customer Check/Create:", err);
+        return res.status(500).json({ success: false, message: "Customer DB Error: " + err.message });
+    }
 }
 
-
 // ==========================================
-// ORDER CREATION LOGIC (NEW)
+// ORDER QUEUE CREATION LOGIC
 // ==========================================
 async function proceedToCreateOrder(req, res, companyCode, branch_id, customer_id) {
     try {
-        console.log("Starting order generation process...");
-        
-        // Data passed from frontend (ensure your frontend sends these exact keys in the payload)
-        const { cartTotal, shippingCost, grandTotal, table_no } = req.body;
+        console.log("Starting order generation process into customer_order_queues...");
+        const { items, table_no } = req.body;
 
-        // Ensure table_no handles multiple values cleanly (e.g., if array passed like ["1", "2"])
+        // ---- THIS HANDLES THE MULTIPLE TABLES ----
         let ord_table_no = null;
         if (Array.isArray(table_no)) {
+            // Turns frontend array ["1", "5"] into string "1, 5" for the database!
             ord_table_no = table_no.join(', ');
         } else if (table_no) {
             ord_table_no = String(table_no);
         }
 
-        // 1. Calculate ord_inv_no (Starts at 445001)
-        let ord_inv_no = 445001;
-        const invRes = await queryPromise("SELECT MAX(ord_inv_no) as max_val FROM orders");
-        if (invRes[0] && invRes[0].max_val && invRes[0].max_val >= 445001) {
-            ord_inv_no = invRes[0].max_val + 1;
+        let order_no = 1;
+        const comRes = await queryPromise("SELECT MAX(CAST(order_no AS UNSIGNED)) as max_val FROM customer_order_queues WHERE company_id = ?", [companyCode]);
+        if (comRes[0] && comRes[0].max_val) {
+            order_no = parseInt(comRes[0].max_val) + 1;
         }
+        
+        const finalOrderNo = String(order_no); 
 
-        // 2. Calculate ord_com_order_no (Unique per company, starting at 1)
-        let ord_com_order_no = 1;
-        const comRes = await queryPromise("SELECT MAX(ord_com_order_no) as max_val FROM orders WHERE ord_company_id = ?", [companyCode]);
-        if (comRes[0] && comRes[0].max_val) ord_com_order_no = comRes[0].max_val + 1;
-
-        // 3. Calculate ord_branch_order_no (Unique per company & branch, starting at 1)
-        let ord_branch_order_no = 1;
-        const brRes = await queryPromise("SELECT MAX(ord_branch_order_no) as max_val FROM orders WHERE ord_company_id = ? AND ord_branch_id = ?", [companyCode, branch_id]);
-        if (brRes[0] && brRes[0].max_val) ord_branch_order_no = brRes[0].max_val + 1;
-
-        // 4. Calculate ord_daily_order_no (Unique per company, branch, and TODAY's date, starting at 1)
-        let ord_daily_order_no = 1;
-        const dailyRes = await queryPromise("SELECT MAX(ord_daily_order_no) as max_val FROM orders WHERE ord_company_id = ? AND ord_branch_id = ? AND DATE(created_at) = CURDATE()", [companyCode, branch_id]);
-        if (dailyRes[0] && dailyRes[0].max_val) ord_daily_order_no = dailyRes[0].max_val + 1;
-
-        // 5. Build Final Insert Query
         const insertSql = `
-            INSERT INTO orders (
-                ord_create_by, ord_inv_no, ord_com_order_no, ord_daily_order_no, ord_branch_order_no,
-                ord_customer_id, ord_company_id, ord_branch_id, ord_table_no,
-                ord_sub_total, ord_discount, ord_delivery, ord_total, ord_pay_mtd,
-                ord_card, ord_mbank, ord_status, ord_kitchen_no, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            INSERT INTO customer_order_queues (
+                create_by, emp_id, order_no, table_no, customer_id, 
+                company_id, branch_id, menu_id, size, qty, price, 
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         `;
 
-        const insertParams = [
-            null,                   // ord_create_by
-            ord_inv_no,             // ord_inv_no
-            ord_com_order_no,       // ord_com_order_no
-            ord_daily_order_no,     // ord_daily_order_no
-            ord_branch_order_no,    // ord_branch_order_no
-            customer_id,            // ord_customer_id
-            companyCode,            // ord_company_id
-            branch_id,              // ord_branch_id
-            ord_table_no,           // ord_table_no
-            cartTotal,              // ord_sub_total
-            null,                   // ord_discount
-            shippingCost,           // ord_delivery
-            grandTotal,             // ord_total
-            "cash",                 // ord_pay_mtd (hardcoded)
-            null,                   // ord_card
-            null,                   // ord_mbank
-            1,                      // ord_status (default 1)
-            null                    // ord_kitchen_no
-        ];
+        for (const item of items) {
+            let menu_id = parseInt(item.m_menu_id) || parseInt(item.id) || null; 
+            if (isNaN(menu_id)) menu_id = null;
 
-        // 6. Execute Insert
-        const finalOrder = await queryPromise(insertSql, insertParams);
+            let qty = parseInt(item.quantity) || 1;
+            if (isNaN(qty)) qty = 1;
+            
+            const itemPrice = parseFloat(item.m_price) || 0;
+            const rowTotalPrice = itemPrice * qty;
 
-        console.log("Order successfully created! Order ID:", finalOrder.insertId);
+            const insertParams = [
+                null,                   
+                null,                   
+                finalOrderNo,           
+                ord_table_no,           // Passes the comma-separated tables here
+                customer_id,            
+                companyCode,            
+                branch_id,              
+                menu_id,                
+                null,                   
+                qty,                    
+                String(rowTotalPrice)   
+            ];
 
-        // Final success response sent back to the React Frontend
+            const safeParams = insertParams.map(v => v === undefined ? null : v);
+            await queryPromise(insertSql, safeParams);
+        }
+
+        console.log("All order items successfully queued! Order No:", finalOrderNo);
+
         return res.status(200).json({ 
             success: true, 
-            message: "Order placed successfully!", 
-            order_id: finalOrder.insertId
+            message: "Order placed successfully in queue!", 
+            order_no: finalOrderNo 
         });
 
     } catch (err) {
-        console.error("Critical error while generating order data:", err);
+        console.error("Critical error while inserting items into queue:", err);
         return res.status(500).json({ 
             success: false, 
-            message: "Customer profile processed, but order creation failed." 
+            message: "Order Insert DB Error: " + err.message 
         });
     }
 }

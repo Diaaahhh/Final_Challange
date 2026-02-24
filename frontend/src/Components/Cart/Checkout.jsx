@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../Cart/CartContext'; 
 import api from '../../api';
 import { FaTimes, FaCalendarAlt, FaClock, FaExclamationCircle } from 'react-icons/fa';
-import "cally"; // Import Cally
+import "cally"; 
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { cartItems, cartTotal, setCartItems } = useCart(); 
+  const { cartItems, cartTotal, clearCart } = useCart(); 
     
   const SHIPPING_COST = 100; 
 
@@ -19,41 +19,34 @@ export default function Checkout() {
     order_method: '' 
   });
 
-  // --- Modal & Data State ---
   const [showModal, setShowModal] = useState(false);
   const [availableTables, setAvailableTables] = useState([]);
   
+  // Changed table_no to an Array to handle multiple tables
   const [bookingData, setBookingData] = useState({
-    table_no: '', 
+    table_no: [], 
     date: new Date(),
     time: '12:00'
   });
+  
+  // New state for Number of Persons (UI ONLY, not sent to backend)
+  const [personCount, setPersonCount] = useState('');
+
   const [showCalendar, setShowCalendar] = useState(false);
-
-  // --- Refs for Cally Calendar ---
   const calendarRef = useRef(null);
-
-  // --- Toast State ---
   const [toast, setToast] = useState({ show: false, message: '' });
-
   const [loading, setLoading] = useState(false);
 
-  // --- DYNAMIC CALCULATIONS ---
   const isHomeDelivery = formData.order_method === "Home delivery";
   const finalShippingCost = isHomeDelivery ? SHIPPING_COST : 0;
   const grandTotal = cartTotal + finalShippingCost;
 
-  // --- NEW LOGIC: Fetch User Data by Phone Number ---
   const handlePhoneBlur = async (e) => {
     const phoneNumber = e.target.value;
-    
-    // Basic validation to avoid unnecessary calls for short/empty numbers
     if (phoneNumber && phoneNumber.length > 3) {
         try {
             const res = await api.get(`/get-user-by-phone/${phoneNumber}`);
-            
             if (res.data) {
-                // Auto-fill form with fetched data
                 setFormData(prev => ({
                     ...prev,
                     cust_name: res.data.name || prev.cust_name,
@@ -61,18 +54,15 @@ export default function Checkout() {
                 }));
             }
         } catch (err) {
-            // It's okay if not found, user can fill manually
             console.log("User not found by phone, proceeding with manual entry.");
         }
     }
   };
 
-  // --- Cally Calendar Logic ---
   useEffect(() => {
     const calendar = calendarRef.current;
     if (calendar) {
       const handleDateChange = (e) => {
-        // Cally returns YYYY-MM-DD string
         const selectedDate = new Date(e.target.value);
         setBookingData((prev) => ({ ...prev, date: selectedDate }));
         setShowCalendar(false);
@@ -82,7 +72,6 @@ export default function Checkout() {
     }
   }, [showCalendar]);
 
-  // 2. Fetch Tables Logic
   const fetchTables = async () => {
      if (cartItems.length > 0) {
         const firstItem = cartItems[0];
@@ -91,8 +80,18 @@ export default function Checkout() {
 
         if (companyId && branchId) {
           try {
-            const res = await api.get(`/get-tables/${companyId}/${branchId}`);
-            setAvailableTables(res.data);
+            const tablesRes = await api.get(`/get-tables/${companyId}/${branchId}`);
+            const allTables = tablesRes.data || [];
+
+            const occupiedRes = await api.get(`/get-occupied-tables/${companyId}/${branchId}`);
+            const occupiedTables = occupiedRes.data || []; 
+
+            const finalTables = allTables.map(t => ({
+                ...t,
+                is_occupied: occupiedTables.includes(String(t.table_no).trim())
+            }));
+
+            setAvailableTables(finalTables);
           } catch (err) {
             console.error("Error fetching tables:", err);
           }
@@ -110,45 +109,49 @@ export default function Checkout() {
             fetchTables();
             setShowModal(true);
         } else if (value === 'Parcel') {
-            setBookingData(prev => ({ ...prev, table_no: '' })); 
+            setBookingData(prev => ({ ...prev, table_no: [] })); 
             fetchTables(); 
             setShowModal(true);
         } else {
-            setBookingData({ table_no: '', date: new Date(), time: '12:00' });
+            setBookingData({ table_no: [], date: new Date(), time: '12:00' });
             setAvailableTables([]);
         }
     }
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleBookingDataChange = (e) => {
-      const { name, value } = e.target;
-      setBookingData(prev => ({ ...prev, [name]: value }));
-  };
-
+  // Toggles the table in the array for multi-select
   const handleTableSelect = (tableNo) => {
-      setBookingData(prev => ({ ...prev, table_no: tableNo }));
+      setBookingData(prev => {
+          const currentTables = Array.isArray(prev.table_no) ? prev.table_no : [];
+          if (currentTables.includes(tableNo)) {
+              // Remove table if already selected
+              return { ...prev, table_no: currentTables.filter(t => t !== tableNo) };
+          } else {
+              // Add table to selection
+              return { ...prev, table_no: [...currentTables, tableNo] };
+          }
+      });
   };
 
-  // --- Helper to Trigger Toast ---
   const showToastWarning = (msg) => {
       setToast({ show: true, message: msg });
       setTimeout(() => setToast({ show: false, message: '' }), 3000); 
   };
 
   const saveDetails = () => {
-      if (!bookingData.table_no) {
-          alert(formData.order_method === 'Dine-in' ? "Please select a table." : "Please enter a number.");
+      if (!bookingData.table_no || bookingData.table_no.length === 0) {
+          alert(formData.order_method === 'Dine-in' ? "Please select at least one table." : "Please select a table.");
           return;
       }
 
       if (formData.order_method === 'Parcel') {
           const isValid = availableTables.some(
-              t => String(t.table_no).trim() === String(bookingData.table_no).trim()
+              t => String(t.table_no).trim() === String(bookingData.table_no[0]).trim()
           );
 
           if (!isValid) {
-              showToastWarning(`Warning: Table "${bookingData.table_no}" does not exist!`);
+              showToastWarning(`Warning: Table "${bookingData.table_no[0]}" does not exist!`);
               return; 
           }
       }
@@ -170,7 +173,7 @@ export default function Checkout() {
     }
 
     const needsDetails = ['Dine-in', 'Parcel'].includes(formData.order_method);
-    if(needsDetails && !bookingData.table_no) {
+    if(needsDetails && (!bookingData.table_no || bookingData.table_no.length === 0)) {
         alert(`Please provide details for ${formData.order_method}.`);
         fetchTables(); 
         setShowModal(true);
@@ -179,16 +182,12 @@ export default function Checkout() {
     
     setLoading(true);
 
-    const formattedDate = bookingData.date.toISOString().split('T')[0];
-    
-    let finalInfoString = formData.order_method;
-    if(formData.order_method === 'Dine-in') {
-        finalInfoString = `Table ${bookingData.table_no} | ${formattedDate} ${bookingData.time}`;
-    } else if (formData.order_method === 'Parcel') {
-        finalInfoString = `Parcel ${bookingData.table_no} | ${formattedDate} ${bookingData.time}`;
+    // If Dine-in or Parcel, send the array of tables directly. Backend will join them!
+    let finalTableData = formData.order_method; 
+    if (formData.order_method === 'Dine-in' || formData.order_method === 'Parcel') {
+        finalTableData = bookingData.table_no; // This is an array, e.g., ["1", "5"]
     }
 
-    // --- NEW LOGIC: EXTRACT USER DATA FROM LOCAL STORAGE ---
     let userEmail = null;
     let isLoggedIn = false;
     try {
@@ -196,54 +195,45 @@ export default function Checkout() {
         if (storedUser) {
             const parsedUser = JSON.parse(storedUser);
             if (parsedUser && parsedUser.id) {
-                isLoggedIn = true; // Set flag to 1 (true)
+                isLoggedIn = true; 
                 userEmail = parsedUser.email || null;
             }
         }
     } catch (err) {
         console.error("Error parsing user data:", err);
     }
-    // -------------------------------------------------------
 
     const orderPayload = {
         phone: String(formData.phone),
         cust_name: formData.cust_name,
         address: formData.address,
         waiter: "65", 
-        table_no: finalInfoString, 
+        table_no: finalTableData, // Passed to backend
         discount: 0, 
         payment_method: "cash", 
         branch_id: cartItems.length > 0 ? (cartItems[0].branchId || 1) : 1, 
         total: grandTotal, 
         payment_details: { total: grandTotal },
-        
-        // --- PASS NEW FIELDS TO BACKEND ---
         email: userEmail,
         is_logged_in: isLoggedIn, 
-        // ----------------------------------
-
         items: cartItems.map(item => ({
             id: item.id,
-            menu_id: item.id, 
-            name: item.m_menu_name,
-            qty: item.quantity,
-            price: item.m_price
+            m_menu_id: item.m_menu_id || item.id,  
+            m_menu_name: item.m_menu_name,
+            quantity: item.quantity,                    
+            m_price: item.m_price                       
         }))
     };
 
     try {
         const response = await api.post("/save-customer-data", orderPayload);
         
-        // Check if order was successful (handles both success and local_order flags)
         if(response.data.success || response.data.status === 200 || response.data.customer_id || response.data.local_order) {
             alert("Order placed successfully!");
-            // Clear the cart using setCartItems from context
-            if (setCartItems && typeof setCartItems === 'function') {
-                setCartItems([]);
+            if (clearCart && typeof clearCart === 'function') {
+                clearCart();
             } else {
-                console.error("setCartItems is not a function", setCartItems);
-                // Fallback: try to clear localStorage directly
-                localStorage.removeItem('cart');
+                localStorage.removeItem('siteCart');
             }
             navigate('/'); 
         } else {
@@ -253,14 +243,13 @@ export default function Checkout() {
 
     } catch (error) {
         console.error("❌ Submission Error:", error);
-        const serverMessage = error.response?.data?.message || error.message;
+        const serverMessage = error.response?.data?.message || error.response?.data?.error || error.message;
         alert(`Failed to place order: ${serverMessage}`);
     } finally {
         setLoading(false);
     }
   };
 
-  // --- Helper: Render Chairs ---
   const renderChairs = (count, position) => {
     return Array.from({ length: count }).map((_, index) => (
       <div key={`${position}-${index}`} className="flex flex-col items-center">
@@ -284,7 +273,6 @@ export default function Checkout() {
     <div className="bg-white min-h-screen font-['Inter'] relative">
       <div className="container mx-auto px-4 py-16 md:py-24">
         
-        {/* --- TOAST MESSAGE --- */}
         {toast.show && (
             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[60] animate-bounce">
                 <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 font-bold text-sm">
@@ -295,7 +283,6 @@ export default function Checkout() {
         )}
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Billing Details */}
           <div>
             <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-[#0E1014] mb-8 border-l-4 border-[#C59D5F] pl-4">
               Billing Details
@@ -325,7 +312,6 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Your Order */}
           <div>
              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-[#0E1014] mb-8 border-l-4 border-[#C59D5F] pl-4">
               Your Order
@@ -352,7 +338,6 @@ export default function Checkout() {
                     <td className="py-4 text-right text-[#C59D5F]">Tk {cartTotal.toLocaleString()}</td>
                   </tr>
 
-                  {/* --- ORDER METHOD DROPDOWN --- */}
                   <tr className="border-b border-gray-100">
                     <td className="py-4 align-middle">
                         Order Method <span className="text-red-500">*</span>
@@ -362,7 +347,7 @@ export default function Checkout() {
                             name="order_method" 
                             value={formData.order_method} 
                             onChange={handleChange}
-                            className="bg-[#F3F4F7] border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-[#C59D5F] focus:border-[#C59D5F] block w-full p-2.5 outline-none"
+                            className="bg-[#F3F4F7] border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-[#C59D5F] focus:border-[#C59D5F] block w-full p-2.5 outline-none font-['Arial']"
                             required
                         >
                             <option value="">Select Method</option>
@@ -372,11 +357,16 @@ export default function Checkout() {
                             <option value="Dine-in">Dine-in</option>
                         </select>
                         
-                        {/* Summary of Selection (Dine-in OR Parcel) */}
-                        {['Dine-in', 'Parcel'].includes(formData.order_method) && bookingData.table_no && (
+                        {['Dine-in', 'Parcel'].includes(formData.order_method) && bookingData.table_no && bookingData.table_no.length > 0 && (
                             <div className="text-xs text-[#C59D5F] mt-2 font-normal">
-                                {formData.order_method === 'Dine-in' ? 'Table' : 'Table'}: {bookingData.table_no} <br/>
+                                {formData.order_method === 'Dine-in' ? 'Table(s)' : 'Table'}: {bookingData.table_no.join(', ')} <br/>
                                 {bookingData.date.toLocaleDateString()} at {bookingData.time}
+                                
+                                {/* Show Number of Persons in summary if Dine-in */}
+                                {formData.order_method === 'Dine-in' && personCount && (
+                                    <span><br/>Guests: {personCount}</span>
+                                )}
+
                                 <button type="button" onClick={() => setShowModal(true)} className="ml-2 underline text-gray-500 hover:text-black">Edit</button>
                             </div>
                         )}
@@ -408,12 +398,10 @@ export default function Checkout() {
           </div>
         </form>
 
-        {/* --- UNIVERSAL MODAL (Dine-in & Parcel) --- */}
         {showModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col relative">
                     
-                    {/* Header */}
                     <div className="bg-[#0E1014] p-5 flex justify-between items-center shrink-0">
                         <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
                             Order Method: <span className="text-[#C59D5F]">{formData.order_method}</span>
@@ -423,15 +411,27 @@ export default function Checkout() {
                         </button>
                     </div>
 
-                    {/* Body - Scrollable */}
                     <div className="p-6 space-y-6 overflow-y-auto">
                         
-                        {/* --- CONDITIONAL FIELD: Visual Tables OR Text Input --- */}
                         {formData.order_method === 'Dine-in' ? (
-                            // >>> VISUAL TABLE GRID <<<
                             <div>
+                                {/* UI ONLY: Number of Persons */}
+                                <div className="mb-6">
+                                    <label className="block text-gray-600 text-sm font-bold mb-2 uppercase tracking-wide">
+                                        Number of Persons
+                                    </label>
+                                    <input 
+                                        type="number"
+                                        min="1"
+                                        value={personCount}
+                                        onChange={(e) => setPersonCount(e.target.value)}
+                                        placeholder="Enter number of guests"
+                                        className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700"
+                                    />
+                                </div>
+
                                 <label className="block text-gray-600 text-sm font-bold mb-4 uppercase tracking-wide">
-                                    Select a Table
+                                    Select Table(s)
                                 </label>
                                 
                                 {availableTables.length > 0 ? (
@@ -440,24 +440,42 @@ export default function Checkout() {
                                             const totalChairs = t.person_no || t.capacity || 4; 
                                             const topRow = Math.ceil(totalChairs / 2);
                                             const bottomRow = Math.floor(totalChairs / 2);
-                                            const isSelected = bookingData.table_no === t.table_no;
+                                            
+                                            // Check if this table is inside the selected array
+                                            const isSelected = bookingData.table_no.includes(t.table_no);
+                                            const isOccupied = t.is_occupied;
 
                                             return (
                                                 <div 
                                                     key={t.id} 
-                                                    onClick={() => handleTableSelect(t.table_no)}
+                                                    onClick={() => {
+                                                        if (!isOccupied) handleTableSelect(t.table_no);
+                                                    }}
                                                     className={`
-                                                        group cursor-pointer flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300
-                                                        ${isSelected 
-                                                            ? 'border-[#C59D5F] bg-amber-50 shadow-md transform scale-105' 
-                                                            : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50'
+                                                        group flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 relative
+                                                        ${isOccupied 
+                                                            ? 'border-red-300 bg-red-50 cursor-not-allowed opacity-70' 
+                                                            : isSelected 
+                                                                ? 'border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer' 
+                                                                : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer'
                                                         }
                                                     `}
                                                 >
+                                                    {isOccupied && (
+                                                        <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
+                                                            BUSY
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex gap-1 mb-1">{renderChairs(topRow, 'top')}</div>
                                                     <div className={`
                                                         w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
-                                                        ${isSelected ? 'bg-[#C59D5F] text-white' : 'bg-gray-200 text-gray-600'}
+                                                        ${isOccupied 
+                                                            ? 'bg-red-200 text-red-800' 
+                                                            : isSelected 
+                                                                ? 'bg-[#C59D5F] text-white' 
+                                                                : 'bg-gray-200 text-gray-600'
+                                                        }
                                                     `}>
                                                         <div className="absolute inset-0 opacity-10 bg-black"></div>
                                                         <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
@@ -479,64 +497,32 @@ export default function Checkout() {
                                 )}
                             </div>
                         ) : (
-                            // >>> PARCEL DROPDOWN <<<
-<div>
-    <label className="block text-gray-600 text-sm font-bold mb-2 uppercase tracking-wide">
-        Table No.
-    </label>
-    <select 
-        name="table_no" 
-        value={bookingData.table_no}
-        onChange={handleBookingDataChange}
-        className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700 cursor-pointer"
-    >
-        <option value="">-- Select a Table --</option>
-        {availableTables.length > 0 ? (
-            availableTables.map(t => (
-                <option key={t.id} value={t.table_no}>
-                    Table {t.table_no} {t.capacity ? `(${t.capacity} Seats)` : ''}
-                </option>
-            ))
-        ) : (
-            <option value="" disabled>No tables available</option>
-        )}
-    </select>
-    <p className="text-xs text-gray-400 mt-1">Please select a table for your parcel order.</p>
-</div>
+                        <div>
+                            <label className="block text-gray-600 text-sm font-bold mb-2 uppercase tracking-wide">
+                                Table No.
+                            </label>
+                            <select 
+                                name="table_no" 
+                                // Parcel only allows selecting one table
+                                value={bookingData.table_no.length > 0 ? bookingData.table_no[0] : ''}
+                                onChange={(e) => setBookingData(prev => ({ ...prev, table_no: [e.target.value] }))}
+                                className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700 cursor-pointer"
+                            >
+                                <option value="">-- Select a Table --</option>
+                                {availableTables.length > 0 ? (
+                                    availableTables.map(t => (
+                                        <option key={t.id} value={t.table_no} disabled={t.is_occupied}>
+                                            Table {t.table_no} {t.capacity ? `(${t.capacity} Seats)` : ''} {t.is_occupied ? '(Occupied)' : ''}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="" disabled>No tables available</option>
+                                )}
+                            </select>
+                            <p className="text-xs text-gray-400 mt-1">Please select a table for your parcel order.</p>
+                        </div>
                         )}
 
-                        {/* --- COMMON FIELDS: Date & Time --- */}
-                        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-gray-600 text-xs font-bold mb-2 uppercase tracking-wide">Date</label>
-                                <div className="relative">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setShowCalendar(!showCalendar)}
-                                        className="w-full flex items-center justify-between bg-[#F3F4F7] rounded-lg px-4 py-3 text-gray-700 hover:bg-gray-200 transition-colors text-sm"
-                                    >
-                                        <span>{bookingData.date.toDateString()}</span>
-                                        <FaCalendarAlt className="text-[#C59D5F]" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-gray-600 text-xs font-bold mb-2 uppercase tracking-wide">Time</label>
-                                <div className="relative">
-                                    <input 
-                                        type="time" 
-                                        name="time"
-                                        value={bookingData.time}
-                                        onChange={handleBookingDataChange}
-                                        className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700 text-sm"
-                                    />
-                                    <FaClock className="absolute right-4 top-1/2 -translate-y-1/2 text-[#C59D5F] pointer-events-none" />
-                                </div>
-                            </div>
-                        </div> */}
-
-                        {/* Inline Cally Calendar Display */}
                         {showCalendar && (
                             <div className="flex justify-center border border-gray-100 rounded-lg p-4 bg-white shadow-sm animate-fade-in-up">
                                 <calendar-date
@@ -552,7 +538,6 @@ export default function Checkout() {
                             </div>
                         )}
 
-                        {/* Save Button */}
                         <button 
                             type="button"
                             onClick={saveDetails}

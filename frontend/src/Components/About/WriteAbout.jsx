@@ -76,7 +76,7 @@ export default function WriteAbout() {
         {/* Right Side: Form */}
         <div className="md:w-3/5 p-8">
             <h3 className="text-2xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-[#1E1E1E] pb-4">
-                <FaPen className="text-[#00FFD1]"/> Edit Content
+                <FaPen className="text-[#007BFF]"/> Edit Content
             </h3>
 
             {success && (

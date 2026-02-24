@@ -10,12 +10,13 @@ import {
   FaPen,
   FaCheckCircle,
   FaUtensils,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaChevronDown,
+  FaSpinner
 } from "react-icons/fa";
-import api from "../../api";
+import api from "../../api"; 
 
 export default function Reservation() {
-  // --- Form State ---
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -24,52 +25,61 @@ export default function Reservation() {
     notes: "",
     date: "",
     time: "",
-    table_number: [] // Changed to Array for multiple selections
+    branch_id: "",       
+    table_number: [],    
   });
 
+  const [branches, setBranches] = useState([]);
+  const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [showCalendar, setShowCalendar] = useState(false);
   
-  // --- Layout State ---
-  const [floorPlan, setFloorPlan] = useState([]);
+  // UI toggles
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showTableDropdown, setShowTableDropdown] = useState(false);
+  const [fetchingUserData, setFetchingUserData] = useState(false);
 
   const calendarRef = useRef(null);
-  const calendarContainerRef = useRef(null);
+  const tableDropdownRef = useRef(null);
 
-  // --- Fetch Floor Plan on Mount ---
+  // 1. Fetch branches on mount
   useEffect(() => {
-    const fetchLayout = async () => {
+    const fetchBranches = async () => {
       try {
-        const res = await api.get("/tables");
-        setFloorPlan(Array.isArray(res.data) ? res.data : []);
+        const res = await api.get("/reservation/branches"); 
+        setBranches(res.data || []);
       } catch (err) {
-        console.error("Failed to load floor plan", err);
+        console.error("Error fetching branches:", err);
       }
     };
-    fetchLayout();
+    fetchBranches();
   }, []);
 
-  // --- Calendar Logic ---
+  // 2. Fetch tables whenever branch_id changes
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        calendarContainerRef.current &&
-        !calendarContainerRef.current.contains(event.target)
-      ) {
-        setShowCalendar(false);
+    const fetchTables = async () => {
+      if (!formData.branch_id) {
+        setTables([]);
+        return;
+      }
+      try {
+        const res = await api.get(`/reservation/tables/${formData.branch_id}`);
+        setTables(res.data || []);
+      } catch (err) {
+        console.error("Error fetching tables:", err);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    fetchTables();
+  }, [formData.branch_id]);
 
+  // 3. Handle Calendar Clicks
   useEffect(() => {
     const calendar = calendarRef.current;
     if (calendar) {
       const handleDateChange = (e) => {
-        setFormData((prev) => ({ ...prev, date: e.target.value }));
+        const selectedDate = new Date(e.target.value).toISOString().split("T")[0];
+        setFormData((prev) => ({ ...prev, date: selectedDate }));
         setShowCalendar(false);
       };
       calendar.addEventListener("change", handleDateChange);
@@ -77,373 +87,325 @@ export default function Reservation() {
     }
   }, [showCalendar]);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // 4. Handle clicks outside the custom table dropdown to close it
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (tableDropdownRef.current && !tableDropdownRef.current.contains(event.target)) {
+        setShowTableDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // NEW: Handle phone blur to fetch user data
+  const handlePhoneBlur = async (e) => {
+    const phoneNumber = e.target.value;
+    if (phoneNumber && phoneNumber.length > 5) {
+      setFetchingUserData(true);
+      try {
+        const res = await api.get(`/reservation/get-user-by-phone/${phoneNumber}`);
+        if (res.data) {
+          setFormData(prev => ({
+            ...prev,
+            name: res.data.name || res.data.cust_name || prev.name,
+          }));
+        }
+      } catch (err) {
+        // User not found, just ignore - let user fill manually
+        console.log("User not found by phone, proceeding with manual entry.");
+      } finally {
+        setFetchingUserData(false);
+      }
+    }
   };
 
-  // --- NEW: Handle Multiple Table Selection ---
-  const handleTableSelect = (tableNum) => {
-    setFormData((prev) => {
+  // Handle standard inputs
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "branch_id") {
+      setFormData((prev) => ({ ...prev, branch_id: value, table_number: [] }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Handle custom Table Checkbox toggle
+  const handleTableToggle = (tableNo) => {
+    setFormData(prev => {
       const currentTables = prev.table_number;
-      if (currentTables.includes(tableNum)) {
-        // If already selected, remove it (deselect)
-        return { ...prev, table_number: currentTables.filter(t => t !== tableNum) };
+      if (currentTables.includes(tableNo)) {
+        // Remove if already selected
+        return { ...prev, table_number: currentTables.filter(t => t !== tableNo) };
       } else {
-        // If not selected, add it
-        return { ...prev, table_number: [...currentTables, tableNum] };
+        // Add to selection
+        return { ...prev, table_number: [...currentTables, tableNo] };
       }
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     setSuccess(false);
 
-    // Prepare data payload (Convert array to string for backend)
-    const payload = {
-        ...formData,
-        table_number: formData.table_number.join(", ") // "1, 5, 8"
-    };
+    // Custom Validation for Table Array
+    if (formData.table_number.length === 0) {
+        setError("Please select at least one table.");
+        return;
+    }
+
+    setLoading(true);
 
     try {
-      await api.post("/reservation/create", payload);
+      await api.post("/reservation/create", formData);
       setSuccess(true);
       setFormData({
-        name: "", phone: "", guest_number: "", event_name: "Others..", notes: "", date: "", time: "",
-        table_number: []
+        name: "",
+        phone: "",
+        guest_number: "",
+        event_name: "Others..",
+        notes: "",
+        date: "",
+        time: "",
+        branch_id: "",
+        table_number: [],
       });
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to make reservation.");
+      setError(err.response?.data?.error || "An error occurred during submission.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Styles ---
-  const inputClass =
-    "w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg py-3 px-4 pl-10 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder-gray-500 text-sm";
-  const textareaClass =
-    "w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg py-3 px-4 pl-10 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder-gray-500 text-sm h-24 resize-none";
-
   return (
-    <div className="min-h-screen bg-gray-900 font-sans relative overflow-x-hidden">
-      
-      {/* Background Image with Overlay */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-          alt="Restaurant Background"
-          className="w-full h-full object-cover opacity-20"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-900/90 to-gray-900"></div>
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 py-12 lg:py-20 max-w-7xl">
+    <div className="min-h-screen bg-[rgb(229,231,235)] py-12 px-4 font-['Inter']">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg relative">
         
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <span className="text-amber-500 text-sm font-bold tracking-[0.2em] uppercase mb-2 block">
-            Reservation
-          </span>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white mb-4">
-            Book Your <span className="text-amber-500">Table</span>
-          </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto font-light">
-            Experience culinary excellence. Select your tables directly from the map below.
-          </p>
+        {/* Header */}
+        <div className="bg-[#0E1014] text-white p-8 text-center rounded-t-xl">
+          <h2 className="text-3xl font-['Barlow_Condensed'] font-bold uppercase tracking-wider mb-2">Book a Table</h2>
+          <p className="text-gray-400 text-sm">Reserve your spot at your favorite branch.</p>
         </div>
 
-        {/* --- MAIN CONTENT: FLEX LAYOUT --- */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          
-          {/* --- LEFT SIDE: RESERVATION FORM --- */}
-          <div className="w-full lg:w-1/3 bg-gray-900/80 backdrop-blur-md border border-gray-800 rounded-2xl p-6 md:p-8 shadow-2xl">
-            {success ? (
-              <div className="text-center py-12 animate-in fade-in zoom-in duration-500">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 text-green-500 mb-4">
-                  <FaCheckCircle className="text-3xl" />
-                </div>
-                <h3 className="text-2xl font-serif font-bold text-white mb-2">
-                  Reservation Confirmed!
-                </h3>
-                <p className="text-gray-400">
-                  We look forward to hosting you.
-                </p>
-                <button
-                  onClick={() => setSuccess(false)}
-                  className="mt-6 text-amber-500 hover:text-amber-400 text-sm font-bold uppercase tracking-wider underline underline-offset-4"
+        <div className="p-8">
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 text-green-700 border border-green-200 rounded-lg flex items-center gap-3">
+              <FaCheckCircle /> Reservation submitted successfully!
+            </div>
+          )}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* --- BRANCH DROPDOWN --- */}
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaMapMarkerAlt className="text-[#C59D5F]" /> Branch <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="branch_id"
+                  value={formData.branch_id}
+                  onChange={handleChange}
+                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all font-['Arial']"
+                  required
                 >
-                  Book Another
-                </button>
+                  <option value="">-- Select Branch --</option>
+                  {branches.map((b) => (
+                    <option key={b.branch_id} value={b.branch_id}>
+                      {b.branch_name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {error && (
-                  <div className="md:col-span-2 bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm text-center">
-                    {error}
+
+              {/* --- TABLE NUMBER (CUSTOM CHECKBOX DROPDOWN) --- */}
+              <div className="relative" ref={tableDropdownRef}>
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaUtensils className="text-[#C59D5F]" /> Table No. <span className="text-red-500">*</span>
+                </label>
+                <div
+                  onClick={() => setShowTableDropdown(!showTableDropdown)}
+                  className="w-full bg-[#F3F4F7] rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all cursor-pointer flex justify-between items-center font-['Arial']"
+                >
+                  <span className="truncate text-gray-700">
+                    {formData.table_number.length > 0 
+                      ? `Selected: Table ${formData.table_number.join(", ")}` 
+                      : "-- Select Table(s) --"}
+                  </span>
+                  <FaChevronDown className="text-gray-400 text-xs" />
+                </div>
+
+                {showTableDropdown && (
+                  <div className="absolute top-full left-0 mt-2 z-50 w-full bg-white border border-gray-200 shadow-xl rounded-lg max-h-60 overflow-y-auto font-['Arial'] py-2">
+                    {tables.length > 0 ? (
+                      tables.map((t) => (
+                        <label key={t.id} className="flex items-center px-4 py-2 hover:bg-gray-100 cursor-pointer transition-colors text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={formData.table_number.includes(t.table_no)}
+                            onChange={() => handleTableToggle(t.table_no)}
+                            className="mr-3 w-4 h-4 text-[#C59D5F] focus:ring-[#C59D5F] rounded border-gray-300"
+                          />
+                          Table {t.table_no} {t.person_no ? `(${t.person_no} Seats)` : ""}
+                        </label>
+                      ))
+                    ) : (
+                      <div className="p-4 text-gray-500 text-sm text-center">Please select a branch first</div>
+                    )}
                   </div>
                 )}
+              </div>
 
-                {/* Name */}
-                <div className="md:col-span-2">
-                  <label className="label text-xs font-bold text-gray-400 uppercase">Full Name</label>
-                  <div className="relative">
-                    <FaUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="Enter your name"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="md:col-span-2">
-                  <label className="label text-xs font-bold text-gray-400 uppercase">Phone Number</label>
-                  <div className="relative">
-                    <FaPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="+880 1XXXXXXXXX"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Date & Time */}
-                <div className="relative" ref={calendarContainerRef}>
-                  <label className="label text-xs font-bold text-gray-400 uppercase">Date</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowCalendar(!showCalendar)}
-                    className={`${inputClass} text-left flex items-center`}
-                  >
-                    <FaCalendarAlt className="absolute left-3 text-gray-400" />
-                    <span className={formData.date ? "text-white" : "text-gray-500"}>
-                      {formData.date || "Select Date"}
-                    </span>
-                  </button>
-                  
-                  {showCalendar && (
-                    <div className="absolute top-full left-0 z-50 mt-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200">
-                      <calendar-date
-                        ref={calendarRef}
-                        className="cally text-gray-900" 
-                        min={new Date().toISOString().split("T")[0]}
-                      >
-                        <svg slot="previous" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                        <svg slot="next" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-                        <calendar-month></calendar-month>
-                      </calendar-date>
+              {/* Phone - Modified with onBlur handler */}
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaPhone className="text-[#C59D5F]" /> Phone <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    onBlur={handlePhoneBlur}
+                    placeholder="Phone Number"
+                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all pr-10"
+                    required
+                  />
+                  {fetchingUserData && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <FaSpinner className="animate-spin text-gray-400" />
                     </div>
                   )}
                 </div>
-
-                <div>
-                  <label className="label text-xs font-bold text-gray-400 uppercase">Time</label>
-                  <div className="relative">
-                    <FaClock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="time"
-                      name="time"
-                      value={formData.time}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Guests & Table Selection Display */}
-                <div>
-                  <label className="label text-xs font-bold text-gray-400 uppercase">Guests</label>
-                  <div className="relative">
-                    <FaUsers className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="number"
-                      name="guest_number"
-                      value={formData.guest_number}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="2"
-                      min="1"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="label text-xs font-bold text-amber-500 uppercase">Table No.</label>
-                  <div className="relative">
-                    <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500" />
-                    <input
-                      type="text"
-                      name="table_number"
-                      value={formData.table_number.length > 0 ? formData.table_number.join(", ") : "Select on Map"}
-                      readOnly
-                      className={`${inputClass} border-amber-500/50 text-amber-500 font-bold cursor-default`}
-                      placeholder="Select on Map"
-                    />
-                  </div>
-                </div>
-
-                {/* Occasion */}
-                <div className="md:col-span-2">
-                  <label className="label text-xs font-bold text-gray-400 uppercase">Occasion</label>
-                  <div className="relative">
-                    <FaGlassCheers className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <select
-                      name="event_name"
-                      value={formData.event_name}
-                      onChange={handleChange}
-                      className={`${inputClass} appearance-none cursor-pointer`}
-                    >
-                      <option value="Casual Dining">Casual Dining</option>
-                      <option value="Birthday Party">Birthday Party</option>
-                      <option value="Anniversary">Anniversary</option>
-                      <option value="Date Night">Date Night</option>
-                      <option value="Business Meal">Business Meal</option>
-                      <option value="Others..">Others..</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                <div className="md:col-span-2">
-                  <label className="label text-xs font-bold text-gray-400 uppercase">Special Request</label>
-                  <div className="relative">
-                    <FaPen className="absolute left-3 top-4 text-gray-400" />
-                    <textarea
-                      name="notes"
-                      value={formData.notes}
-                      onChange={handleChange}
-                      className={textareaClass}
-                      placeholder="Allergies, specific requests..."
-                    ></textarea>
-                  </div>
-                </div>
-
-                <div className="md:col-span-2 mt-2">
-                  <button
-                    type="submit"
-                    disabled={loading || formData.table_number.length === 0}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-4 rounded-lg uppercase tracking-widest transition-all shadow-lg hover:shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? "Confirming..." : (formData.table_number.length === 0 ? "Select Table to Book" : "Reserve Now")}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          {/* --- RIGHT SIDE: FLOOR PLAN VISUALIZATION --- */}
-          <div className="w-full lg:w-2/3 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[700px] md:h-[800px]">
-            
-            {/* Map Header */}
-            <div className="bg-gray-100 p-4 border-b border-gray-200 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <FaUtensils className="text-amber-600" />
-                <h3 className="font-['Barlow_Condensed'] font-bold text-gray-800 uppercase tracking-wide text-lg">
-                  Interactive <span className="text-amber-600">Map</span>
-                </h3>
+                <p className="text-xs text-gray-400 mt-1">Phone number will auto-fill your name if you're a returning customer</p>
               </div>
-              <span className="text-[10px] bg-white px-2 py-1 rounded border border-gray-300 text-gray-500 uppercase font-bold tracking-wider">
-                Select Multiple
-              </span>
-            </div>
 
-            {/* Map Canvas */}
-            <div className="flex-1 overflow-auto relative bg-slate-50 p-8">
-              <div className="relative w-[1000px] h-[800px] bg-white rounded-xl border border-dashed border-gray-300 shadow-sm mx-auto">
-                <div className="absolute inset-0 opacity-10 pointer-events-none" 
-                     style={{ backgroundImage: 'radial-gradient(#64748B 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-                </div>
+              {/* Name */}
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaUser className="text-[#C59D5F]" /> Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Your Full Name"
+                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all"
+                  required
+                />
+              </div>
 
-                {floorPlan.length === 0 ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                    <FaUtensils className="text-5xl mb-3 opacity-20" />
-                    <p className="font-bold uppercase tracking-widest text-sm">Floor Plan Loading...</p>
+              {/* Guest Number */}
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaUsers className="text-[#C59D5F]" /> Number of Guests <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="guest_number"
+                  value={formData.guest_number}
+                  onChange={handleChange}
+                  min="1"
+                  placeholder="E.g., 4"
+                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all"
+                  required
+                />
+              </div>
+
+              {/* Event Name */}
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaGlassCheers className="text-[#C59D5F]" /> Occasion
+                </label>
+                <select
+                  name="event_name"
+                  value={formData.event_name}
+                  onChange={handleChange}
+                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all font-['Arial']"
+                >
+                  <option value="Birthday">Birthday</option>
+                  <option value="Anniversary">Anniversary</option>
+                  <option value="Meeting">Business Meeting</option>
+                  <option value="Others..">Others...</option>
+                </select>
+              </div>
+
+              {/* Date */}
+              <div className="relative">
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaCalendarAlt className="text-[#C59D5F]" /> Date <span className="text-red-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="w-full text-left bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700"
+                >
+                  {formData.date ? formData.date : "Select Date"}
+                </button>
+                {showCalendar && (
+                  <div className="absolute top-full left-0 mt-2 z-50 bg-white border border-gray-200 shadow-xl rounded-lg p-4">
+                    <calendar-date
+                      ref={calendarRef}
+                      className="cally text-gray-900 border-none shadow-none"
+                      min={new Date().toISOString().split("T")[0]}
+                      value={formData.date}
+                    >
+                      <svg slot="previous" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                      <svg slot="next" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                      <calendar-month></calendar-month>
+                    </calendar-date>
                   </div>
-                ) : (
-                  floorPlan.map((item) => {
-                    const isTable = item.type === 'table';
-                    const isBookable = item.isBookable; // From API (true/false)
-                    const isSelected = formData.table_number.includes(item.table_number);
-
-                    return (
-                      <div
-                        key={item.id}
-                        // Only add click handler if it IS a table and IS bookable
-                        onClick={() => isTable && isBookable && handleTableSelect(item.table_number)}
-                        className={`
-                            absolute transition-all duration-200 
-                            ${isTable && isBookable ? 'cursor-pointer hover:scale-105 z-10' : 'z-0'}
-                        `}
-                        style={{
-                          left: `${item.pos_x}px`,
-                          top: `${item.pos_y}px`,
-                          width: `${item.width || 100}px`, 
-                          height: `${item.height || 100}px`
-                        }}
-                      >
-                        <div 
-                          className="w-full h-full"
-                          style={{ transform: `rotate(${item.rotation || 0}deg)` }}
-                        >
-                          <div className={`
-                            w-full h-full flex flex-col items-center justify-center rounded-lg border-2 shadow-sm transition-all
-                            ${!isTable 
-                                ? "bg-gray-200 border-gray-400 text-gray-500" // Wall/Object
-                                : isSelected 
-                                    ? "bg-green-100 border-green-500 text-green-700 shadow-green-200 ring-2 ring-green-500 ring-offset-2" // Selected
-                                    : isBookable 
-                                        ? "bg-white border-gray-800 text-gray-800 hover:border-amber-500 hover:shadow-amber-500/50" // Bookable
-                                        : "bg-red-50 border-red-200 text-red-300 cursor-not-allowed opacity-70" // Not Bookable
-                            }
-                          `}>
-                            {isTable ? (
-                              <>
-                                {isSelected && <FaCheckCircle className="absolute -top-2 -right-2 text-green-600 bg-white rounded-full z-20" />}
-                                <FaUtensils className={`opacity-80 mb-1 ${isSelected ? "text-green-600" : "text-amber-600"}`} size={12} />
-                                <span className="font-['Barlow_Condensed'] font-bold leading-none text-lg">
-                                  {item.table_number}
-                                </span>
-                                <span className={`text-[9px] uppercase font-bold tracking-wider mt-1 ${isSelected ? "text-green-700" : "text-gray-500"}`}>
-                                  {item.capacity} Seats
-                                </span>
-                              </>
-                            ) : (
-                              <span className="font-['Barlow_Condensed'] font-bold uppercase tracking-widest px-1 text-center leading-tight text-[10px] overflow-hidden">
-                                {item.label}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
                 )}
               </div>
-            </div>
-            
-            {/* Map Footer */}
-            <div className="bg-gray-50 p-3 text-center border-t border-gray-200 text-xs text-gray-500 font-medium flex justify-center gap-4">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-white border border-gray-800 rounded"></span> Available</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-100 border border-green-500 rounded"></span> Selected</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-gray-200 border border-gray-400 rounded"></span> Wall/Object</span>
-            </div>
-          </div>
 
+              {/* Time */}
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                  <FaClock className="text-[#C59D5F]" /> Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  name="time"
+                  value={formData.time}
+                  onChange={handleChange}
+                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                <FaPen className="text-[#C59D5F]" /> Special Notes
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                placeholder="Any special requests?"
+                className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all h-24 text-gray-700"
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full bg-[#C59D5F] text-white font-bold py-4 rounded-lg uppercase tracking-widest hover:bg-[#0E1014] transition-all duration-300 ${
+                loading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
+            >
+              {loading ? "Processing..." : "Confirm Reservation"}
+            </button>
+          </form>
         </div>
       </div>
     </div>

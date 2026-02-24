@@ -12,7 +12,7 @@ export const CartProvider = ({ children }) => {
 
   // Sidebar Visibility State
   const [isCartOpen, setIsCartOpen] = useState(false);
-
+ 
   const toggleCart = () => setIsCartOpen(prev => !prev);
   const closeCart = () => setIsCartOpen(false);
   const openCart = () => setIsCartOpen(true);
@@ -33,34 +33,34 @@ export const CartProvider = ({ children }) => {
         if (String(currentBranchId) !== String(branchId)) {
           // If branch differs, clear cart and start fresh
           if (delta > 0) {
-             return [{ ...product, quantity: delta, branchId, branchName }];
+             return [{ ...product, menu_id: product.m_menu_sl, quantity: delta, branchId, branchName }];
           }
           return prev; 
         }
       }
 
       // 2. Standard Cart Logic
-      const existing = prev.find(item => item.id === product.id);
+      const existing = prev.find(item => item.m_menu_sl === product.m_menu_sl);
       
       if (existing) {
         const newQty = existing.quantity + delta;
         if (newQty <= 0) {
-          return prev.filter(item => item.id !== product.id);
+          return prev.filter(item => item.m_menu_sl !== product.m_menu_sl);
         }
         return prev.map(item => 
-          item.id === product.id ? { ...item, quantity: newQty, branchName } : item
+          item.m_menu_sl === product.m_menu_sl ? { ...item, quantity: newQty, branchName } : item
         );
       } else {
         if (delta > 0) {
-          return [...prev, { ...product, quantity: delta, branchId, branchName }];
+          return [...prev, { ...product, menu_id: product.m_menu_sl, quantity: delta, branchId, branchName }];
         }
         return prev;
       }
     });
   };
 
-  const removeFromCart = (id) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
+  const removeFromCart = (menuSl) => {
+    setCartItems(prev => prev.filter(item => item.m_menu_sl !== menuSl));
   };
 
   const cartTotal = cartItems.reduce((total, item) => {

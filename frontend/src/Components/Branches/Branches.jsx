@@ -34,7 +34,7 @@ export default function Branches() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center font-['Barlow_Condensed'] uppercase tracking-widest text-xl">
-        <span className="loading loading-spinner text-[#00FFD1] mr-3"></span>
+        <span className="loading loading-spinner text-[#007BFF] mr-3"></span>
         <span className="text-[#E0E0E0]">Loading Branches...</span>
     </div>
   );
@@ -83,7 +83,7 @@ export default function Branches() {
                         {/* Card Header */}
                         <div className="bg-[#0A0A0A] p-6 border-b border-[#1E1E1E] flex items-start justify-between">
                             <div>
-                                <h3 className="text-xl font-['Barlow_Condensed'] font-bold uppercase text-white group-hover:text-[#00FFD1] transition-colors tracking-wide">
+                                <h3 className="text-xl font-['Barlow_Condensed'] font-bold uppercase text-white group-hover:text-[#007BFF] transition-colors tracking-wide">
                                     {displayName}
                                 </h3>
                             </div>

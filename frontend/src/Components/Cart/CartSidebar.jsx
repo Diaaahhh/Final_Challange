@@ -62,7 +62,7 @@ export default function CartSidebar() {
               </div>
             ) : (
               cartItems.map((item) => (
-                <div key={item.id} className="flex gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <div key={item.m_menu_sl} className="flex gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
                   {/* Image */}
                   <img 
                     src={item.m_image ? `${IMAGE_BASE_URL}/${item.m_image}` : "https://via.placeholder.com/80"} 
@@ -103,7 +103,7 @@ export default function CartSidebar() {
                       </div>
 
                       {/* Remove */}
-                      <button onClick={() => removeFromCart(item.id)} className="text-red-400 hover:text-red-600">
+                      <button onClick={() => removeFromCart(item.m_menu_sl)} className="text-red-400 hover:text-red-600">
                         <FaTrashAlt size={14} />
                       </button>
                     </div>

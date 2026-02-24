@@ -33,7 +33,7 @@ return (
           </p>
           <div className="flex gap-6">
             {['Privacy Policy', 'Terms & Condition', 'Support policy'].map((link, i) => (
-              <a key={i} href="#" className="text-[#A0A0A0] hover:text-[#00FFD1] text-sm transition-colors font-medium">{link}</a>
+              <a key={i} href="#" className="text-[#A0A0A0] hover:text-[#007BFF] text-sm transition-colors font-medium">{link}</a>
             ))}
           </div>
         </div>

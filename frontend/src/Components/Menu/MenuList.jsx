@@ -110,7 +110,7 @@ export default function MenuList() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-[#0A0A0A] text-[#A0A0A0] text-xs uppercase tracking-wider font-['Barlow_Condensed'] border-b border-[#1E1E1E]">
-                  <th className="p-4 w-12 text-center text-[#00FFD1]">SL</th>
+                  <th className="p-4 w-12 text-center ">SL</th>
                   <th className="p-4">Code</th>
                   <th className="p-4">Item Name</th>
                   <th className="p-4">Ingredients</th>
@@ -123,7 +123,7 @@ export default function MenuList() {
               <tbody className="divide-y divide-[#1A1A1A]">
                 {loading ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-12 text-[#00FFD1] font-bold tracking-widest">Loading Data...</td>
+                    <td colSpan="7" className="text-center py-12 text-[#007BFF] font-bold tracking-widest">Loading Data...</td>
                   </tr>
                 ) : filteredMenuItems.length > 0 ? (
                   filteredMenuItems.map((item, index) => (
@@ -185,7 +185,7 @@ export default function MenuList() {
           <div className="bg-[#111111] w-full max-w-lg rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-[#2A2A2A] relative overflow-hidden">
             <div className="bg-[#0A0A0A] p-6 border-b border-[#1E1E1E] flex justify-between items-center">
               <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">Item Details</h3>
-              <button onClick={() => setOpenModal(false)} className="text-[#555] hover:text-[#00FFD1] transition-colors text-lg">✕</button>
+              <button onClick={() => setOpenModal(false)} className="text-[#555] hover:text-[#007BFF] transition-colors text-lg">✕</button>
             </div>
             <div className="p-6 space-y-4">
               {currentItem.m_image && (
@@ -262,7 +262,7 @@ const ImageUploadCell = ({ item, backendUrl }) => {
                     {preview ? <img src={preview} alt="Preview" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-[#555]"><FaCamera /></div>}
                 </div>
                 <div className="flex flex-col gap-1">
-                    <label className="cursor-pointer bg-[#1A1A1A] hover:bg-[#2A2A2A] px-2 py-1 rounded text-[13px] text-[#E0E0E0] transition-colors text-center border border-[#2A2A2A] hover:border-[#00FFD1]">
+                    <label className="cursor-pointer bg-[#1A1A1A] hover:bg-[#2A2A2A] px-2 py-1 rounded text-[13px] text-[#E0E0E0] transition-colors text-center border border-[#2A2A2A] hover:border-[#007BFF]">
                         Choose
                         <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
                     </label>

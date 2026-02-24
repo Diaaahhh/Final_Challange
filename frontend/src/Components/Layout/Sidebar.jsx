@@ -37,7 +37,7 @@ export default function Sidebar() {
     { path: "/admin/upload_hero", icon: FaImage, label: "Upload Hero" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
     // { path: "/admin/table", icon: FaCog, label: "Table Layout" },
-    { path: "/admin/branch_list", icon: FaStore, label: "All Stores" },
+    { path: "/admin/branch_list", icon: FaStore, label: "All Branches" },
   ];
 
   return (
