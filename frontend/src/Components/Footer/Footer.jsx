@@ -66,13 +66,13 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {/* LINKS */}
           <div className="text-center lg:text-left">
-            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Sister Concerns</h3>
+            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Useful Links</h3>
             <ul className="space-y-3">
   {[
-    { name: 'IGL Tours and Travels', link: 'https://iglweb.com/web/' },
-    { name: 'IGL Network',           link: '#' },
-    { name: 'Student Visa',          link: 'https://studentvisabd.com/' },
-    { name: 'FelnaTech',             link: 'https://felnatech.com' }
+    { name: 'IGL Web Ltd.', link: 'https://iglweb.com/web/' },
+    { name: 'FelnaTech',           link: 'https://felnatech.com' },
+    { name: 'Felna Online',  link: 'https://felnaonline.com/' },
+    { name: '',             link: '' }
   ].map((item, i) => (
     <li key={i}>
       <a 
@@ -106,10 +106,26 @@ const Footer = () => {
 
           {/* MENUS */}
           <div className="text-center lg:text-right">
-            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Sister Concerns</h3>
+            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Links</h3>
             <ul className="space-y-3">
-              {['IGL Group', 'Felna Digital Marketing Agency', 'Felna Online', 'IGL Host LLC'].map((item, i) => (
-                <li key={i}><a href="#" className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg">{item}</a></li>
+              {[
+                {
+                  name: "National Emergency Service: 999",
+                  link: "#",
+                },
+                { name: "Immigration and Passport Office", link: "https://dip.gov.bd/" },
+                
+              ].map((item, i) => (
+                <li key={i}>
+                  <a
+                    href={item.link}
+                    target={item.link !== "#" ? "_blank" : "_self"}
+                    rel={item.link !== "#" ? "noopener noreferrer" : ""}
+                    className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg"
+                  >
+                    {item.name}
+                  </a>
+                </li>
               ))}
             </ul>
           </div>
@@ -118,22 +134,40 @@ const Footer = () => {
 
       {/* COPYRIGHT */}
       <div className="border-t border-white/10 bg-[#08090C] py-6">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-sm text-center md:text-left">
-  Copyright © 2025 
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4">
+          <p className="text-gray-400 text-sm text-center md:text-left">
+  Copyright © 2026 RamBD. All rights reserved | 
   <a 
-    href="https://iglweb.com/web/contact-address.php" 
+    href="https://iglweb.com/web/domains-services.php" 
+    className="text-[#C59D5F] hover:text-white ml-1 mr-2 font-['Arial_Black'] transition-colors"
+  >
+    Domain Registration by: IGL Web Ltd.
+</a> 
+| All Rights Reserved.
+<a
+    href="https://iglweb.com/web/hosting-regular-shared.php" 
     className="text-[#C59D5F] hover:text-white ml-1 font-['Arial_Black']"
   >
-    IGL Web Ltd.
-  </a> 
-  All Rights Reserved.
+    Web Hosting by: IGL Web Ltd.
+  </a> | <a 
+    href="href="https://iglweb.com/web/web-development.php"" 
+    className="text-[#C59D5F] hover:text-white ml-1 font-['Arial_Black']"
+  >
+    Web Design & Development by: IGL Web Ltd
+  </a>
 </p>
-          <div className="flex gap-6">
-            {['Privacy Policy', 'Terms & Condition', 'Support policy'].map((link, i) => (
-              <a key={i} href="#" className="text-gray-500 hover:text-[#C59D5F] text-sm transition-colors">{link}</a>
-            ))}
-          </div>
+        
+        </div>
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4">
+          <p className="text-gray-400 text-sm text-center md:text-left">
+            A Concern of
+<a 
+    href="https://iglgroup.com.bd/" 
+    className="text-[#C59D5F] hover:text-white ml-1 font-['Arial_Black']"
+  >
+    IGL Group
+  </a>
+          </p>
         </div>
       </div>
 

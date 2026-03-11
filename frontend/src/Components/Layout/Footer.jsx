@@ -28,14 +28,14 @@ return (
       {/* COPYRIGHT */}
       <div className="border-t border-[#1E1E1E] bg-[#111111] py-5">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-[#A0A0A0] text-sm text-center md:text-left font-medium">
+          {/* <p className="text-[#A0A0A0] text-sm text-center md:text-left font-medium">
             Copyright © 2025 All Rights Reserved.
-          </p>
-          <div className="flex gap-6">
+          </p> */}
+          {/* <div className="flex gap-6">
             {['Privacy Policy', 'Terms & Condition', 'Support policy'].map((link, i) => (
               <a key={i} href="#" className="text-[#A0A0A0] hover:text-[#007BFF] text-sm transition-colors font-medium">{link}</a>
             ))}
-          </div>
+          </div> */}
         </div>
       </div>
 

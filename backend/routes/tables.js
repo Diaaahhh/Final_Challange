@@ -1,21 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); // Ensure this points to your database connection
+const axios = require('axios'); // We need axios to make the external API call
 
 // Endpoint: GET /api/get-tables/:company_id/:branch_id
-router.get('/get-tables/:company_id/:branch_id', (req, res) => {
+router.get('/get-tables/:company_id/:branch_id', async (req, res) => {
     const { company_id, branch_id } = req.params;
 
-    // Fetch tables matching the company and branch
-    const sql = "SELECT * FROM tables WHERE company_id = ? AND branch_id = ?";
+    try {
+        // Call the external API using POST (as defined in your Laravel Route::post)
+        const response = await axios.post('https://pos.chulkani.com/website/table', {
+            company_id: company_id,
+            branch_id: branch_id
+        });
 
-    db.query(sql, [company_id, branch_id], (err, results) => {
-        if (err) {
-            console.error("Error fetching tables:", err);
-            return res.status(500).json({ message: "Database error" });
+        // The Laravel API returns JSON with { status, message, data }
+        if (response.data && response.data.status === true) {
+            // Send ONLY the array of tables to match the previous local DB behavior
+            res.json(response.data.data); 
+        } else {
+            // Handle if the Laravel API returns status => false
+            console.error("External API error:", response.data.message);
+            res.status(400).json({ message: response.data.message || "Failed to fetch tables" });
         }
-        res.json(results);
-    });
+
+    } catch (error) {
+        console.error("Error fetching tables from external API:", error.message);
+        res.status(500).json({ message: "Error communicating with the external server" });
+    }
 });
 
 module.exports = router;

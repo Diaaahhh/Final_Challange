@@ -31,29 +31,32 @@ export default function Navbar() {
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     
-    if (storedUser) {
+   if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser); 
-
-      // Fetch the latest user data (including photoUrl) from the database
-      if (parsedUser.id) {
-          api.get(`/user/${parsedUser.id}`)
-            .then(res => {
-                const freshUserData = res.data;
-                setUser(prev => ({ ...prev, ...freshUserData }));
-                localStorage.setItem('user', JSON.stringify({ ...parsedUser, ...freshUserData }));
-            })
-            .catch(err => console.error("Error fetching fresh user data:", err));
-      }
+      setUser(parsedUser);
+      
+      const fetchUserData = async () => {
+          try {
+              const res = await api.get(`/user/${parsedUser.id}`);
+              if (res.data) {
+                  setUser(res.data);
+                  localStorage.setItem('user', JSON.stringify(res.data));
+              }
+          } catch (err) {}
+      };
+      fetchUserData();
     }
   }, []);
 
-  // 3. Handle Logout Logic
-  const handleLogout = () => {
+const handleLogout = () => {
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    navigate('/login');
-    setIsMobileMenuOpen(false); 
+    
+    // --- TRIGGER CART CONTEXT TO SWITCH TO GUEST CART ---
+    window.dispatchEvent(new Event('userAuthStateChanged'));
+
+    navigate('/');
   };
 
   // Helper to get Image URL (Backend Port 8081)
@@ -124,18 +127,28 @@ export default function Navbar() {
             {/* DESKTOP MENU */}
             <div className="navbar-center hidden lg:flex">
               <ul className="menu menu-horizontal px-1 gap-6 font-bold text-white uppercase tracking-wide text-[15px] font-['Barlow_Condensed']">
+                {/* --- DESKTOP ADMIN PANEL BUTTON --- */}
+                {user && (user.role === 0 || user.role === '0') && (
+                  <li>
+                    <Link to="/admin" className="hover:text-white text-[#C59D5F] p-0 bg-transparent">
+                      Admin Panel
+                    </Link>
+                  </li>
+                )}
                 <li><Link to="/" className="hover:text-[#C59D5F] focus:text-[#C59D5F] p-0 bg-transparent">Home</Link></li>
                 <li><Link to="/about" className="hover:text-[#C59D5F] p-0 bg-transparent">About</Link></li>
                 <li><Link to="/menu-user" className="hover:text-[#C59D5F] p-0 bg-transparent">Menu</Link></li>
-
                 <li tabIndex={0} className="dropdown dropdown-hover group">
                   <span className="hover:text-[#C59D5F] p-0 bg-transparent cursor-pointer">Contact</span>
                   <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-52 text-sm mt-5 border-t-4 border-[#C59D5F]">
                     <li><Link to="/address" className="hover:text-[#C59D5F] hover:bg-transparent">Address</Link></li>
+                                        <li><Link to="/branch_user" className="hover:text-[#C59D5F] hover:bg-transparent">Branches</Link></li>
+
                     <li><Link to="/review" className="hover:text-[#C59D5F] hover:bg-transparent">Feedback</Link></li>
                     <li><Link to="/map" className="hover:text-[#C59D5F] hover:bg-transparent">Location Map</Link></li>
                   </ul>
                 </li>
+                <li><Link to="/portfolio_user" className="hover:text-[#C59D5F] p-0 bg-transparent">Gallery</Link></li>
               </ul>
             </div>
 

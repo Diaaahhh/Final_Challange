@@ -35,7 +35,7 @@ export default function UploadHero() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setMessage({ type: "success", text: "Hero section updated successfully!" });
+      setMessage({ type: "success", text: "Home section updated successfully!" });
       
       // Reset Form
       setName("");
@@ -60,7 +60,7 @@ export default function UploadHero() {
           {/* Neon blue glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-20 bg-[#007BFF] opacity-5 blur-3xl rounded-full pointer-events-none"></div>
           <h2 className="text-3xl font-bold text-white font-['Barlow_Condensed'] uppercase tracking-wider relative z-10">
-            Upload <span className="text-[#007BFF]">Hero</span> Content
+            Upload <span className="text-[#007BFF]">Home</span> Content
           </h2>
           <p className="text-[#A0A0A0] text-sm mt-2 font-medium tracking-wide relative z-10">
             Add a new main banner to your website
@@ -73,7 +73,7 @@ export default function UploadHero() {
           {/* 1. Name Input */}
           <div className="space-y-2">
             <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-widest flex items-center gap-2">
-              <FaHeading className="text-[#007BFF]" /> Hero Title / Name
+              <FaHeading className="text-[#007BFF]" /> Title / Name
             </label>
             <input 
               type="text" 
@@ -87,7 +87,7 @@ export default function UploadHero() {
           {/* 2. Image Upload */}
           <div className="space-y-2">
             <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-widest flex items-center gap-2">
-              <FaCloudUploadAlt className="text-[#007BFF]" /> Hero Image
+              <FaCloudUploadAlt className="text-[#007BFF]" /> Image
             </label>
             
             <div className="relative border-2 border-dashed border-[#2A2A2A] rounded-xl p-6 flex flex-col items-center justify-center hover:border-[#007BFF] transition-all duration-300 cursor-pointer bg-[#1A1A1A] group hover:shadow-[0_0_20px_rgba(0,123,255,0.1)]">
@@ -131,7 +131,7 @@ export default function UploadHero() {
             type="submit" 
             className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-4 rounded-xl uppercase tracking-widest text-sm font-['Barlow_Condensed'] transition-all duration-300 shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_35px_rgba(0,123,255,0.5)] transform active:scale-95"
           >
-            Upload Hero
+            Upload Banner
           </button>
 
         </form>

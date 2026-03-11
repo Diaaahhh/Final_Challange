@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { FaUtensils, FaList, FaEye, FaFilter, FaCamera, FaCloudUploadAlt, FaCheck, FaTimes } from "react-icons/fa";
+import { FaUtensils, FaList, FaEye, FaFilter, FaCamera, FaCloudUploadAlt, FaCheck, FaTimes, FaTag } from "react-icons/fa";
 import api from "../../api";
 import { IMAGE_BASE_URL } from "../../config";
 
@@ -13,6 +13,12 @@ export default function MenuList() {
   const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
+
+  // Edit Discount Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -44,6 +50,13 @@ export default function MenuList() {
     }
   };
 
+  // --- ADDED MISSING FUNCTION HERE ---
+  const getBranchName = (branchId) => {
+    if (!branchId || branchId === "All") return "Unknown Branch";
+    const branch = branches.find((b) => String(b.branch_id) === String(branchId));
+    return branch ? branch.branch_name : `Branch ${branchId}`;
+  };
+
   const formatIngredients = (rawInput) => {
     if (!rawInput) return "No details";
     const strVal = String(rawInput);
@@ -56,9 +69,49 @@ export default function MenuList() {
     }
   };
 
+  // Safely parse JSON from the DB discount column
+  const getDiscountForBranch = (item, branchId) => {
+    try {
+        const d = item.discount ? JSON.parse(item.discount) : {};
+        return Number(d[branchId]) || 0;
+    } catch {
+        return 0;
+    }
+  };
+
   const openViewModal = (item) => {
     setCurrentItem(item);
     setOpenModal(true);
+  };
+
+  // Require a branch to be selected before editing
+  const openEditModal = (item) => {
+    if (selectedBranch === "All") {
+        alert("Please select a specific branch from the top-right filter before setting a discount.");
+        return;
+    }
+    setEditItem(item);
+    setDiscountAmount(getDiscountForBranch(item, selectedBranch)); 
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateDiscount = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    try {
+      // Now sending BOTH branch_id and discount
+      await api.put(`/menu/update-discount/${editItem.id}`, { 
+          branch_id: selectedBranch, 
+          discount: discountAmount 
+      });
+      setEditModalOpen(false);
+      fetchInitialData(); 
+    } catch (error) {
+      console.error("Update Error:", error);
+      alert("Failed to update discount percentage.");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const filteredMenuItems = selectedBranch === "All"
@@ -126,22 +179,19 @@ export default function MenuList() {
                     <td colSpan="7" className="text-center py-12 text-[#007BFF] font-bold tracking-widest">Loading Data...</td>
                   </tr>
                 ) : filteredMenuItems.length > 0 ? (
-                  filteredMenuItems.map((item, index) => (
+                  filteredMenuItems.map((item, index) => {
+                    const activeDiscount = selectedBranch !== "All" ? getDiscountForBranch(item, selectedBranch) : 0;
+                    
+                    return (
                     <tr key={item.id} className="hover:bg-[#1A1A1A] transition-colors group">
-                      
-                      <td className="p-4 text-center font-bold text-[#007BFF] text-sm">
-                        {index + 1}
-                      </td>
-
+                      <td className="p-4 text-center font-bold text-[#007BFF] text-sm">{index + 1}</td>
                       <td className="p-4">
                         <span className="text-[#E0E0E0] text-xs font-mono bg-[#1A1A1A] px-2 py-1 rounded border border-[#2A2A2A]">
                           {item.m_menu_sl}
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="font-bold text-white font-['Barlow_Condensed'] text-lg tracking-wide">
-                          {item.m_menu_name}
-                        </div>
+                        <div className="font-bold text-white font-['Barlow_Condensed'] text-lg tracking-wide">{item.m_menu_name}</div>
                         <div className="flex gap-2 mt-1">
                            <span className="text-[10px] bg-[#007BFF]/10 text-[#007BFF] px-1.5 py-0.5 rounded border border-[#007BFF]/20">
                               Cat: {categories[item.category_id] || item.category_id || "Global"}
@@ -152,19 +202,33 @@ export default function MenuList() {
                         {formatIngredients(item.m_ingredient)}
                       </td>
                       <td className="p-4 font-mono text-white">
-                        <span className="text-[#C59D5F] mr-1 font-bold">BDT</span>
-                        {Number(item.m_price).toFixed(2)}
+                        <div className="flex flex-col items-start">
+                          <div>
+                            <span className="text-[#C59D5F] mr-1 font-bold">BDT</span>
+                            {Number(item.m_price).toFixed(2)}
+                          </div>
+                          {activeDiscount > 0 && (
+                            <div className="text-[10px] text-green-400 font-bold bg-green-400/10 px-2 py-0.5 rounded inline-flex items-center gap-1 mt-1 border border-green-400/20">
+                                <FaTag size={8} /> {activeDiscount}% OFF
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                           <ImageUploadCell item={item} backendUrl={IMAGE_BASE_URL} />
                       </td>
                       <td className="p-4 text-right">
-                        <button onClick={() => openViewModal(item)} className="p-2 text-[#555] hover:text-[#007BFF] transition-colors rounded-lg hover:bg-[#007BFF]/10">
-                          <FaEye />
-                        </button>
+                        <div className="flex items-center justify-end gap-3">
+                          <button onClick={() => openEditModal(item)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-[#C59D5F] hover:text-white border border-[#C59D5F]/30 hover:bg-[#C59D5F] transition-all rounded-lg" title="Set Discount">
+                            <FaTag size={12}/> Discount
+                          </button>
+                          <button onClick={() => openViewModal(item)} className="p-2 text-[#555] hover:text-[#007BFF] transition-colors rounded-lg hover:bg-[#007BFF]/10">
+                            <FaEye size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))
+                  )})
                 ) : (
                   <tr>
                     <td colSpan={7} className="text-center py-12 text-[#555]">
@@ -179,7 +243,7 @@ export default function MenuList() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* VIEW DETAILS MODAL */}
       {openModal && currentItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#111111] w-full max-w-lg rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-[#2A2A2A] relative overflow-hidden">
@@ -215,72 +279,129 @@ export default function MenuList() {
           </div>
         </div>
       )}
+
+      {/* EDIT DISCOUNT PERCENTAGE MODAL */}
+      {editModalOpen && editItem && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="bg-[#111111] w-full max-w-sm rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-[#2A2A2A] relative overflow-hidden">
+                <div className="bg-[#0A0A0A] p-5 border-b border-[#1E1E1E] flex justify-between items-center">
+                    <h3 className="text-lg font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <FaTag className="text-[#C59D5F]"/> Set Discount
+                    </h3>
+                    <button onClick={() => setEditModalOpen(false)} className="text-[#555] hover:text-[#007BFF] transition-colors text-lg">✕</button>
+                </div>
+
+                <form onSubmit={handleUpdateDiscount} className="p-6 space-y-5">
+                    <div>
+                        <label className="text-[10px] text-[#A0A0A0] uppercase font-bold tracking-widest">Item Name</label>
+                        <p className="text-xl font-['Barlow_Condensed'] text-white mt-1">{editItem.m_menu_name}</p>
+                    </div>
+                    
+                    <div className="flex justify-between items-center bg-[#0A0A0A] p-3 rounded-lg border border-[#1E1E1E]">
+                        <div>
+                            <label className="text-[10px] text-[#A0A0A0] uppercase font-bold tracking-widest">Base Price</label>
+                            <p className="text-lg text-[#C59D5F] font-mono font-bold mt-1">BDT {Number(editItem.m_price).toFixed(2)}</p>
+                        </div>
+                        <div className="text-right">
+                            <label className="text-[10px] text-[#A0A0A0] uppercase font-bold tracking-widest">Branch</label>
+                            <p className="text-sm text-[#007BFF] font-bold mt-1">{getBranchName(selectedBranch)}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-[#E0E0E0] font-bold mb-2 flex items-center justify-between">
+                            <span>Discount Percentage (%)</span>
+                            <span className="text-green-400 font-mono text-[10px] bg-green-400/10 px-2 py-0.5 rounded">
+                                Pays: BDT {(editItem.m_price - (editItem.m_price * (discountAmount / 100))).toFixed(2)}
+                            </span>
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={discountAmount}
+                                onChange={(e) => setDiscountAmount(e.target.value)}
+                                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg py-3 px-4 text-white font-mono text-lg focus:outline-none focus:border-[#007BFF] transition-all text-right pr-10"
+                                required
+                            />
+                            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                <span className="text-[#555] font-bold text-lg">%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isUpdating}
+                        className="w-full bg-[#007BFF] hover:bg-[#0056b3] text-white font-bold tracking-widest text-sm py-3 rounded-lg transition-all disabled:opacity-50 mt-4 uppercase"
+                    >
+                        {isUpdating ? "Saving..." : "Save Discount"}
+                    </button>
+                </form>
+            </div>
+        </div>
+      )}
     </div>
   );
 }
 
+// Sub-component remains unchanged
 const ImageUploadCell = ({ item, backendUrl }) => {
-    const [preview, setPreview] = useState(item.m_image ? `${backendUrl}${item.m_image}` : null);
-    const [selectedFile, setSelectedFile] = useState(null);
-    const [uploadStatus, setUploadStatus] = useState("idle");
+  const [preview, setPreview] = useState(item.m_image ? `${backendUrl}${item.m_image}` : null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState("idle");
 
-    const handleFileSelect = (e) => {
-        const file = e.target.files[0];
-        const MAX_SIZE = 200 * 1024;
+  const handleFileSelect = (e) => {
+      const file = e.target.files[0];
+      const MAX_SIZE = 200 * 1024;
+      if (file) {
+          if (file.size > MAX_SIZE) {
+              alert(`File is too large (${(file.size / 1024).toFixed(1)} KB). Please upload an image under 200 KB.`);
+              e.target.value = ""; return;
+          }
+          setSelectedFile(file);
+          setPreview(URL.createObjectURL(file));
+          setUploadStatus("idle");
+      }
+  };
 
-        if (file) {
-            if (file.size > MAX_SIZE) {
-                alert(`File is too large (${(file.size / 1024).toFixed(1)} KB). Please upload an image under 200 KB.`);
-                e.target.value = "";
-                return;
-            }
-            setSelectedFile(file);
-            setPreview(URL.createObjectURL(file));
-            setUploadStatus("idle");
-        }
-    };
+  const handleUpload = async () => {
+      if (!selectedFile) return;
+      setUploadStatus("uploading");
+      const formData = new FormData();
+      formData.append("image", selectedFile);
+      formData.append("m_menu_sl", item.m_menu_sl);
+      try {
+          await axios.post(`${backendUrl}/api/menu/upload`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+          setUploadStatus("success");
+          setTimeout(() => setUploadStatus("idle"), 3000);
+      } catch (err) {
+          setUploadStatus("error");
+      }
+  };
 
-    const handleUpload = async () => {
-        if (!selectedFile) return;
-        setUploadStatus("uploading");
-        const formData = new FormData();
-        formData.append("image", selectedFile);
-        formData.append("m_menu_sl", item.m_menu_sl);
-        try {
-            await axios.post(`${backendUrl}/api/menu/upload`, formData, { headers: { "Content-Type": "multipart/form-data" } });
-            setUploadStatus("success");
-            setTimeout(() => setUploadStatus("idle"), 3000);
-        } catch (err) {
-            setUploadStatus("error");
-        }
-    };
-
-    return (
-        <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A] overflow-hidden flex-shrink-0 relative">
-                    {preview ? <img src={preview} alt="Preview" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-[#555]"><FaCamera /></div>}
-                </div>
-                <div className="flex flex-col gap-1">
-                    <label className="cursor-pointer bg-[#1A1A1A] hover:bg-[#2A2A2A] px-2 py-1 rounded text-[13px] text-[#E0E0E0] transition-colors text-center border border-[#2A2A2A] hover:border-[#007BFF]">
-                        Choose
-                        <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-                    </label>
-                    
-                    {!selectedFile && <span className="text-[10px] text-[#666] text-center leading-tight">Max 200KB</span>}
-
-                    {selectedFile && (
-                        <button 
-                            onClick={handleUpload}
-                            disabled={uploadStatus === "uploading" || uploadStatus === "success"}
-                            className={`px-2 py-1 rounded text-[13px] flex items-center justify-center gap-1 transition-all font-bold ${uploadStatus === "success" ? "bg-green-600 text-white" : "bg-[#007BFF] text-white hover:bg-[#0066e6]"}`}
-                        >
-                            {uploadStatus === "uploading" ? "..." : uploadStatus === "success" ? <FaCheck /> : <><FaCloudUploadAlt /> Upload</>}
-                        </button>
-                    )}
-                </div>
-            </div>
-            {uploadStatus === "success" && <span className="text-[10px] text-[#007BFF] font-bold">Saved!</span>}
-        </div>
-    );
+  return (
+      <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A] overflow-hidden flex-shrink-0 relative">
+                  {preview ? <img src={preview} alt="Preview" className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-[#555]"><FaCamera /></div>}
+              </div>
+              <div className="flex flex-col gap-1">
+                  <label className="cursor-pointer bg-[#1A1A1A] hover:bg-[#2A2A2A] px-2 py-1 rounded text-[13px] text-[#E0E0E0] transition-colors text-center border border-[#2A2A2A] hover:border-[#007BFF]">
+                      Choose
+                      <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                  </label>
+                  {!selectedFile && <span className="text-[10px] text-[#666] text-center leading-tight">Max 200KB</span>}
+                  {selectedFile && (
+                      <button onClick={handleUpload} disabled={uploadStatus === "uploading" || uploadStatus === "success"} className={`px-2 py-1 rounded text-[13px] flex items-center justify-center gap-1 transition-all font-bold ${uploadStatus === "success" ? "bg-green-600 text-white" : "bg-[#007BFF] text-white hover:bg-[#0066e6]"}`}>
+                          {uploadStatus === "uploading" ? "..." : uploadStatus === "success" ? <FaCheck /> : <><FaCloudUploadAlt /> Upload</>}
+                      </button>
+                  )}
+              </div>
+          </div>
+          {uploadStatus === "success" && <span className="text-[10px] text-[#007BFF] font-bold">Saved!</span>}
+      </div>
+  );
 };

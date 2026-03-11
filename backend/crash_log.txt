@@ -1,0 +1,85 @@
+
+[2026-03-07T09:09:23.743Z] CRASH REPORT:
+Error: Cannot access 'storage' before initialization
+Stack: ReferenceError: Cannot access 'storage' before initialization
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\routes\portfolio.js:11:25)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\server.js:89:27)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+----------------------
+
+[2026-03-07T09:17:05.572Z] CRASH REPORT:
+Error: Cannot access 'storage' before initialization
+Stack: ReferenceError: Cannot access 'storage' before initialization
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\routes\portfolio.js:11:25)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\server.js:89:27)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+----------------------
+
+[2026-03-08T03:16:50.681Z] CRASH REPORT:
+Error: Cannot access 'storage' before initialization
+Stack: ReferenceError: Cannot access 'storage' before initialization
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\routes\portfolio.js:11:25)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\server.js:89:27)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+----------------------
+
+[2026-03-08T03:17:12.047Z] CRASH REPORT:
+Error: Cannot access 'storage' before initialization
+Stack: ReferenceError: Cannot access 'storage' before initialization
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\routes\portfolio.js:11:25)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\server.js:89:27)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+----------------------
+
+[2026-03-08T03:18:01.439Z] CRASH REPORT:
+Error: Cannot access 'storage' before initialization
+Stack: ReferenceError: Cannot access 'storage' before initialization
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\routes\portfolio.js:11:25)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\server.js:89:27)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+----------------------
+
+[2026-03-08T04:59:45.449Z] CRASH REPORT:
+Error: formattedBanner is not defined
+Stack: ReferenceError: formattedBanner is not defined
+    at E:\Last_Chance\Final_Challange\backend\routes\portfolio.js:57:25
+    at Array.map (<anonymous>)
+    at Query.onResult (E:\Last_Chance\Final_Challange\backend\routes\portfolio.js:42:42)
+    at E:\Last_Chance\Final_Challange\backend\node_modules\mysql2\lib\commands\query.js:87:16
+    at process.processTicksAndRejections (node:internal/process/task_queues:77:11)
+----------------------

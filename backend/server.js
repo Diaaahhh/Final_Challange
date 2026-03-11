@@ -76,7 +76,7 @@ app.post('/login', (req, res) => {
 // Ensure all these files exist in your 'routes' folder
 app.use('/api', require('./routes/create_menu'));
 app.use('/api/menu', require('./routes/menu_list'));
-app.use('/api/menu-user', require('./routes/menu_user'));
+app.use('/api/menu_user', require('./routes/menu_user'));
 app.use('/api/reservation', require('./routes/reservation'));
 app.use('/api/about', require('./routes/write_about'));
 app.use('/api/view-about', require('./routes/view_about'));
@@ -86,7 +86,7 @@ app.use('/api', require('./routes/upload_hero'));
 app.use('/api', require('./routes/Profile')); 
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/branches', require('./routes/branches'));
-
+app.use('/api/portfolio', require('./routes/portfolio'));
 // --- UPDATED CHECKOUT ROUTE MOUNTING ---
 // Changed from '/api/proxy' to '/api' because checkout.js now handles:
 // 1. /get-user-by-phone/:phone

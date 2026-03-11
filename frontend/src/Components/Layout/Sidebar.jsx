@@ -11,10 +11,13 @@ import {
   FaImage,
   FaCog,
   FaStore,
+  FaFolderPlus,
+  FaTachometerAlt
 } from "react-icons/fa";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
   const location = useLocation();
 
   // Helper to check active link for styling
@@ -25,7 +28,7 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    // { path: "/admin/create-menu", icon: FaUtensils, label: "Create Menu" },
+    { path: "/admin/dashboard", icon: FaTachometerAlt, label: "Dashboard" },
     { path: "/admin/menu-list", icon: FaListUl, label: "Menu List" },
     {
       path: "/admin/reservation_view",
@@ -36,13 +39,12 @@ export default function Sidebar() {
     { path: "/admin/view_review", icon: FaComments, label: "Reviews" },
     { path: "/admin/upload_hero", icon: FaImage, label: "Upload Hero" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
-    // { path: "/admin/table", icon: FaCog, label: "Table Layout" },
     { path: "/admin/branch_list", icon: FaStore, label: "All Branches" },
   ];
 
   return (
     <div className="flex h-screen font-['Inter'] relative z-40">
-      {/* SIDEBAR CONTAINER - Dark Theme */}
+      {/* SIDEBAR CONTAINER */}
       <div
         className={`${
           isOpen ? "w-72" : "w-0 lg:w-20"
@@ -55,7 +57,6 @@ export default function Sidebar() {
               !isOpen && "lg:hidden"
             }`}
           >
-            {/* LOGO */}
             <div className="navbar-start w-auto mr-0">
               <Link
                 to="/"
@@ -77,8 +78,9 @@ export default function Sidebar() {
           </h2>
         </div>
 
-        {/* NAVIGATION LINKS */}
+        {/* NAVIGATION */}
         <nav className="flex-1 py-6 flex flex-col gap-1 px-3 overflow-y-auto">
+
           {menuItems.map((item) => (
             <Link
               key={item.path}
@@ -97,6 +99,46 @@ export default function Sidebar() {
               </span>
             </Link>
           ))}
+
+          {/* PORTFOLIO DROPDOWN */}
+          <div>
+            <button
+              onClick={() => setPortfolioOpen(!portfolioOpen)}
+              className="flex items-center gap-4 px-4 py-3 rounded-lg w-full text-left text-[#E0E0E0] hover:bg-[#1A1A1A] hover:text-[#007BFF] transition-all duration-300"
+            >
+              <FaFolderPlus className="text-xl min-w-[24px]" />
+              <span
+                className={`whitespace-nowrap text-sm tracking-wide font-medium ${
+                  !isOpen && "lg:hidden"
+                }`}
+              >
+                Portfolio
+              </span>
+            </button>
+
+            {portfolioOpen && (
+              <div className="ml-10 mt-1 flex flex-col gap-1">
+                <Link
+                  to="/admin/create_portfolio"
+                  className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${isActive(
+                    "/admin/create_portfolio"
+                  )}`}
+                >
+                  Create Portfolio
+                </Link>
+                <Link
+                  to="/admin/view_portfolio"
+                  className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${isActive(
+                    "/admin/view_portfolio"
+                  )}`}
+                >
+                  View Portfolio
+                </Link>
+              </div>
+              
+            )}
+          </div>
+
         </nav>
       </div>
     </div>

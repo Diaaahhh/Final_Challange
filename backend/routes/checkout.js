@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db'); 
+const axios = require('axios'); 
 
-// Helper function to wrap db.query in Promises for clean async/await syntax
+// Helper function to wrap db.query in Promises
 const queryPromise = (sql, params = []) => {
     return new Promise((resolve, reject) => {
         db.query(sql, params, (err, results) => {
@@ -29,228 +30,326 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         return res.status(404).json({ message: "User not found" });
     } catch (err) {
         console.error("Database Error:", err);
-        return res.status(500).json({ message: "Internal Server Error" });
+        return res.status(500).json({ message: "Internal server error" });
     }
 });
 
 // ==========================================
-// GET OCCUPIED TABLES FROM QUEUE
+// GET: Fetch and Validate Dine-in Tables (Complete Logic)
+// ==========================================
+router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
+    const { company_id, branch_id } = req.params;
+
+    try {
+        // 1. Fetch tables from External API (Using the same endpoint as tables.js)
+        const tablesResponse = await axios.post('https://pos.chulkani.com/website/table', {
+            company_id: company_id,
+            branch_id: branch_id
+        });
+        
+        let tables = [];
+        if (tablesResponse.data && tablesResponse.data.status === true) {
+            tables = tablesResponse.data.data || [];
+        }
+
+        // 2. Fetch occupied tables from External API (customer_order_queues)
+        const queueApiUrl = `https://pos.chulkani.com/branch/order/website/customer-order-queues?company_id=${company_id}&branch_id=${branch_id}`;
+        const queueResponse = await axios.get(queueApiUrl);
+        
+        // Create a Set of occupied table numbers from queues
+        const occupiedQueueSet = new Set();
+
+        if (queueResponse.data && queueResponse.data.status === true && Array.isArray(queueResponse.data.data)) {
+            const invalidTableTypes = ['Home delivery', 'Take a way', 'Parcel'];
+            
+            const queueResults = queueResponse.data.data.filter(row => 
+                row.table_no && 
+                !invalidTableTypes.includes(row.table_no)
+            );
+
+            queueResults.forEach(row => {
+                if (row.table_no) {
+                    String(row.table_no).split(',').forEach(t => {
+                        const trimmed = t.trim();
+                        if (trimmed) occupiedQueueSet.add(trimmed);
+                    });
+                }
+            });
+        }
+
+        // 3. Get current date and time
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const currentDate = `${year}-${month}-${day}`;
+        
+        const currentTimeInHours = now.getHours() + (now.getMinutes() / 60);
+
+        console.log(`Current Date: ${currentDate}, Current Time: ${currentTimeInHours} hours`);
+
+        // 4. Process each table according to the logic
+        const processedTables = tables.map(table => {
+            let { 
+                id, 
+                table_no, 
+                status, 
+                date: tableDate, 
+                time: tableTime 
+            } = table;
+            
+            let isAvailable = false;
+            let bookingMessage = null;
+            let finalStatus = parseInt(status) || 0;
+            let finalDate = tableDate;
+            let finalTime = tableTime;
+            
+            const stringTableNo = String(table_no).trim();
+
+            // Format table date if it contains a timestamp
+            let formattedTableDate = tableDate;
+            if (tableDate && tableDate.includes('T')) {
+                formattedTableDate = tableDate.split('T')[0];
+            }
+
+            // Helper function to check if table exists in queue
+            const isInQueue = () => occupiedQueueSet.has(stringTableNo);
+
+            // --- LOGIC IMPLEMENTATION ---
+
+            // CASE 1: Status 0 - Always Available
+            if (finalStatus === 0) {
+                isAvailable = true;
+            }
+            
+            // CASE 2: Status 1 - Check Queue
+            else if (finalStatus === 1) {
+                if (isInQueue()) {
+                    isAvailable = false; // Table is occupied in queue
+                } else {
+                    // Not in queue, change to status 0 and make available
+                    finalStatus = 0;
+                    finalDate = null;
+                    finalTime = null;
+                    isAvailable = true;
+                }
+            }
+            
+            // CASE 3: Status 2 - Complex Logic with Date/Time
+            else if (finalStatus === 2) {
+                // Check if date matches
+                if (currentDate !== formattedTableDate) {
+                    // Dates don't match -> Table is available with booking info
+                    isAvailable = true;
+                    bookingMessage = `Booked on ${formattedTableDate || 'Unknown'} at ${tableTime || 'Unknown'}`;
+                } else {
+                    // Dates match -> Compare time
+                    let tableTimeInHours = 0;
+                    if (tableTime && typeof tableTime === 'string') {
+                        const parts = tableTime.split(':');
+                        tableTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
+                    }
+                    
+                    const timeDiff = tableTimeInHours - currentTimeInHours;
+                    
+                    if (timeDiff > 0) {
+                        // Future booking - Table is available with booking info
+                        isAvailable = true;
+                        bookingMessage = `Booked today at ${tableTime}`;
+                    } 
+                    else if (timeDiff <= 0 && timeDiff > -0.5) {
+                        // Within -0.5 hours (30 mins) of booking time - Not available
+                        isAvailable = false;
+                    } 
+                    else {
+                        // More than 0.5 hours past booking time - Check queue
+                        if (isInQueue()) {
+                            // Table is in queue - change to status 1, follow status 1 rules
+                            finalStatus = 1;
+                            if (isInQueue()) {
+                                isAvailable = false;
+                            } else {
+                                finalStatus = 0;
+                                finalDate = null;
+                                finalTime = null;
+                                isAvailable = true;
+                            }
+                        } else {
+                            // Not in queue - change to status 0
+                            finalStatus = 0;
+                            finalDate = null;
+                            finalTime = null;
+                            isAvailable = true;
+                        }
+                    }
+                }
+            }
+
+            return {
+                id,
+                table_no: stringTableNo,
+                person_no: table.person_no,
+                capacity: table.capacity,
+                status: finalStatus,
+                date: finalDate,
+                time: finalTime,
+                isAvailable,
+                bookingMessage
+            };
+        });
+
+        res.status(200).json({ 
+            status: true, 
+            data: processedTables,
+            summary: {
+                total: processedTables.length,
+                available: processedTables.filter(t => t.isAvailable).length,
+                unavailable: processedTables.filter(t => !t.isAvailable).length
+            }
+        });
+
+    } catch (error) {
+        console.error("Error processing dine-in tables:", error);
+        res.status(500).json({ 
+            status: false, 
+            message: "Server error calculating table logic.",
+            error: error.message 
+        });
+    }
+});
+
+// ==========================================
+// GET OCCUPIED TABLES (Keep existing for backward compatibility)
 // ==========================================
 router.get('/get-occupied-tables/:company_id/:branch_id', async (req, res) => {
     const { company_id, branch_id } = req.params;
+
     try {
-        const occupiedSql = `
-            SELECT DISTINCT table_no 
-            FROM customer_order_queues 
-            WHERE company_id = ? 
-              AND branch_id = ? 
-              AND table_no IS NOT NULL 
-              AND table_no != 'Home delivery' 
-              AND table_no != 'Take a way'
-              AND table_no != 'Parcel'
+        // Fetch occupied tables from External API
+        const apiUrl = `https://pos.chulkani.com/branch/order/website/customer-order-queues?company_id=${company_id}&branch_id=${branch_id}`;
+        const apiResponse = await axios.get(apiUrl);
+        
+        let queueResults = [];
+        if (apiResponse.data && apiResponse.data.status === true && Array.isArray(apiResponse.data.data)) {
+            const invalidTableTypes = ['Home delivery', 'Take a way', 'Parcel'];
+            
+            queueResults = apiResponse.data.data.filter(row => 
+                row.table_no && 
+                !invalidTableTypes.includes(row.table_no)
+            );
+        }
+
+        // Fetch reservations from local DB
+        const reserveSql = `
+            SELECT table_number 
+            FROM reservation 
+            WHERE branch_id = ?
+              AND table_number IS NOT NULL 
+              AND table_number != ''
         `;
+        const reserveResults = await queryPromise(reserveSql, [branch_id]);
+
+        const occupiedSet = new Set();
+
+        // Process the external API queue results
+        queueResults.forEach(row => {
+            if (row.table_no) {
+                String(row.table_no).split(',').forEach(t => {
+                    const trimmed = t.trim();
+                    if (trimmed) occupiedSet.add(trimmed);
+                });
+            }
+        });
+
+        // Process the local DB reservation results
+        reserveResults.forEach(row => {
+            if (row.table_number) {
+                String(row.table_number).split(',').forEach(t => {
+                    const trimmed = t.trim();
+                    if (trimmed) occupiedSet.add(trimmed);
+                });
+            }
+        });
         
-        const occupiedResults = await queryPromise(occupiedSql, [company_id, branch_id]);
-        const occupiedTableNumbers = occupiedResults.map(row => String(row.table_no).trim());
-        
-        res.status(200).json(occupiedTableNumbers);
+        res.status(200).json(Array.from(occupiedSet));
     } catch (error) {
-        console.error("Error fetching occupied tables:", error);
+        console.error("Error fetching occupied tables:", error.message);
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
 
 // ==========================================
-// 2. PLACE ORDER (MAIN ENTRY)
+// 2. PLACE ORDER API (To Laravel)
 // ==========================================
-router.post('/save-customer-data', async (req, res) => {
+router.post('/place-order', async (req, res) => {
     try {
-        const { cust_name, phone, items } = req.body;
+        const { branch_id, cust_name, phone, email, address, sub_total, discount, delivery, total, table_no, pay_mtd, items } = req.body;
 
-        if (!cust_name || !phone || !items || items.length === 0) {
-            return res.status(400).json({ message: "Missing required order information." });
+        if (!phone || !items || items.length === 0) {
+            return res.status(400).json({ status: false, message: "Missing required fields" });
         }
 
-        const firstItem = items[0];
-        const branch_id = req.body.branch_id || (firstItem?.branchId || firstItem?.m_branch_id || 1);
-        
-        const settingsSql = "SELECT company_code FROM settings WHERE id = 1";
-        const settingsResult = await queryPromise(settingsSql);
+        // 1. Get Company Code dynamically
+        const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
+        const companyCode = settings[0]?.company_code || '26672691';
 
-        if (!settingsResult || settingsResult.length === 0) {
-            return res.status(500).json({ success: false, message: "Failed to process request: Settings not found." });
-        }
+        // 2. Ensure items is properly formatted as an array of objects
+        const formattedItems = items.map(item => ({
+            menu_id: parseInt(item.menu_id) || 0,
+            menu_name: item.menu_name || '',
+            qty: parseInt(item.qty) || 1,
+            price: parseFloat(item.price) || 0
+        }));
 
-        const companyCode = settingsResult[0].company_code;
-        
-        // Pass off to the async creation functions
-        await checkAndCreateCustomer(req, res, companyCode, branch_id);
+        // 3. Construct the payload
+        const laravelPayload = {
+            company_id: companyCode,
+            branch_id: parseInt(branch_id || 1),
+            cust_name: cust_name || "Website Customer",
+            phone: phone,
+            email: email || null,
+            address: address || null,
+            sub_total: parseFloat(sub_total || 0),
+            discount: parseFloat(discount || 0),
+            delivery: parseFloat(delivery || 0),
+            total: parseFloat(total || 0),
+            table_no: table_no,
+            pay_mtd: pay_mtd || "cash",
+            items: formattedItems
+        };
+
+        console.log("Sending to Laravel API:", JSON.stringify(laravelPayload, null, 2));
+
+        // 4. Send to Laravel API with proper headers
+        const apiUrl = 'https://pos.chulkani.com/website/order'; 
+
+        const laravelRes = await axios.post(
+            apiUrl,
+            laravelPayload,
+            {
+               headers: {
+                 'Content-Type': 'application/json',
+                 'Accept': 'application/json'
+               },
+               timeout: 30000
+            }
+        );
+
+        return res.status(laravelRes.status).json(laravelRes.data);
 
     } catch (error) {
-        console.error("Unexpected error in place-order:", error);
-        res.status(500).json({ message: "Internal server error", error: error.message });
+        console.error("Laravel API Error Details:", {
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message
+        });
+        
+        return res.status(error.response?.status || 500).json({ 
+            status: false,
+            message: error.response?.data?.message || "Order failed at Laravel API",
+            details: error.response?.data || error.message
+        });
     }
 });
-
-// ==========================================
-// CUSTOMER CREATION LOGIC (Refactored to Async)
-// ==========================================
-async function checkAndCreateCustomer(req, res, companyCode, branch_id) {
-    try {
-        const { cust_name, phone, address, email, is_logged_in } = req.body;
-
-        const checkCustSql = `SELECT id, cust_id FROM customers WHERE company_id = ? AND phone = ?`;
-        const checkRows = await queryPromise(checkCustSql, [companyCode, phone]);
-
-        if (!checkRows || checkRows.length === 0) {
-            console.log("Customer not found. Creating new record...");
-
-            const descResult = await queryPromise("DESCRIBE customers");
-            const columns = descResult.map(col => col.Field);
-
-            const insertFields = [];
-            const insertValues = [];
-            const placeholders = [];
-
-            if (columns.includes('company_id')) {
-                insertFields.push('company_id');
-                insertValues.push(companyCode);
-                placeholders.push('?');
-            }
-
-            const otherFields = {
-                'branch_id': branch_id,
-                'name': cust_name,
-                'phone': phone,
-                'email': email || null,
-                'address': address || null,
-                'is_guest': is_logged_in ? 0 : 1,
-                'created_at': 'NOW()',
-                'updated_at': 'NOW()'
-            };
-
-            for (const [field, value] of Object.entries(otherFields)) {
-                if (columns.includes(field) && !insertFields.includes(field)) {
-                    insertFields.push(field);
-                    if (value === 'NOW()') {
-                        insertValues.push('NOW()');
-                        placeholders.push('NOW()');
-                    } else {
-                        // Ensure no undefined values sneak in
-                        insertValues.push(value !== undefined ? value : null);
-                        placeholders.push('?');
-                    }
-                }
-            }
-
-            let nextCustId = null;
-            if (columns.includes('cust_id') && !insertFields.includes('cust_id')) {
-                const maxRows = await queryPromise("SELECT MAX(cust_id) as maxId FROM customers WHERE company_id = ?", [companyCode]);
-                nextCustId = 1;
-                if (maxRows && maxRows.length > 0 && maxRows[0].maxId) {
-                    nextCustId = parseInt(maxRows[0].maxId) + 1;
-                }
-                
-                insertFields.unshift('cust_id');
-                insertValues.unshift(nextCustId);
-                placeholders.unshift('?');
-            }
-
-            const safeValues = insertValues.filter(v => v !== 'NOW()');
-            const insertSql = `INSERT INTO customers (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')})`;
-            
-            const insResult = await queryPromise(insertSql, safeValues);
-            
-            const finalCustId = nextCustId ? nextCustId : insResult.insertId;
-            await proceedToCreateOrder(req, res, companyCode, branch_id, finalCustId);
-
-        } else {
-            console.log("Customer exists. Proceeding to order.");
-            const existingCustId = checkRows[0].cust_id || checkRows[0].id;
-            await proceedToCreateOrder(req, res, companyCode, branch_id, existingCustId);
-        }
-    } catch (err) {
-        console.error("Database Error during Customer Check/Create:", err);
-        return res.status(500).json({ success: false, message: "Customer DB Error: " + err.message });
-    }
-}
-
-// ==========================================
-// ORDER QUEUE CREATION LOGIC
-// ==========================================
-async function proceedToCreateOrder(req, res, companyCode, branch_id, customer_id) {
-    try {
-        console.log("Starting order generation process into customer_order_queues...");
-        const { items, table_no } = req.body;
-
-        // ---- THIS HANDLES THE MULTIPLE TABLES ----
-        let ord_table_no = null;
-        if (Array.isArray(table_no)) {
-            // Turns frontend array ["1", "5"] into string "1, 5" for the database!
-            ord_table_no = table_no.join(', ');
-        } else if (table_no) {
-            ord_table_no = String(table_no);
-        }
-
-        let order_no = 1;
-        const comRes = await queryPromise("SELECT MAX(CAST(order_no AS UNSIGNED)) as max_val FROM customer_order_queues WHERE company_id = ?", [companyCode]);
-        if (comRes[0] && comRes[0].max_val) {
-            order_no = parseInt(comRes[0].max_val) + 1;
-        }
-        
-        const finalOrderNo = String(order_no); 
-
-        const insertSql = `
-            INSERT INTO customer_order_queues (
-                create_by, emp_id, order_no, table_no, customer_id, 
-                company_id, branch_id, menu_id, size, qty, price, 
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-        `;
-
-        for (const item of items) {
-            let menu_id = parseInt(item.m_menu_id) || parseInt(item.id) || null; 
-            if (isNaN(menu_id)) menu_id = null;
-
-            let qty = parseInt(item.quantity) || 1;
-            if (isNaN(qty)) qty = 1;
-            
-            const itemPrice = parseFloat(item.m_price) || 0;
-            const rowTotalPrice = itemPrice * qty;
-
-            const insertParams = [
-                null,                   
-                null,                   
-                finalOrderNo,           
-                ord_table_no,           // Passes the comma-separated tables here
-                customer_id,            
-                companyCode,            
-                branch_id,              
-                menu_id,                
-                null,                   
-                qty,                    
-                String(rowTotalPrice)   
-            ];
-
-            const safeParams = insertParams.map(v => v === undefined ? null : v);
-            await queryPromise(insertSql, safeParams);
-        }
-
-        console.log("All order items successfully queued! Order No:", finalOrderNo);
-
-        return res.status(200).json({ 
-            success: true, 
-            message: "Order placed successfully in queue!", 
-            order_no: finalOrderNo 
-        });
-
-    } catch (err) {
-        console.error("Critical error while inserting items into queue:", err);
-        return res.status(500).json({ 
-            success: false, 
-            message: "Order Insert DB Error: " + err.message 
-        });
-    }
-}
 
 module.exports = router;

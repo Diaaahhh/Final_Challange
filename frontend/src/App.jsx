@@ -36,6 +36,12 @@ import Cart from "./Components/Cart/Cart";
 import Checkout from "./Components/Cart/Checkout";
 import TableLayout from "./Components/Table/TableLayout";
 
+import Dashboard from "./Components/Layout/Dashboard";
+import BranchUser from "./Components/Contact/BranchUser";
+import CreatePortfolio from "./Components/Portfolio/CreatePortfolio";
+import PortfolioUser from "./Components/Portfolio/PortfolioUser";
+import ViewPortfolio from "./Components/Portfolio/ViewPortfolio";
+
 // --- ADMIN PROTECTION GUARD ---
 const AdminGuard = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user"));
@@ -91,9 +97,9 @@ function App() {
     <CartProvider>
       {/* Navbar only shows if NOT auth/admin page */}
       {!shouldHideNavbarFooter && <Navbar />}
-      
+
       {/* 2. Place Sidebar Here (Globally accessible, but controlled by context) */}
-      <CartSidebar /> 
+      <CartSidebar />
 
       <Routes>
         {/* Role 0 redirected only on first entry after login, else allowed to view */}
@@ -105,10 +111,12 @@ function App() {
         <Route path="/reservation" element={<Reservation />} />
         <Route path="/about" element={<ViewAbout />} />
         <Route path="/profile" element={<Profile />} />
-        
+                <Route path="/portfolio_user" element={<PortfolioUser />} />
+
+
         {/* You can keep /cart as a fallback or remove it if you fully switch to sidebar */}
         <Route path="/cart" element={<Cart />} />
-        
+
         <Route path="/checkout" element={<Checkout />} />
 
         <Route
@@ -118,6 +126,15 @@ function App() {
               <h1 className="text-3xl font-bold">
                 <Address />
               </h1>
+            </div>
+          }
+        />
+
+        <Route
+          path="/branch_user"
+          element={
+            <div className="pt-24 pb-12 bg-base-200 min-h-screen">
+              <BranchUser />
             </div>
           }
         />
@@ -150,13 +167,18 @@ function App() {
             </AdminGuard>
           }
         >
+          <Route path="dashboard" element={<Dashboard />} />
+                <Route path="create_portfolio" element={<CreatePortfolio />} />
+
           <Route path="branch_list" element={<Branches />} />
           <Route path="menu-list" element={<MenuList />} />
           <Route path="reservation_view" element={<ReservationView />} />
           <Route path="write_about" element={<WriteAbout />} />
           <Route path="view_review" element={<ViewReview />} />
           <Route path="upload_hero" element={<UploadHero />} />
-          <Route path="settings" element={<Settings />} /> 
+          <Route path="settings" element={<Settings />} />
+                    <Route path="view_portfolio" element={<ViewPortfolio />} />
+
           <Route path="table" element={<TableLayout />} />
         </Route>
       </Routes>
