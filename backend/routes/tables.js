@@ -6,12 +6,9 @@ const axios = require('axios'); // We need axios to make the external API call
 router.get('/get-tables/:company_id/:branch_id', async (req, res) => {
     const { company_id, branch_id } = req.params;
 
-    try {
-        // Call the external API using POST (as defined in your Laravel Route::post)
-        const response = await axios.post('https://pos.chulkani.com/website/table', {
-            company_id: company_id,
-            branch_id: branch_id
-        });
+   try {
+        // Call the external API using GET 
+        const response = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${company_id}&branch_id=${branch_id}`);
 
         // The Laravel API returns JSON with { status, message, data }
         if (response.data && response.data.status === true) {
