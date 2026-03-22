@@ -83,3 +83,22 @@ Stack: ReferenceError: formattedBanner is not defined
     at E:\Last_Chance\Final_Challange\backend\node_modules\mysql2\lib\commands\query.js:87:16
     at process.processTicksAndRejections (node:internal/process/task_queues:77:11)
 ----------------------
+
+[2026-03-12T09:11:43.407Z] CRASH REPORT:
+Error: Missing catch or finally after try
+Stack: E:\Last_Chance\Final_Challange\backend\routes\tables.js:29
+});
+^
+
+SyntaxError: Missing catch or finally after try
+    at wrapSafe (node:internal/modules/cjs/loader:1464:18)
+    at Module._compile (node:internal/modules/cjs/loader:1495:20)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+    at Module.load (node:internal/modules/cjs/loader:1266:32)
+    at Module._load (node:internal/modules/cjs/loader:1091:12)
+    at Module.require (node:internal/modules/cjs/loader:1289:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (E:\Last_Chance\Final_Challange\backend\server.js:96:17)
+    at Module._compile (node:internal/modules/cjs/loader:1521:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+----------------------
