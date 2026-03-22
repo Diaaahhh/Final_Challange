@@ -75,75 +75,156 @@ router.get('/branches', async (req, res) => {
 });
 
 // ==========================================
-// 3. GET TABLES BY BRANCH ID
+// 3. GET TABLES & AVAILABILITY BY BRANCH ID
 // ==========================================
 router.get('/tables/:branch_id', async (req, res) => {
     try {
         const { branch_id } = req.params;
+        // Capture the chosen date and time from the frontend request
+        const { date: chosenDate, time: chosenTime } = req.query;
+
+        if (!chosenDate || !chosenTime) {
+            return res.status(400).json({ error: "Date and Time are required to check table availability." });
+        }
+
         const companyCode = await getCompanyCode();
+
+        // 1. Fetch ALL physical tables from External API
+        const tablesResponse = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
         
-        const sql = "SELECT * FROM tables WHERE company_id = ? AND branch_id = ?";
-        db.query(sql, [companyCode, branch_id], (err, results) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json(results);
-        });
-    } catch (error) {
-        res.status(500).json({ error: "Server error" });
-    }
-});
+        let tables = [];
+        if (tablesResponse.data && tablesResponse.data.status === true) {
+            tables = tablesResponse.data.data || [];
+        }
 
-// ==========================================
-// 4. GET OCCUPIED TABLES (QUEUE + RESERVATION)
-// ==========================================
-router.get('/occupied-tables/:branch_id', async (req, res) => {
-    try {
-        const { branch_id } = req.params;
-        const companyCode = await getCompanyCode();
+        // 2. Fetch LOCAL reservations for this branch AND company
+        const reservations = await queryPromise(
+            "SELECT * FROM reservation WHERE re_com_id = ? AND re_branch_id = ?", 
+            [companyCode, branch_id]
+        );
 
-        const queueSql = `
-            SELECT table_no 
-            FROM customer_order_queues 
-            WHERE company_id = ? AND branch_id = ? 
-              AND table_no IS NOT NULL 
-              AND table_no != 'Home delivery' 
-              AND table_no != 'Take a way' 
-              AND table_no != 'Parcel'
-        `;
-        const queueResults = await queryPromise(queueSql, [companyCode, branch_id]);
+        // 3. Convert chosenTime to hours for easy math (e.g., 14:30 becomes 14.5)
+        let userTimeInHours = 0;
+        if (chosenTime && typeof chosenTime === 'string') {
+            const parts = chosenTime.split(':');
+            userTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
+        }
 
-        const reserveSql = `
-            SELECT table_number 
-            FROM reservation 
-            WHERE branch_id = ? 
-              AND table_number IS NOT NULL 
-              AND table_number != ''
-        `;
-        const reserveResults = await queryPromise(reserveSql, [branch_id]);
+        // --- NEW: Get REAL current date and time to auto-expire past reservations ---
+        const now = new Date();
+        const realYear = now.getFullYear();
+        const realMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const realDay = String(now.getDate()).padStart(2, '0');
+        const realDateStr = `${realYear}-${realMonth}-${realDay}`;
+        const realTimeInHours = now.getHours() + (now.getMinutes() / 60);
 
-        const occupiedSet = new Set();
+        const updatePromises = [];
 
-        queueResults.forEach(row => {
-            if (row.table_no) {
-                String(row.table_no).split(',').forEach(t => {
-                    const trimmed = t.trim();
-                    if (trimmed) occupiedSet.add(trimmed);
-                });
+        // 4. Process each table according to your NEW logic
+        const processedTables = tables.map(table => {
+            let { id, table_no, capacity, person_no } = table;
+            const stringTableNo = String(table_no).trim();
+            
+            // Assume table is available by default
+            let isAvailable = true;
+            let bookingMessage = null;
+
+            // Find all local reservations belonging to this specific table
+            const tableReservations = reservations.filter(res => {
+                if (!res.re_table_no) return false;
+                const resTables = String(res.re_table_no).split(',').map(t => t.trim());
+                return resTables.includes(stringTableNo);
+            });
+
+            // Loop through the reservations to check for conflicts
+            for (const res of tableReservations) {
+                let resDate = "";
+                let resTime = "";
+                
+                // Format the new DATETIME column `re_date` into separate Date and Time variables
+                if (res.re_date instanceof Date) {
+                    const y = res.re_date.getFullYear();
+                    const m = String(res.re_date.getMonth() + 1).padStart(2, '0');
+                    const d = String(res.re_date.getDate()).padStart(2, '0');
+                    resDate = `${y}-${m}-${d}`;
+
+                    const hr = String(res.re_date.getHours()).padStart(2, '0');
+                    const min = String(res.re_date.getMinutes()).padStart(2, '0');
+                    resTime = `${hr}:${min}`;
+                } else if (res.re_date && typeof res.re_date === 'string') {
+                    // Handles string formats like "2026-03-22 14:30:00" or "2026-03-22T14:30:00Z"
+                    const parts = res.re_date.split(/T|\s/);
+                    resDate = parts[0];
+                    if (parts[1]) {
+                        resTime = parts[1].substring(0, 5); // Extracts just the "HH:MM"
+                    }
+                }
+
+                let resTimeInHours = 0;
+                if (resTime) {
+                    const parts = resTime.split(':');
+                    resTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
+                }
+
+                // DYNAMIC DURATION: Convert re_duration (minutes) to hours. Default to 1.5 if null/missing.
+                let durationInHours = 1.5; 
+                if (res.re_duration) {
+                    durationInHours = parseInt(res.re_duration, 10) / 60;
+                }
+
+                // --- LOGIC 1: AUTO-EXPIRATION ---
+                // If status is 1, dynamically check if it is older than the DURATION in REAL time
+                if (res.re_status === 1) {
+                    let isExpired = false;
+                    if (resDate < realDateStr) {
+                        isExpired = true; // The date was in the past
+                    } else if (resDate === realDateStr && realTimeInHours >= (resTimeInHours + durationInHours)) {
+                        isExpired = true; // Today, but it has been past the allowed duration since the booking
+                    }
+
+                    if (isExpired) {
+                        // Automatically queue DB update to change re_status to 0
+                        const updateSql = "UPDATE reservation SET re_status = 0 WHERE id = ?";
+                        updatePromises.push(queryPromise(updateSql, [res.id]));
+                        res.re_status = 0; // Update local memory so it doesn't block the table below!
+                    }
+                }
+
+                // --- LOGIC 2: AVAILABILITY CHECK ---
+                // We only care if the status is currently 1 (and not expired)
+                if (res.re_status === 1 && resDate === chosenDate) {
+                    
+                    // If the user's chosen time falls within the specific DURATION block of the reserved time, mark it unavailable.
+                    if (Math.abs(userTimeInHours - resTimeInHours) < durationInHours) {
+                        isAvailable = false;
+                        bookingMessage = `Reserved at ${resTime}`;
+                        break; // Conflict found, table is blocked!
+                    }
+                }
             }
+
+            return {
+                id,
+                table_no: stringTableNo,
+                person_no: person_no,
+                capacity: capacity,
+                isAvailable,
+                bookingMessage
+            };
         });
 
-        reserveResults.forEach(row => {
-            if (row.table_number) {
-                String(row.table_number).split(',').forEach(t => {
-                    const trimmed = t.trim();
-                    if (trimmed) occupiedSet.add(trimmed);
-                });
-            }
-        });
+        // 5. Execute auto-expirations in the background before sending response
+        if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
+            console.log(`Auto-expired ${updatePromises.length} reservations by setting re_status to 0.`);
+        }
 
-        res.status(200).json(Array.from(occupiedSet));
+        // Return the clean data to the frontend
+        res.status(200).json(processedTables);
+
     } catch (error) {
-        console.error("Error fetching occupied tables:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+        console.error("Error processing reservation tables:", error);
+        res.status(500).json({ error: "Server error calculating table logic." });
     }
 });
 
@@ -213,35 +294,127 @@ async function checkAndCreateCustomer(companyCode, branch_id, name, phone, addre
 }
 
 // ==========================================
-// 5. CREATE NEW RESERVATION 
+// 5. CREATE NEW RESERVATION
 // ==========================================
 router.post('/create', async (req, res) => {
     try {
-        const { branch_id, name, phone, address, guest_number, event_name, notes, date, time, table_number } = req.body;
-
-        if (!branch_id || !name || !phone || !date || !time || !guest_number || !address) {
-            return res.status(400).json({ error: "Please fill in all required fields." });
-        }
-
-        const companyCode = await getCompanyCode();
-
-        await checkAndCreateCustomer(companyCode, branch_id, name, phone, address);
+        // Updated to reflect the new table structure needs (frontend should pass customer_id if available)
+        const { branch_id, date, time, table_number, customer_id, duration } = req.body;
 
         let tableStr = null;
         if (table_number) {
-            tableStr = Array.isArray(table_number) ? table_number.join(", ") : table_number;
+            tableStr = Array.isArray(table_number) ? table_number.join(", ") : String(table_number);
         }
 
-        const sql = `INSERT INTO reservation (branch_id, name, phone, guest_number, event_name, notes, date, time, table_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        const values = [branch_id, name, phone, guest_number, event_name, notes, date, time, tableStr];
+        // Extremely strictly cast integers to prevent strict mode crashes in MySQL
+        const safeBranchId = (branch_id === "" || branch_id === null) ? null : parseInt(branch_id);
+        const safeCustomerId = (customer_id === "" || customer_id == null) ? null : parseInt(customer_id);
+        const safeDuration = (duration === "" || duration == null) ? 90 : parseInt(duration); // Default to 60 mins
 
-        const result = await queryPromise(sql, values);
-        
-        res.json({ message: "Reservation created successfully", id: result.insertId });
+        // FIX: Ensure time has seconds appended (HH:MM -> HH:MM:SS) for Laravel validation & MySQL DATETIME
+        let formattedTime = time;
+        if (formattedTime && formattedTime.split(':').length === 2) {
+            formattedTime = `${formattedTime}:00`;
+        }
+
+        // Combine date and formattedTime for the new DATETIME column `re_date` (e.g., '2026-03-22 14:30:00')
+        let dateTimeString = null;
+        if (date && formattedTime) {
+            dateTimeString = `${date} ${formattedTime}`;
+        }
+
+        // We need the company code earlier now because it goes into the local DB
+        const companyCode = await getCompanyCode();
+
+        // New SQL Statement matching the updated schema
+        const sql = `
+            INSERT INTO reservation 
+            (re_com_id, re_branch_id, re_table_no, re_customer_id, re_date, re_duration, re_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+        // CHANGED: Defaulting re_status to 1 
+        const values = [companyCode, safeBranchId, tableStr, safeCustomerId, dateTimeString, safeDuration, 1];
+
+        // 1. Save to local database
+        await queryPromise(sql, values);
+
+        // ==========================================
+        // 2. UPDATE EXTERNAL 'tables' STATUS TO 2 (RESERVED)
+        // ==========================================
+        // if (tableStr) {
+        //     try {
+        //         // Split selected tables into an array (e.g. "10, 20" -> ['10', '20'])
+        //         const tableArray = String(tableStr).split(',').map(t => t.trim());
+                
+        //         // Fetch ALL tables from the external API to find the exact 'id's
+        //         const getTablesUrl = `https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${parseInt(branch_id || 1)}`;
+        //         const externalTablesRes = await axios.get(getTablesUrl);
+                
+        //         let tableRecords = [];
+        //         if (externalTablesRes.data && externalTablesRes.data.status === true) {
+        //             const allExternalTables = externalTablesRes.data.data || [];
+                    
+        //             // Filter the API response to only keep the tables the user reserved
+        //             tableRecords = allExternalTables.filter(apiTable => 
+        //                 tableArray.includes(String(apiTable.table_no).trim())
+        //             );
+        //         }
+
+        //         // Create an array of API requests using the fetched IDs
+        //         const updatePromises = tableRecords.map(record => {
+        //             // Send payload with chosen date, time, and status 2
+        //             // Note: External API still expects them separated
+        //             const tablePayload = {
+        //                 company_id: companyCode,
+        //                 branch_id: parseInt(branch_id || 1),
+        //                 table_no: record.table_no,
+        //                 person_no: record.person_no || null,
+        //                 status: 2,               
+        //                 date: date,              
+        //                 time: formattedTime      
+        //             };
+
+        //             // Dynamically inject the fetched table ID into the URL
+        //             const updateApiUrl = `https://pos.chulkani.com/branch/order/website/table/update/${record.id}`;
+
+        //             // Using POST to hit the update endpoint
+        //             return axios.post(
+        //                 updateApiUrl, 
+        //                 tablePayload,
+        //                 {
+        //                     headers: {
+        //                         'Content-Type': 'application/json',
+        //                         'Accept': 'application/json'
+        //                     },
+        //                     timeout: 15000
+        //                 }
+        //             );
+        //         });
+
+        //         // Execute all table update requests simultaneously
+        //         if (updatePromises.length > 0) {
+        //             await Promise.all(updatePromises);
+        //             console.log(`External API: Tables [${tableRecords.map(t => t.table_no).join(', ')}] status updated to 2 via /update/<id> endpoint.`);
+        //         } else {
+        //             console.warn(`Could not find external IDs for tables: ${tableStr}`);
+        //         }
+
+        //     } catch (apiError) {
+        //         // To help debug if it fails, log the exact validation errors from Laravel
+        //         if (apiError.response && apiError.response.data) {
+        //             console.error("Error updating external tables API (422 Details):", JSON.stringify(apiError.response.data, null, 2));
+        //         } else {
+        //             console.error("Error updating external tables API:", apiError.message);
+        //         }
+        //     }
+        // }
+
+        // Respond success to the frontend
+        res.status(201).json({ message: "Reservation created successfully" });
 
     } catch (error) {
-        console.error("Reservation DB Error:", error);
-        res.status(500).json({ error: error.message });
+        console.error("Error creating reservation:", error);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
@@ -274,23 +447,54 @@ router.delete('/delete/:id', (req, res) => {
 router.put('/update/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { branch_id, name, phone, guest_number, event_name, notes, date, time, table_number } = req.body;
+        
+        // Updated to extract only the fields relevant to the new table structure
+        const { branch_id, table_number, customer_id, date, time, duration, status } = req.body;
 
+        // Process table numbers into a comma-separated string
         let tableStr = null;
         if (table_number) {
             tableStr = Array.isArray(table_number) ? table_number.join(", ") : String(table_number);
         }
 
         // Extremely strictly cast integers to prevent strict mode crashes in MySQL
-        const safeBranchId = (branch_id === "" || branch_id === null) ? null : parseInt(branch_id);
-        const safeGuestNum = (guest_number === "" || guest_number === null) ? 0 : parseInt(guest_number);
+        const safeBranchId = (branch_id === "" || branch_id == null) ? null : parseInt(branch_id);
+        const safeCustomerId = (customer_id === "" || customer_id == null) ? null : parseInt(customer_id);
+        const safeDuration = (duration === "" || duration == null) ? 90 : parseInt(duration);
+        const safeStatus = (status === "" || status == null) ? 0 : parseInt(status);
 
+        // Ensure time has seconds appended (HH:MM -> HH:MM:SS) for MySQL DATETIME compatibility
+        let dateTimeString = null;
+        if (date && time) {
+            let formattedTime = time;
+            if (formattedTime.split(':').length === 2) {
+                formattedTime = `${formattedTime}:00`;
+            }
+            // Combine into 'YYYY-MM-DD HH:MM:SS'
+            dateTimeString = `${date} ${formattedTime}`;
+        }
+
+        // Updated SQL matching the new column names
         const sql = `
             UPDATE reservation 
-            SET branch_id=?, name=?, phone=?, guest_number=?, event_name=?, notes=?, date=?, time=?, table_number=?
-            WHERE id=?`;
+            SET 
+                re_branch_id = ?, 
+                re_table_no = ?, 
+                re_customer_id = ?, 
+                re_date = ?, 
+                re_duration = ?, 
+                re_status = ?
+            WHERE id = ?`;
             
-        const values = [safeBranchId, name, phone, safeGuestNum, event_name, notes, date, time, tableStr, id];
+        const values = [
+            safeBranchId, 
+            tableStr, 
+            safeCustomerId, 
+            dateTimeString, 
+            safeDuration, 
+            safeStatus, 
+            id
+        ];
 
         await queryPromise(sql, values);
         res.json({ message: "Updated successfully" });
