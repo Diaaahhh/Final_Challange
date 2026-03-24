@@ -142,27 +142,25 @@ export default function Checkout() {
         firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
 
       if (companyId && branchId) {
-        try {
-          const tablesRes = await api.get(
-            `/get-tables/${companyId}/${branchId}`
-          );
+        setLoadingTables(true);
+    try {
+      // FIX: Changed from /get-occupied-tables to /checkout/get-dine-in-tables
+      const response = await api.get(
+        `get-dine-in-tables/${companyId}/${branchId}`
+      );
 
-          const allTables = tablesRes.data || [];
-          console.log(allTables);
-          const occupiedRes = await api.get(
-            `/get-occupied-tables/${companyId}/${branchId}`
-          );
-          const occupiedTables = occupiedRes.data || [];
-
-          const finalTables = allTables.map((t) => ({
-            ...t,
-            is_occupied: occupiedTables.includes(String(t.table_no).trim()),
-          }));
-
-          setAvailableTables(finalTables);
-        } catch (err) {
-          console.error("Error fetching tables:", err);
-        }
+      if (response.data && response.data.status === true) {
+        setAvailableTables(response.data.data || []);
+      } else {
+        setAvailableTables([]);
+      }
+    } catch (error) {
+      console.error("Error fetching tables:", error);
+      showToastWarning("Could not check table availability.");
+      setAvailableTables([]); 
+    } finally {
+      setLoadingTables(false);
+    }
       } else {
         console.warn("Missing Company ID or Branch ID in cart items.");
       }
@@ -292,6 +290,7 @@ export default function Checkout() {
       phone: String(formData.phone),
       email: userEmail || "",
       address: formData.address,
+      order_method: formData.order_method,
       sub_total: cartSubTotal,
       discount: cartDiscount,
       delivery: finalShippingCost,

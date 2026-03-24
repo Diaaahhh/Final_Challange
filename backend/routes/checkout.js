@@ -38,126 +38,111 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 // GET: Fetch and Validate Dine-in Tables
 // ==========================================
 router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
-    const { company_id, branch_id } = req.params;
-
     try {
-        // 1. Fetch ALL tables from External API
+        const { company_id, branch_id } = req.params;
+
+        // --- NEW: Get REAL current date and time (Replaces chosenDate/chosenTime) ---
+        const now = new Date();
+        const realYear = now.getFullYear();
+        const realMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const realDay = String(now.getDate()).padStart(2, '0');
+        const currentDate = `${realYear}-${realMonth}-${realDay}`;
+        const currentTimeInHours = now.getHours() + (now.getMinutes() / 60);
+
+        // 1. Fetch ALL physical tables from External API
         const tablesResponse = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${company_id}&branch_id=${branch_id}`);
         let tables = [];
         if (tablesResponse.data && tablesResponse.data.status === true) {
             tables = tablesResponse.data.data || [];
         }
 
-        // 2. Fetch occupied tables from External API (customer_order_queues)
-        const queueApiUrl = `https://pos.chulkani.com/branch/order/website/customer-order-queues?company_id=${company_id}&branch_id=${branch_id}`;
-        const queueResponse = await axios.get(queueApiUrl);
-        
-        const occupiedQueueSet = new Set();
-        if (queueResponse.data && queueResponse.data.status === true && Array.isArray(queueResponse.data.data)) {
-            const invalidTableTypes = ['Home delivery', 'Take a way', 'Parcel'];
-            const queueResults = queueResponse.data.data.filter(row => 
-                row.table_no && !invalidTableTypes.includes(row.table_no)
-            );
+        // 2. Fetch LOCAL reservations for this branch AND company
+        const reservations = await queryPromise(
+            "SELECT * FROM reservation WHERE re_com_id = ? AND re_branch_id = ?", 
+            [company_id, branch_id]
+        );
 
-            queueResults.forEach(row => {
-                if (row.table_no) {
-                    String(row.table_no).split(',').forEach(t => {
-                        const trimmed = t.trim();
-                        if (trimmed) occupiedQueueSet.add(trimmed);
-                    });
-                }
-            });
-        }
+        const updatePromises = [];
 
-        // 3. Fetch LOCAL reservations for this branch
-        const reservations = await queryPromise("SELECT * FROM reservation WHERE branch_id = ?", [branch_id]);
-
-        // 4. Get CURRENT date and time
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const currentDate = `${year}-${month}-${day}`;
-        
-        const currentTimeInHours = now.getHours() + (now.getMinutes() / 60);
-
-        console.log(`Current Date: ${currentDate}, Current Time: ${currentTimeInHours.toFixed(2)} hours`);
-
-        const deletionPromises = []; // Array to hold expired reservation deletions
-
-        // 5. Process each table according to the NEW logic
+        // 3. Process each table according to your NEW logic
         const processedTables = tables.map(table => {
-            let { 
-                id, 
-                table_no, 
-                status, 
-                capacity,
-                person_no 
-            } = table;
-            
+            let { id, table_no, capacity, person_no } = table;
             const stringTableNo = String(table_no).trim();
+            
+            // Assume table is available by default
             let isAvailable = true;
             let bookingMessage = null;
-            let finalStatus = parseInt(status) || 0;
 
-            const isInQueue = () => occupiedQueueSet.has(stringTableNo);
+            // Find all local reservations belonging to this specific table
+            const tableReservations = reservations.filter(res => {
+                if (!res.re_table_no) return false;
+                const resTables = String(res.re_table_no).split(',').map(t => t.trim());
+                return resTables.includes(stringTableNo);
+            });
 
-            // --- LOGIC IMPLEMENTATION ---
+            // Loop through the reservations to check for conflicts
+            for (const res of tableReservations) {
+                let resDate = "";
+                let resTime = "";
+                
+                // Format the new DATETIME column `re_date` into separate Date and Time variables
+                if (res.re_date instanceof Date) {
+                    const y = res.re_date.getFullYear();
+                    const m = String(res.re_date.getMonth() + 1).padStart(2, '0');
+                    const d = String(res.re_date.getDate()).padStart(2, '0');
+                    resDate = `${y}-${m}-${d}`;
 
-            // STEP 1: Check the status column from table: "tables" using API
-            if (finalStatus === 1) {
-                isAvailable = false;
-            } else {
-                // STEP 2: Find if this specific table has any local reservations
-                const tableReservations = reservations.filter(res => {
-                    if (!res.table_number) return false;
-                    const resTables = String(res.table_number).split(',').map(t => t.trim());
-                    return resTables.includes(stringTableNo);
-                });
+                    const hr = String(res.re_date.getHours()).padStart(2, '0');
+                    const min = String(res.re_date.getMinutes()).padStart(2, '0');
+                    resTime = `${hr}:${min}`;
+                } else if (res.re_date && typeof res.re_date === 'string') {
+                    // Handles string formats like "2026-03-22 14:30:00" or "2026-03-22T14:30:00Z"
+                    const parts = res.re_date.split(/T|\s/);
+                    resDate = parts[0];
+                    if (parts[1]) {
+                        resTime = parts[1].substring(0, 5); // Extracts just the "HH:MM"
+                    }
+                }
 
-                // Loop through all reservations for this table to check for conflicts
-                for (const reservation of tableReservations) {
-                    const resDate = reservation.date;
-                    const resTime = reservation.time;
+                let resTimeInHours = 0;
+                if (resTime) {
+                    const parts = resTime.split(':');
+                    resTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
+                }
 
-                    // If Dates don't match, it is available (no action needed, remains true)
-                    if (currentDate === resDate) {
-                        // Dates match -> Compare time
-                        let resTimeInHours = 0;
-                        if (resTime && typeof resTime === 'string') {
-                            const parts = resTime.split(':');
-                            resTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
-                        }
+                // DYNAMIC DURATION: Convert re_duration (minutes) to hours. Default to 1.5 if null/missing.
+                let durationInHours = 1.5; 
+                if (res.re_duration) {
+                    durationInHours = parseInt(res.re_duration, 10) / 60;
+                }
 
-                        // Condition A: If column "time" is greater than or equal to (current time + 30 minutes) -> Available
-                        if (resTimeInHours >= (currentTimeInHours + 0.5)) {
-                            // isAvailable remains true
-                            bookingMessage = `Reserved later today at ${resTime}`;
-                        }
-                        // Condition B: If column "time" is less or equal current time AND current time is less than (column "time" + 30 minutes) -> Unavailable
-                        else if (resTimeInHours <= currentTimeInHours && currentTimeInHours < (resTimeInHours + 0.5)) {
-                            isAvailable = false;
-                            bookingMessage = `Currently Reserved (Awaiting arrival)`;
-                            break; // Conflict found, no need to check other reservations for this table
-                        }
-                        // Condition C: If current time is greater than (column "time" + 30 minutes)
-                        else if (currentTimeInHours >= (resTimeInHours + 0.5)) {
-                            // Check inside Table: customer_order_queues
-                            if (isInQueue()) {
-                                // Exists in queue -> Unavailable
-                                isAvailable = false;
-                                break;
-                            } else {
-                                // Not in queue -> Available AND Remove the row from local table: "reservation"
-                                // isAvailable remains true
-                                const deleteSql = "DELETE FROM reservation WHERE id = ?";
-                                const deleteReq = queryPromise(deleteSql, [reservation.id])
-                                    .then(() => console.log(`Deleted expired No-Show reservation ID: ${reservation.id} for table ${stringTableNo}`))
-                                    .catch(err => console.error(`Failed to delete reservation ID ${reservation.id}:`, err));
-                                
-                                deletionPromises.push(deleteReq);
-                            }
-                        }
+                // --- LOGIC 1: AUTO-EXPIRATION ---
+                // If status is 1, dynamically check if it is older than the DURATION in REAL time
+                if (res.re_status === 1) {
+                    let isExpired = false;
+                    if (resDate < currentDate) {
+                        isExpired = true; // The date was in the past
+                    } else if (resDate === currentDate && currentTimeInHours >= (resTimeInHours + durationInHours)) {
+                        isExpired = true; // Today, but it has been past the allowed duration since the booking
+                    }
+
+                    if (isExpired) {
+                        // Automatically queue DB update to change re_status to 0
+                        const updateSql = "UPDATE reservation SET re_status = 0 WHERE id = ?";
+                        updatePromises.push(queryPromise(updateSql, [res.id]));
+                        res.re_status = 0; // Update local memory so it doesn't block the table below!
+                    }
+                }
+
+                // --- LOGIC 2: AVAILABILITY CHECK (USING CURRENT DATE & TIME) ---
+                // We only care if the status is currently 1 (and not expired)
+                if (res.re_status === 1 && resDate === currentDate) {
+                    
+                    // If the CURRENT time falls within the specific DURATION block of the reserved time, mark it unavailable.
+                    if (Math.abs(currentTimeInHours - resTimeInHours) < durationInHours) {
+                        isAvailable = false;
+                        bookingMessage = `Currently Reserved`;
+                        break; // Conflict found, table is blocked!
                     }
                 }
             }
@@ -167,18 +152,18 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
                 table_no: stringTableNo,
                 person_no: person_no,
                 capacity: capacity,
-                status: finalStatus,
                 isAvailable,
                 bookingMessage
             };
         });
 
-        // 6. Execute any required local database deletions (No-shows)
-        if (deletionPromises.length > 0) {
-            await Promise.all(deletionPromises);
-            console.log(`Cleaned up ${deletionPromises.length} expired reservations from local DB.`);
+        // 4. Execute auto-expirations in the background before sending response
+        if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
+            console.log(`Auto-expired ${updatePromises.length} reservations by setting re_status to 0.`);
         }
 
+        // Return the clean data to the frontend in the format Checkout.jsx expects
         res.status(200).json({ 
             status: true, 
             data: processedTables,
@@ -276,68 +261,39 @@ router.post('/place-order', async (req, res) => {
                 const seconds = String(now.getSeconds()).padStart(2, '0');
                 const currentTime = `${hours}:${minutes}:${seconds}`;
 
-                // Split "10, 20" into an array ['10', '20']
-                const tableArray = String(table_no).split(',').map(t => t.trim());
-                
-                // 1. Fetch ALL tables from the external API to find the exact 'id's
-                const getTablesUrl = `https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${parseInt(branch_id || 1)}`;
-                const externalTablesRes = await axios.get(getTablesUrl);
-                
-                let tableRecords = [];
-                if (externalTablesRes.data && externalTablesRes.data.status === true) {
-                    const allExternalTables = externalTablesRes.data.data || [];
-                    
-                    // Filter the API response to only keep the tables the user selected
-                    tableRecords = allExternalTables.filter(apiTable => 
-                        tableArray.includes(String(apiTable.table_no).trim())
-                    );
+                // Combine date and formattedTime for the DATETIME column `re_date` (e.g., '2026-03-22 14:30:00')
+                const dateTimeString = `${currentDate} ${currentTime}`;
+
+                // Format the table_no string (e.g., if array was joined or just a string)
+                let tableStr = null;
+                if (table_no) {
+                    tableStr = Array.isArray(table_no) ? table_no.join(", ") : String(table_no);
                 }
 
-                // 2. Create an array of API requests using the fetched IDs
-                const updatePromises = tableRecords.map(record => {
-                    // FIX: Sending a full payload to satisfy Laravel's 422 validation rules
-                    const tablePayload = {
-                        company_id: companyCode,
-                        branch_id: parseInt(branch_id || 1),
-                        table_no: record.table_no, // Sending back the exact table_no
-                        person_no: record.person_no || null,
-                        status: 1,
-                        date: currentDate,
-                        time: currentTime
-                    };
+                // Strictly cast integers
+                const safeBranchId = (branch_id === "" || branch_id == null) ? null : parseInt(branch_id);
+                // We don't have a specific customer_id in this payload directly, so we pass null or parse if you add it later
+                const safeCustomerId = null; 
+                const safeDuration = 90; // Defaulting to 90 mins
 
-                    // Dynamically inject the fetched table ID into the URL
-                    const updateApiUrl = `https://pos.chulkani.com/branch/order/website/table/update/${record.id}`;
+                // Ensure companyCode is ready
+                const compCode = companyCode || await getCompanyCode();
 
-                    // Using POST to hit the update endpoint
-                    return axios.post(
-                        updateApiUrl, 
-                        tablePayload,
-                        {
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            timeout: 15000
-                        }
-                    );
-                });
+                // 1. Insert directly into the local reservation table instead of updating external tables API
+                const sql = `
+                    INSERT INTO reservation 
+                    (re_com_id, re_branch_id, re_table_no, re_customer_id, re_date, re_duration, re_status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
 
-                // 3. Execute all table update requests simultaneously
-                if (updatePromises.length > 0) {
-                    await Promise.all(updatePromises);
-                    console.log(`External API: Tables [${tableRecords.map(t => t.table_no).join(', ')}] status updated via /update/<id> endpoint.`);
-                } else {
-                    console.warn(`Could not find external IDs for tables: ${table_no}`);
-                }
+                // Setting re_status to 1 to block the table
+                const values = [compCode, safeBranchId, tableStr, safeCustomerId, dateTimeString, safeDuration, 1];
 
-            } catch (apiError) {
-                // To help debug if it fails again, log the exact validation errors from Laravel
-                if (apiError.response && apiError.response.data) {
-                    console.error("Error updating external tables API (422 Details):", JSON.stringify(apiError.response.data, null, 2));
-                } else {
-                    console.error("Error updating external tables API:", apiError.message);
-                }
+                await queryPromise(sql, values);
+                console.log(`Successfully created a local reservation for table(s) [${tableStr}] to block availability.`);
+
+            } catch (dbError) {
+                console.error("Error inserting into local reservation table during checkout:", dbError.message);
+                // We just log this and move on, so the user still sees a successful checkout
             }
 
            // ==========================================

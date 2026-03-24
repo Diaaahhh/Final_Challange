@@ -80,7 +80,6 @@ router.get('/branches', async (req, res) => {
 router.get('/tables/:branch_id', async (req, res) => {
     try {
         const { branch_id } = req.params;
-        // Capture the chosen date and time from the frontend request
         const { date: chosenDate, time: chosenTime } = req.query;
 
         if (!chosenDate || !chosenTime) {
@@ -97,17 +96,26 @@ router.get('/tables/:branch_id', async (req, res) => {
             tables = tablesResponse.data.data || [];
         }
 
-        // 2. Fetch LOCAL reservations for this branch
-        const reservations = await queryPromise("SELECT * FROM reservation WHERE branch_id = ?", [branch_id]);
+        // 2. We will auto-expire ALL pending reservations older than 30 minutes across the database FIRST
+        // This solves the timezone issue by letting MySQL handle the time calculation natively.
+        const expireSql = `
+            UPDATE reservation 
+            SET re_status = 3 
+            WHERE re_status = 0 
+            AND re_create_at <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+        `;
+        await queryPromise(expireSql);
 
-        // 3. Convert chosenTime to hours for easy math (e.g., 14:30 becomes 14.5)
-        let userTimeInHours = 0;
-        if (chosenTime && typeof chosenTime === 'string') {
-            const parts = chosenTime.split(':');
-            userTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
-        }
+        // 3. NOW fetch LOCAL reservations for this branch (data will be fresh with correct statuses)
+        const reservations = await queryPromise(
+            "SELECT * FROM reservation WHERE re_com_id = ? AND re_branch_id = ?", 
+            [companyCode, branch_id]
+        );
 
-        // 4. Process each table according to your NEW logic
+        // Normalize chosenTime to guarantee it is strictly "HH:MM" format (e.g., "14:30:00" -> "14:30")
+        const normalizedChosenTime = chosenTime.substring(0, 5);
+
+        // 4. Process each table to determine availability
         const processedTables = tables.map(table => {
             let { id, table_no, capacity, person_no } = table;
             const stringTableNo = String(table_no).trim();
@@ -118,41 +126,43 @@ router.get('/tables/:branch_id', async (req, res) => {
 
             // Find all local reservations belonging to this specific table
             const tableReservations = reservations.filter(res => {
-                if (!res.table_number) return false;
-                const resTables = String(res.table_number).split(',').map(t => t.trim());
+                if (!res.re_table_no) return false;
+                const resTables = String(res.re_table_no).split(',').map(t => t.trim());
                 return resTables.includes(stringTableNo);
             });
 
             // Loop through the reservations to check for conflicts
             for (const res of tableReservations) {
-                let resDate = res.date;
+                let resDate = "";
+                let resTime = "";
                 
-                // Format database date safely to YYYY-MM-DD for accurate comparison
-                if (resDate instanceof Date) {
-                    const y = resDate.getFullYear();
-                    const m = String(resDate.getMonth() + 1).padStart(2, '0');
-                    const d = String(resDate.getDate()).padStart(2, '0');
+                // Extract Date and strictly formatted HH:MM Time from the database
+                if (res.re_date instanceof Date) {
+                    const y = res.re_date.getFullYear();
+                    const m = String(res.re_date.getMonth() + 1).padStart(2, '0');
+                    const d = String(res.re_date.getDate()).padStart(2, '0');
                     resDate = `${y}-${m}-${d}`;
-                } else if (resDate && resDate.includes('T')) {
-                    resDate = resDate.split('T')[0];
+
+                    const hr = String(res.re_date.getHours()).padStart(2, '0');
+                    const min = String(res.re_date.getMinutes()).padStart(2, '0');
+                    resTime = `${hr}:${min}`;
+                } else if (res.re_date && typeof res.re_date === 'string') {
+                    const parts = res.re_date.split(/T|\s/);
+                    resDate = parts[0];
+                    if (parts[1]) {
+                        resTime = parts[1].substring(0, 5); // Extracts just the "HH:MM"
+                    }
                 }
 
-                // LOGIC: At first compare the column "date" to the chosen date
-                if (resDate === chosenDate) {
-                    // They get matched! Now compare the column "time" to the chosen time.
-                    let resTimeInHours = 0;
-                    if (res.time && typeof res.time === 'string') {
-                        const parts = res.time.split(':');
-                        resTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
-                    }
-
-                    // LOGIC: If the chosen time + 60 minutes is equal or greater than column "time"
-                    // (Adding 1 to userTimeInHours effectively adds 60 minutes)
-                    if ((userTimeInHours + 1) >= resTimeInHours) {
-                        isAvailable = false;
-                        bookingMessage = `Reserved later today at ${res.time}`;
-                        break; // Stop checking further reservations, this table is already blocked!
-                    }
+                // --- AVAILABILITY CHECK ---
+                // We only block the table if status is 0 (Pending) or 1 (Confirmed)
+                // AND the normalized date and time match exactly.
+                if ((res.re_status === 0 || res.re_status === 1) && resDate === chosenDate && resTime <=normalizedChosenTime) {
+                    isAvailable = false;
+                    bookingMessage = res.re_status === 0 
+                        ? `Pending Confirmation` 
+                        : `Reserved`;
+                    break; // Conflict found, block the table immediately
                 }
             }
 
@@ -245,7 +255,7 @@ async function checkAndCreateCustomer(companyCode, branch_id, name, phone, addre
 // ==========================================
 router.post('/create', async (req, res) => {
     try {
-        const { branch_id, name, phone, guest_number, event_name, notes, date, time, table_number } = req.body;
+        const { branch_id, date, time, table_number, customer_id, duration, advance_payment, re_adv_payment } = req.body;
 
         let tableStr = null;
         if (table_number) {
@@ -254,95 +264,39 @@ router.post('/create', async (req, res) => {
 
         // Extremely strictly cast integers to prevent strict mode crashes in MySQL
         const safeBranchId = (branch_id === "" || branch_id === null) ? null : parseInt(branch_id);
-        const safeGuestNum = (guest_number === "" || guest_number === null) ? 0 : parseInt(guest_number);
+        const safeCustomerId = (customer_id === "" || customer_id == null) ? null : parseInt(customer_id);
+        const safeDuration = (duration === "" || duration == null) ? 90 : parseInt(duration); // Default to 90 mins
+        
+        // --- NEW: Handle Advance Payment Safely ---
+        const rawPayment = advance_payment !== undefined ? advance_payment : re_adv_payment;
+        const safeAdvPayment = (rawPayment && !isNaN(parseFloat(rawPayment))) ? parseFloat(rawPayment) : 0.00;
 
-        // FIX: Ensure time has seconds appended (HH:MM -> HH:MM:SS) for Laravel validation
+        // Ensure time has seconds appended (HH:MM -> HH:MM:SS) for Laravel validation & MySQL DATETIME
         let formattedTime = time;
         if (formattedTime && formattedTime.split(':').length === 2) {
             formattedTime = `${formattedTime}:00`;
         }
 
-        const sql = `
-            INSERT INTO reservation (branch_id, name, phone, guest_number, event_name, notes, date, time, table_number)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        // Combine date and formattedTime for the new DATETIME column `re_date` (e.g., '2026-03-22 14:30:00')
+        let dateTimeString = null;
+        if (date && formattedTime) {
+            dateTimeString = `${date} ${formattedTime}`;
+        }
 
-        // Use the originally submitted time for local DB (or formatted, both work)
-        const values = [safeBranchId, name, phone, safeGuestNum, event_name, notes, date, formattedTime, tableStr];
+        // We need the company code earlier now because it goes into the local DB
+        const companyCode = await getCompanyCode();
+
+        // New SQL Statement matching the updated schema including re_adv_payment
+        const sql = `
+            INSERT INTO reservation 
+            (re_com_id, re_branch_id, re_table_no, re_customer_id, re_date, re_duration, re_status, re_adv_payment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+        // Defaulting re_status to 0
+        const values = [companyCode, safeBranchId, tableStr, safeCustomerId, dateTimeString, safeDuration, 0, safeAdvPayment];
 
         // 1. Save to local database
         await queryPromise(sql, values);
-
-        // ==========================================
-        // 2. UPDATE EXTERNAL 'tables' STATUS TO 2 (RESERVED)
-        // ==========================================
-        if (tableStr) {
-            try {
-                const companyCode = await getCompanyCode();
-                
-                // Split selected tables into an array (e.g. "10, 20" -> ['10', '20'])
-                const tableArray = String(tableStr).split(',').map(t => t.trim());
-                
-                // Fetch ALL tables from the external API to find the exact 'id's
-                const getTablesUrl = `https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${parseInt(branch_id || 1)}`;
-                const externalTablesRes = await axios.get(getTablesUrl);
-                
-                let tableRecords = [];
-                if (externalTablesRes.data && externalTablesRes.data.status === true) {
-                    const allExternalTables = externalTablesRes.data.data || [];
-                    
-                    // Filter the API response to only keep the tables the user reserved
-                    tableRecords = allExternalTables.filter(apiTable => 
-                        tableArray.includes(String(apiTable.table_no).trim())
-                    );
-                }
-
-                // Create an array of API requests using the fetched IDs
-                const updatePromises = tableRecords.map(record => {
-                    // Send payload with chosen date, time, and status 2
-                    const tablePayload = {
-                        company_id: companyCode,
-                        branch_id: parseInt(branch_id || 1),
-                        table_no: record.table_no,
-                        person_no: record.person_no || null,
-                        status: 2,               
-                        date: date,              
-                        time: formattedTime      // FIX: Using the formatted time with seconds
-                    };
-
-                    // Dynamically inject the fetched table ID into the URL
-                    const updateApiUrl = `https://pos.chulkani.com/branch/order/website/table/update/${record.id}`;
-
-                    // Using POST to hit the update endpoint
-                    return axios.post(
-                        updateApiUrl, 
-                        tablePayload,
-                        {
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            timeout: 15000
-                        }
-                    );
-                });
-
-                // Execute all table update requests simultaneously
-                if (updatePromises.length > 0) {
-                    await Promise.all(updatePromises);
-                    console.log(`External API: Tables [${tableRecords.map(t => t.table_no).join(', ')}] status updated to 2 via /update/<id> endpoint.`);
-                } else {
-                    console.warn(`Could not find external IDs for tables: ${tableStr}`);
-                }
-
-            } catch (apiError) {
-                // To help debug if it fails, log the exact validation errors from Laravel
-                if (apiError.response && apiError.response.data) {
-                    console.error("Error updating external tables API (422 Details):", JSON.stringify(apiError.response.data, null, 2));
-                } else {
-                    console.error("Error updating external tables API:", apiError.message);
-                }
-            }
-        }
 
         // Respond success to the frontend
         res.status(201).json({ message: "Reservation created successfully" });
@@ -357,9 +311,13 @@ router.post('/create', async (req, res) => {
 // 6. READ ALL RESERVATIONS
 // ==========================================
 router.get('/list', (req, res) => {
-    const sql = "SELECT * FROM reservation ORDER BY date DESC, time ASC";
+    // Changed from ORDER BY re_date DESC to ORDER BY id DESC to prevent missing column crashes
+    const sql = "SELECT * FROM reservation ORDER BY id DESC";
     db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            console.error("Database error in /list:", err.message); // This will tell you exactly what MySQL is complaining about
+            return res.status(500).json({ error: err.message });
+        }
         res.json(results);
     });
 });
@@ -382,23 +340,59 @@ router.delete('/delete/:id', (req, res) => {
 router.put('/update/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { branch_id, name, phone, guest_number, event_name, notes, date, time, table_number } = req.body;
-
+        
+        // Updated to extract only the fields relevant to the new table structure
+const { branch_id, table_number, customer_id, date, time, duration, status, advance_payment, re_adv_payment } = req.body;
+        // Process table numbers into a comma-separated string
         let tableStr = null;
         if (table_number) {
             tableStr = Array.isArray(table_number) ? table_number.join(", ") : String(table_number);
         }
 
         // Extremely strictly cast integers to prevent strict mode crashes in MySQL
-        const safeBranchId = (branch_id === "" || branch_id === null) ? null : parseInt(branch_id);
-        const safeGuestNum = (guest_number === "" || guest_number === null) ? 0 : parseInt(guest_number);
+        const safeBranchId = (branch_id === "" || branch_id == null) ? null : parseInt(branch_id);
+        const safeCustomerId = (customer_id === "" || customer_id == null) ? null : parseInt(customer_id);
+        const safeDuration = (duration === "" || duration == null) ? 90 : parseInt(duration);
+        const safeStatus = (status === "" || status == null) ? 0 : parseInt(status);
 
-        const sql = `
+        // --- NEW: Handle Advance Payment Safely ---
+        const rawPayment = advance_payment !== undefined ? advance_payment : re_adv_payment;
+        const safeAdvPayment = (rawPayment && !isNaN(parseFloat(rawPayment))) ? parseFloat(rawPayment) : 0.00;
+
+        // Ensure time has seconds appended (HH:MM -> HH:MM:SS) for MySQL DATETIME compatibility
+        let dateTimeString = null;
+        if (date && time) {
+            let formattedTime = time;
+            if (formattedTime.split(':').length === 2) {
+                formattedTime = `${formattedTime}:00`;
+            }
+            // Combine into 'YYYY-MM-DD HH:MM:SS'
+            dateTimeString = `${date} ${formattedTime}`;
+        }
+
+        // Updated SQL matching the new column names
+       const sql = `
             UPDATE reservation 
-            SET branch_id=?, name=?, phone=?, guest_number=?, event_name=?, notes=?, date=?, time=?, table_number=?
-            WHERE id=?`;
+            SET 
+                re_branch_id = ?, 
+                re_table_no = ?, 
+                re_customer_id = ?, 
+                re_date = ?, 
+                re_duration = ?, 
+                re_status = ?,
+                re_adv_payment = ?
+            WHERE id = ?`;
             
-        const values = [safeBranchId, name, phone, safeGuestNum, event_name, notes, date, time, tableStr, id];
+        const values = [
+            safeBranchId, 
+            tableStr, 
+            safeCustomerId, 
+            dateTimeString, 
+            safeDuration, 
+            safeStatus, 
+            safeAdvPayment,
+            id
+        ];
 
         await queryPromise(sql, values);
         res.json({ message: "Updated successfully" });
