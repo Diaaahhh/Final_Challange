@@ -385,7 +385,7 @@ export default function Checkout() {
                     type="tel"
                     name="phone"
                     value={formData.phone}
-                    autoComplete="off"
+                    // autoComplete="off"
                     onChange={handleChange}
                     onBlur={handlePhoneBlur}
                     placeholder="Phone Number"
@@ -401,7 +401,7 @@ export default function Checkout() {
                     type="text"
                     name="cust_name"
                     value={formData.cust_name}
-                    autoComplete="off"
+                    // autoComplete="off"
                     onChange={handleChange}
                     placeholder="Your Name"
                     className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 placeholder-gray-400"
@@ -416,7 +416,7 @@ export default function Checkout() {
                     type="text"
                     name="address"
                     value={formData.address}
-                    autoComplete="off"
+                    // autoComplete="off"
                     onChange={handleChange}
                     placeholder="House number and street name"
                     className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 placeholder-gray-400"

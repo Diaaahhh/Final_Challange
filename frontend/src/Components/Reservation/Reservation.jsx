@@ -79,31 +79,25 @@ export default function Reservation() {
   }, []);
 
   // 2. Fetch tables and occupied statuses whenever branch_id changes
-  useEffect(() => {
-    const fetchTables = async () => {
-      if (!formData.branch_id) {
-        setTables([]);
-        return;
-      }
-      try {
-        const resTables = await api.get(`/reservation/tables/${formData.branch_id}`);
-        const allTables = resTables.data || [];
+useEffect(() => {
+    // Force sequential logic: Only fetch tables when Branch, Date, AND Time are all chosen
+    if (formData.branch_id && formData.date && formData.time) {
+      fetchTables();
+    } else {
+      // Clear tables if user hasn't finished the sequence
+      setTables([]);
+    }
+  }, [formData.branch_id, formData.date, formData.time]);
 
-        const resOccupied = await api.get(`/reservation/occupied-tables/${formData.branch_id}`);
-        const occupiedTables = resOccupied.data || [];
-
-        const finalTables = allTables.map(t => ({
-            ...t,
-            is_occupied: occupiedTables.includes(String(t.table_no).trim())
-        }));
-
-        setTables(finalTables);
-      } catch (err) {
-        console.error("Error fetching tables:", err);
-      }
-    };
-    fetchTables();
-  }, [formData.branch_id]);
+  const fetchTables = async () => {
+    try {
+      // This single API call now returns everything already processed by our new logic
+      const tablesRes = await api.get(`/reservation/tables/${formData.branch_id}?date=${formData.date}&time=${formData.time}`);
+      setTables(tablesRes.data);
+    } catch (error) {
+      console.error("Error fetching tables:", error);
+    }
+  };
 
   // 3. Handle Calendar Clicks
   useEffect(() => {
@@ -320,6 +314,7 @@ export default function Reservation() {
                   name="guest_number"
                   value={formData.guest_number}
                   onChange={handleChange}
+                  disabled={!formData.time}
                   min="1"
                   placeholder="E.g., 4"
                   className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
@@ -335,6 +330,7 @@ export default function Reservation() {
                 <button
                   type="button"
                   onClick={() => setShowCalendar(!showCalendar)}
+                  disabled={!formData.branch_id}
                   className="w-full text-left bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700"
                 >
                   {formData.date ? formData.date : "Select Date"}
@@ -365,6 +361,7 @@ export default function Reservation() {
                   name="time"
                   value={formData.time}
                   onChange={handleChange}
+                  disabled={!formData.date}
                   className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700"
                   required
                 />
@@ -499,69 +496,85 @@ export default function Reservation() {
     {/* ADD mt-6 HERE to push the entire grid down inside the scroll box */}
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 mt-6 pb-4 px-2">
         {tables.map(t => {
-            const totalChairs = t.person_no || t.capacity || 4; 
-            const topRow = Math.ceil(totalChairs / 2);
-            const bottomRow = Math.floor(totalChairs / 2);
-            
-            const isSelected = formData.table_number.includes(t.table_no);
-            const isOccupied = t.is_occupied;
-            const isSuggested = suggestedTables.includes(t.table_no); // DYNAMIC STYLING FLAG
+    const totalChairs = t.person_no || t.capacity || 4; 
+    const topRow = Math.ceil(totalChairs / 2);
+    const bottomRow = Math.floor(totalChairs / 2);
+    
+    // String conversion ensures safe comparison
+    const isSelected = formData.table_number.includes(String(t.table_no)); 
+    
+    // NEW: We now rely on the backend's calculated isAvailable flag
+    const isOccupied = !t.isAvailable; 
+    
+    const isSuggested = suggestedTables.includes(String(t.table_no)); // DYNAMIC STYLING FLAG
 
-            return (
-                <div 
-                    key={t.id} 
-                    onClick={() => {
-                        if (!isOccupied) handleTableSelect(t.table_no);
-                    }}
-                    // Added mt-4 to the group to push individual items down slightly
-                    className={`
-                        group flex flex-col items-center justify-center p-3 mt-4 rounded-xl border-2 transition-all duration-300 relative
-                        ${isOccupied 
-                            ? 'border-red-300 bg-red-50 cursor-not-allowed opacity-70' 
-                            : isSelected 
-                                ? 'border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer' 
-                                : isSuggested
-                                    ? 'border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse'
-                                    : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer'
-                        }
-                    `}
-                >
-                    {isSuggested && !isOccupied && !isSelected && (
-                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
-                            ⭐ BEST FIT
-                        </div>
-                    )}
-
-                    {isOccupied && (
-                        <div className="absolute -top-4 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
-                            BUSY
-                        </div>
-                    )}
-
-                    <div className="flex gap-1 mb-1">{renderChairs(topRow, 'top')}</div>
-                    
-                    <div className={`
-                        w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
-                        ${isOccupied 
-                            ? 'bg-red-200 text-red-800' 
-                            : isSelected 
-                                ? 'bg-[#C59D5F] text-white' 
-                                : 'bg-gray-200 text-gray-600'
-                        }
-                    `}>
-                        <div className="absolute inset-0 opacity-10 bg-black"></div>
-                        <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
-                            Table no.{t.table_no}
-                        </span>
-                        <span className="text-[10px] uppercase font-bold text-black relative z-10">
-                            {totalChairs} Seats
-                        </span>
-                    </div>
-                    
-                    <div className="flex gap-1 mt-1">{renderChairs(bottomRow, 'bottom')}</div>
+    return (
+        <div 
+            key={t.id} 
+            onClick={() => {
+                if (!isOccupied) handleTableSelect(String(t.table_no));
+            }}
+            // Added mb-6 so the booking message doesn't overlap with tables in the row below
+            className={`
+                group flex flex-col items-center justify-center p-3 mt-4 mb-5 rounded-xl border-2 transition-all duration-300 relative
+                ${isOccupied 
+                    ? 'border-red-300 bg-red-50 cursor-not-allowed opacity-70' 
+                    : isSelected 
+                        ? 'border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer' 
+                        : isSuggested
+                            ? 'border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse'
+                            : 'border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer'
+                }
+            `}
+        >
+            {/* BEST FIT BADGE */}
+            {isSuggested && !isOccupied && !isSelected && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
+                    ⭐ BEST FIT
                 </div>
-            );
-        })}
+            )}
+
+            {/* BUSY BADGE */}
+            {isOccupied && (
+                <div className="absolute -top-4 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
+                    BUSY
+                </div>
+            )}
+
+            {/* TOP ROW OF CHAIRS */}
+            <div className="flex gap-1 mb-1">{renderChairs(topRow, 'top')}</div>
+            
+            {/* TABLE CENTER */}
+            <div className={`
+                w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
+                ${isOccupied 
+                    ? 'bg-red-200 text-red-800' 
+                    : isSelected 
+                        ? 'bg-[#C59D5F] text-white' 
+                        : 'bg-gray-200 text-gray-600'
+                }
+            `}>
+                <div className="absolute inset-0 opacity-10 bg-black"></div>
+                <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
+                    Table no.{t.table_no}
+                </span>
+                <span className="text-[10px] uppercase font-bold text-black relative z-10">
+                    {totalChairs} Seats
+                </span>
+            </div>
+            
+            {/* BOTTOM ROW OF CHAIRS */}
+            <div className="flex gap-1 mt-1">{renderChairs(bottomRow, 'bottom')}</div>
+
+            {/* BOOKING MESSAGE (NEW) */}
+            {t.bookingMessage && t.isAvailable && (
+                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-[#C59D5F] font-bold text-center w-full">
+                    {t.bookingMessage}
+                </span>
+            )}
+        </div>
+    );
+})}
     </div>
 </div>
                   // -------- END OF CHANGES --------
