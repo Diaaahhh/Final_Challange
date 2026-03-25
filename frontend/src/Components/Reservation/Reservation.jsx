@@ -13,10 +13,10 @@ import {
   FaMapMarkerAlt,
   FaHome,
   FaExclamationCircle,
-  FaMoneyBillWave, // <--- ADDED THIS IMPORT TO FIX THE ERROR
+  FaMoneyBillWave,
 } from "react-icons/fa";
 import api from "../../api";
-import useTableSuggestion from "../Hooks/useTableSuggestion"; // IMPORT CUSTOM HOOK
+import useTableSuggestion from "../Hooks/useTableSuggestion";
 
 // Add this style block to prevent browser autofill from overriding your styles
 const autofillFixStyles = `
@@ -61,33 +61,39 @@ export default function Reservation() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  
+  // --- NEW: State to hold settings for validation ---
+  const [restaurantSettings, setRestaurantSettings] = useState(null); 
 
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef(null);
 
-  // --- USE THE CUSTOM HOOK HERE ---
   const suggestedTables = useTableSuggestion(formData.guest_number, tables);
 
-  // 1. Fetch branches on mount
+  // 1. Fetch branches and settings on mount
   useEffect(() => {
-    const fetchBranches = async () => {
+    const fetchInitialData = async () => {
       try {
         const res = await api.get("/reservation/branches");
         setBranches(res.data || []);
+
+        // --- NEW: Fetch settings to get rest_open and rest_close ---
+        const settingsRes = await api.get("/settings");
+        if (settingsRes.data) {
+          setRestaurantSettings(settingsRes.data);
+        }
       } catch (err) {
-        console.error("Error fetching branches:", err);
+        console.error("Error fetching initial data:", err);
       }
     };
-    fetchBranches();
+    fetchInitialData();
   }, []);
 
   // 2. Fetch tables and occupied statuses whenever branch_id changes
   useEffect(() => {
-    // Force sequential logic: Only fetch tables when Branch, Date, AND Time are all chosen
     if (formData.branch_id && formData.date && formData.time) {
       fetchTables();
     } else {
-      // Clear tables if user hasn't finished the sequence
       setTables([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -95,7 +101,6 @@ export default function Reservation() {
 
   const fetchTables = async () => {
     try {
-      // This single API call now returns everything already processed by our new logic
       const tablesRes = await api.get(
         `/reservation/tables/${formData.branch_id}?date=${formData.date}&time=${formData.time}`
       );
@@ -176,6 +181,42 @@ export default function Reservation() {
       setError("Please select at least one available table.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
+    }
+
+    // --- NEW: Validate Current Time against Restaurant Open/Close Hours ---
+    if (restaurantSettings && restaurantSettings.rest_open && restaurantSettings.rest_close) {
+      const now = new Date();
+      const currentTotal = now.getHours() * 60 + now.getMinutes();
+
+      const [openH, openM] = restaurantSettings.rest_open.split(':').map(Number);
+      const openTotal = openH * 60 + openM;
+
+      const [closeH, closeM] = restaurantSettings.rest_close.split(':').map(Number);
+      const closeTotal = closeH * 60 + closeM;
+
+      let isOpen = false;
+      if (closeTotal > openTotal) {
+          // Standard hours (e.g., 10 AM to 10 PM)
+          isOpen = currentTotal >= openTotal && currentTotal <= closeTotal;
+      } else {
+          // Cross-midnight hours (e.g., 10 PM to 2 AM)
+          isOpen = currentTotal >= openTotal || currentTotal <= closeTotal;
+      }
+
+      if (!isOpen) {
+        // NEW: Formats "13:00:00" to "1:00 pm"
+        const formatTimeAMPM = (timeString) => {
+          const [hourString, minute] = timeString.split(':');
+          let hour = parseInt(hourString, 10);
+          const ampm = hour >= 12 ? 'pm' : 'am';
+          hour = hour % 12 || 12; // Convert 0 to 12
+          return `${hour}:${minute} ${ampm}`;
+        };
+
+        setError(`The restaurant remains open from ${formatTimeAMPM(restaurantSettings.rest_open)} to ${formatTimeAMPM(restaurantSettings.rest_close)}`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return; // Halts the submission completely
+      }
     }
 
     setLoading(true);
@@ -501,12 +542,10 @@ export default function Reservation() {
               {/* Visual Table Selection Grid */}
               {formData.branch_id && (
                 <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
-                  {/* --- BEAUTIFUL DYNAMIC TABLE SUMMARY --- */}
                   {(() => {
-                    // 1. Calculate Summary Data using Reservation state (formData)
                     const selectedTableObjects = tables
                       .filter((t) => formData.table_number.includes(t.table_no))
-                      .sort((a, b) => Number(a.table_no) - Number(b.table_no)); // Sort ascending
+                      .sort((a, b) => Number(a.table_no) - Number(b.table_no));
 
                     const totalSelectedCapacity = selectedTableObjects.reduce(
                       (sum, t) => sum + Number(t.person_no || t.capacity || 4),
@@ -525,10 +564,8 @@ export default function Reservation() {
                           </label>
                         </div>
 
-                        {/* 2. Show Summary Card IF tables are selected */}
                         {selectedTableObjects.length > 0 && (
                           <div className="mb-5 bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm relative overflow-hidden">
-                            {/* Status Indicator Line (Left Edge) */}
                             <div
                               className={`absolute left-0 top-0 bottom-0 w-1.5 ${
                                 capacityMet ? "bg-green-500" : "bg-amber-500"
@@ -536,7 +573,6 @@ export default function Reservation() {
                             ></div>
 
                             <div className="flex flex-col sm:flex-row justify-between gap-4">
-                              {/* Left Side: Selected Tables Badges */}
                               <div className="flex-1">
                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
                                   Selected Tables
@@ -558,7 +594,6 @@ export default function Reservation() {
                                 </div>
                               </div>
 
-                              {/* Right Side: Capacity vs Guests Stats */}
                               <div className="flex flex-row sm:flex-col gap-6 sm:gap-1 justify-center sm:text-right border-t sm:border-t-0 sm:border-l border-gray-200 pt-3 sm:pt-0 sm:pl-5 min-w-[100px]">
                                 <div className="flex flex-col sm:items-end">
                                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
@@ -585,15 +620,13 @@ export default function Reservation() {
                               </div>
                             </div>
 
-                            {/* Warning Message if Capacity is low */}
                             {!capacityMet && parsedGuestCount > 0 && (
                               <div className="mt-3 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded border border-amber-100 flex items-center gap-2 font-bold">
                                 <FaExclamationCircle
                                   className="text-amber-500"
                                   size={14}
                                 />
-                                Selected capacity is less than your total
-                                guests!
+                                Selected capacity is less than your total guests!
                               </div>
                             )}
                           </div>
@@ -609,18 +642,9 @@ export default function Reservation() {
                           const totalChairs = t.person_no || t.capacity || 4;
                           const topRow = Math.ceil(totalChairs / 2);
                           const bottomRow = Math.floor(totalChairs / 2);
-
-                          // String conversion ensures safe comparison
-                          const isSelected = formData.table_number.includes(
-                            String(t.table_no)
-                          );
-
-                          // NEW: We now rely on the backend's calculated isAvailable flag
+                          const isSelected = formData.table_number.includes(String(t.table_no));
                           const isOccupied = !t.isAvailable;
-
-                          const isSuggested = suggestedTables.includes(
-                            String(t.table_no)
-                          ); // DYNAMIC STYLING FLAG
+                          const isSuggested = suggestedTables.includes(String(t.table_no)); 
 
                           return (
                             <div
@@ -642,26 +666,22 @@ export default function Reservation() {
                 }
             `}
                             >
-                              {/* BEST FIT BADGE */}
                               {isSuggested && !isOccupied && !isSelected && (
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
                                   ⭐ BEST FIT
                                 </div>
                               )}
 
-                              {/* BUSY BADGE */}
                               {isOccupied && (
                                 <div className="absolute -top-4 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
                                   BUSY
                                 </div>
                               )}
 
-                              {/* TOP ROW OF CHAIRS */}
                               <div className="flex gap-1 mb-1">
                                 {renderChairs(topRow, "top")}
                               </div>
 
-                              {/* TABLE CENTER */}
                               <div
                                 className={`
                 w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
@@ -683,12 +703,10 @@ export default function Reservation() {
                                 </span>
                               </div>
 
-                              {/* BOTTOM ROW OF CHAIRS */}
                               <div className="flex gap-1 mt-1">
                                 {renderChairs(bottomRow, "bottom")}
                               </div>
 
-                              {/* BOOKING MESSAGE (NEW) */}
                               {t.bookingMessage && t.isAvailable && (
                                 <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-[#C59D5F] font-bold text-center w-full">
                                   {t.bookingMessage}

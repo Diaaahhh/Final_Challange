@@ -35,6 +35,7 @@ const autofillFixStyles = `
 `;
 
 export default function Checkout() {
+  const [isPhoneSubmitted, setIsPhoneSubmitted] = useState(false);
   const [dineInTables, setDineInTables] = useState([]);
   const [loadingTables, setLoadingTables] = useState(false);
   const navigate = useNavigate();
@@ -55,9 +56,7 @@ export default function Checkout() {
   const fetchDineInTables = async (companyId, branchId) => {
     setLoadingTables(true);
     try {
-      const res = await api.get(
-        `get-dine-in-tables/${companyId}/${branchId}`
-      );
+      const res = await api.get(`get-dine-in-tables/${companyId}/${branchId}`);
       if (res.data.status) {
         setDineInTables(res.data.data);
       }
@@ -106,8 +105,21 @@ export default function Checkout() {
   const handlePhoneBlur = async (e) => {
     const phoneNumber = e.target.value;
     if (phoneNumber && phoneNumber.length > 3) {
+      // Unlock the rest of the form!
+      setIsPhoneSubmitted(true); 
+      
+      // --- NEW: Extract branch_id dynamically from cartItems ---
+      let branchId = 1; // Default fallback
+      if (cartItems && cartItems.length > 0) {
+        const firstItem = cartItems[0];
+        // Check the different possible keys your cart uses for branch ID
+        branchId = firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id || 1;
+      }
+
       try {
-        const res = await api.get(`/get-user-by-phone/${phoneNumber}`);
+        // --- NEW: Append branch_id as a query parameter ---
+        const res = await api.get(`/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`);
+        
         if (res.data) {
           setFormData((prev) => ({
             ...prev,
@@ -118,6 +130,9 @@ export default function Checkout() {
       } catch (err) {
         console.log("User not found by phone, proceeding with manual entry.");
       }
+    } else {
+      // If they clear the phone number, lock the form again
+      setIsPhoneSubmitted(false); 
     }
   };
 
@@ -143,24 +158,24 @@ export default function Checkout() {
 
       if (companyId && branchId) {
         setLoadingTables(true);
-    try {
-      // FIX: Changed from /get-occupied-tables to /checkout/get-dine-in-tables
-      const response = await api.get(
-        `get-dine-in-tables/${companyId}/${branchId}`
-      );
+        try {
+          // FIX: Changed from /get-occupied-tables to /checkout/get-dine-in-tables
+          const response = await api.get(
+            `get-dine-in-tables/${companyId}/${branchId}`
+          );
 
-      if (response.data && response.data.status === true) {
-        setAvailableTables(response.data.data || []);
-      } else {
-        setAvailableTables([]);
-      }
-    } catch (error) {
-      console.error("Error fetching tables:", error);
-      showToastWarning("Could not check table availability.");
-      setAvailableTables([]); 
-    } finally {
-      setLoadingTables(false);
-    }
+          if (response.data && response.data.status === true) {
+            setAvailableTables(response.data.data || []);
+          } else {
+            setAvailableTables([]);
+          }
+        } catch (error) {
+          console.error("Error fetching tables:", error);
+          showToastWarning("Could not check table availability.");
+          setAvailableTables([]);
+        } finally {
+          setLoadingTables(false);
+        }
       } else {
         console.warn("Missing Company ID or Branch ID in cart items.");
       }
@@ -402,6 +417,8 @@ export default function Checkout() {
                     value={formData.cust_name}
                     // autoComplete="off"
                     onChange={handleChange}
+                    disabled={!isPhoneSubmitted}
+                    readOnly
                     placeholder="Your Name"
                     className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 placeholder-gray-400"
                     required
@@ -417,6 +434,7 @@ export default function Checkout() {
                     value={formData.address}
                     // autoComplete="off"
                     onChange={handleChange}
+                    disabled={!isPhoneSubmitted}
                     placeholder="House number and street name"
                     className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 placeholder-gray-400"
                     required
@@ -437,7 +455,7 @@ export default function Checkout() {
                         Product
                       </th>
                       <th className="text-right font-['Barlow_Condensed'] uppercase text-[#0E1014] pb-4 text-lg">
-                        Subtotal
+                        Total
                       </th>
                     </tr>
                   </thead>
@@ -476,6 +494,7 @@ export default function Checkout() {
                           name="order_method"
                           value={formData.order_method}
                           onChange={handleChange}
+                          disabled={!isPhoneSubmitted}
                           className="bg-[#F3F4F7] border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-[#C59D5F] focus:border-[#C59D5F] block w-full p-2.5 outline-none font-['Arial']"
                           required
                         >
@@ -539,9 +558,11 @@ export default function Checkout() {
 
                 <button
                   type="submit"
-                  disabled={loading}
-                  className={`w-full bg-[#0E1014] text-white font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded hover:bg-[#C59D5F] hover:text-white transition-all duration-300 ${
-                    loading ? "opacity-70 cursor-not-allowed" : ""
+                  disabled={loading || !isPhoneSubmitted}
+                  className={`w-full bg-[#0E1014] text-white font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded transition-all duration-300 ${
+                    loading || !isPhoneSubmitted
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-[#C59D5F] hover:text-white"
                   }`}
                 >
                   {loading ? "Processing..." : "Place Order"}
@@ -588,8 +609,11 @@ export default function Checkout() {
                       {/* --- BEAUTIFUL DYNAMIC TABLE SUMMARY --- */}
                       {(() => {
                         // Determine which tables to use for summary
-                        const tablesToUse = dineInTables.length > 0 ? dineInTables : availableTables;
-                        
+                        const tablesToUse =
+                          dineInTables.length > 0
+                            ? dineInTables
+                            : availableTables;
+
                         // 1. Calculate Summary Data
                         const selectedTableObjects = tablesToUse
                           .filter((t) =>
@@ -705,25 +729,34 @@ export default function Checkout() {
                       ) : dineInTables.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
                           {dineInTables.map((table) => {
-                            const isSelected = bookingData.table_no.includes(table.table_no);
+                            const isSelected = bookingData.table_no.includes(
+                              table.table_no
+                            );
                             // Calculate if table is suggested based on person count
-                            const isSuggested = personCount && table.person_no && 
-                              Math.abs(table.person_no - parseInt(personCount)) <= 2;
-                            
+                            const isSuggested =
+                              personCount &&
+                              table.person_no &&
+                              Math.abs(
+                                table.person_no - parseInt(personCount)
+                              ) <= 2;
+
                             return (
                               <button
                                 key={table.id}
                                 type="button"
                                 disabled={!table.isAvailable}
-                                onClick={() => handleTableSelect(table.table_no)}
+                                onClick={() =>
+                                  handleTableSelect(table.table_no)
+                                }
                                 className={`
                                   relative pt-7 pb-4 px-2 rounded-xl border-2 transition-all duration-300 
                                   flex flex-col items-center justify-center min-h-[100px] overflow-hidden
-                                  ${table.isAvailable
-                                    ? isSelected
-                                      ? "border-[#C59D5F] bg-[#C59D5F]/20 shadow-md scale-105"
-                                      : "border-[#C59D5F] bg-[#C59D5F]/10 hover:bg-[#C59D5F]/20 cursor-pointer shadow-md"
-                                    : "border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed"
+                                  ${
+                                    table.isAvailable
+                                      ? isSelected
+                                        ? "border-[#C59D5F] bg-[#C59D5F]/20 shadow-md scale-105"
+                                        : "border-[#C59D5F] bg-[#C59D5F]/10 hover:bg-[#C59D5F]/20 cursor-pointer shadow-md"
+                                      : "border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed"
                                   }
                                 `}
                               >
@@ -735,52 +768,64 @@ export default function Checkout() {
                                 )}
 
                                 {/* BEST FIT SUGGESTION */}
-                                {isSuggested && table.isAvailable && !isSelected && (
-                                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm whitespace-nowrap">
-                                    ⭐ BEST FIT
-                                  </div>
-                                )}
+                                {isSuggested &&
+                                  table.isAvailable &&
+                                  !isSelected && (
+                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm whitespace-nowrap">
+                                      ⭐ BEST FIT
+                                    </div>
+                                  )}
 
                                 <span className="text-gray-800 font-extrabold text-xl font-['Barlow_Condensed'] tracking-wider">
                                   Table {table.table_no}
                                 </span>
-                                
+
                                 <span className="text-xs text-gray-600 mt-1">
-                                  {table.person_no || table.capacity || '?'} seats
+                                  {table.person_no || table.capacity || "?"}{" "}
+                                  seats
                                 </span>
-                                
-                                <span className={`text-[11px] mt-2 font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full ${
-                                  table.isAvailable 
-                                    ? "bg-green-500/20 text-green-600" 
-                                    : "bg-red-500/20 text-red-600"
-                                }`}>
-                                  {table.isAvailable ? "Available" : "Unavailable"}
+
+                                <span
+                                  className={`text-[11px] mt-2 font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full ${
+                                    table.isAvailable
+                                      ? "bg-green-500/20 text-green-600"
+                                      : "bg-red-500/20 text-red-600"
+                                  }`}
+                                >
+                                  {table.isAvailable
+                                    ? "Available"
+                                    : "Unavailable"}
                                 </span>
                               </button>
                             );
                           })}
                         </div>
-                      ) : (
-                        /* FALLBACK TO ORIGINAL TABLE RENDERING IF NO DINE-IN TABLES */
-                        availableTables.length > 0 ? (
-                          <div className="max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                              {availableTables.map((t) => {
-                                const totalChairs = t.person_no || t.capacity || 4;
-                                const topRow = Math.ceil(totalChairs / 2);
-                                const bottomRow = Math.floor(totalChairs / 2);
+                      ) : /* FALLBACK TO ORIGINAL TABLE RENDERING IF NO DINE-IN TABLES */
+                      availableTables.length > 0 ? (
+                        <div className="max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                            {availableTables.map((t) => {
+                              const totalChairs =
+                                t.person_no || t.capacity || 4;
+                              const topRow = Math.ceil(totalChairs / 2);
+                              const bottomRow = Math.floor(totalChairs / 2);
 
-                                const isSelected = bookingData.table_no.includes(t.table_no);
-                                const isOccupied = t.is_occupied;
-                                const isSuggested = suggestedTables.includes(t.table_no);
+                              const isSelected = bookingData.table_no.includes(
+                                t.table_no
+                              );
+                              const isOccupied = t.is_occupied;
+                              const isSuggested = suggestedTables.includes(
+                                t.table_no
+                              );
 
-                                return (
-                                  <div
-                                    key={t.id}
-                                    onClick={() => {
-                                      if (!isOccupied) handleTableSelect(t.table_no);
-                                    }}
-                                    className={`
+                              return (
+                                <div
+                                  key={t.id}
+                                  onClick={() => {
+                                    if (!isOccupied)
+                                      handleTableSelect(t.table_no);
+                                  }}
+                                  className={`
                                       group flex flex-col items-center justify-center p-3 mt-4 rounded-xl border-2 transition-all duration-300 relative
                                       ${
                                         isOccupied
@@ -792,24 +837,26 @@ export default function Checkout() {
                                           : "border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
                                       }
                                     `}
-                                  >
-                                    {isSuggested && !isOccupied && !isSelected && (
+                                >
+                                  {isSuggested &&
+                                    !isOccupied &&
+                                    !isSelected && (
                                       <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm whitespace-nowrap">
                                         ⭐ BEST FIT
                                       </div>
                                     )}
 
-                                    {isOccupied && (
-                                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
-                                        BUSY
-                                      </div>
-                                    )}
-
-                                    <div className="flex gap-1 mb-1">
-                                      {renderChairs(topRow, "top")}
+                                  {isOccupied && (
+                                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
+                                      BUSY
                                     </div>
-                                    <div
-                                      className={`
+                                  )}
+
+                                  <div className="flex gap-1 mb-1">
+                                    {renderChairs(topRow, "top")}
+                                  </div>
+                                  <div
+                                    className={`
                                         w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
                                         ${
                                           isOccupied
@@ -819,28 +866,27 @@ export default function Checkout() {
                                             : "bg-gray-200 text-gray-600"
                                         }
                                       `}
-                                    >
-                                      <div className="absolute inset-0 opacity-10 bg-black"></div>
-                                      <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
-                                        Table No.{t.table_no}
-                                      </span>
-                                      <span className="text-[10px] uppercase font-bold text-black relative z-10">
-                                        {totalChairs} Seats
-                                      </span>
-                                    </div>
-                                    <div className="flex gap-1 mt-1">
-                                      {renderChairs(bottomRow, "bottom")}
-                                    </div>
+                                  >
+                                    <div className="absolute inset-0 opacity-10 bg-black"></div>
+                                    <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
+                                      Table No.{t.table_no}
+                                    </span>
+                                    <span className="text-[10px] uppercase font-bold text-black relative z-10">
+                                      {totalChairs} Seats
+                                    </span>
                                   </div>
-                                );
-                              })}
-                            </div>
+                                  <div className="flex gap-1 mt-1">
+                                    {renderChairs(bottomRow, "bottom")}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ) : (
-                          <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
-                            No tables available for this branch.
-                          </div>
-                        )
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                          No tables available for this branch.
+                        </div>
                       )}
                     </div>
                   ) : (

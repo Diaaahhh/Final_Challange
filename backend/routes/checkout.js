@@ -18,18 +18,40 @@ const queryPromise = (sql, params = []) => {
 // ==========================================
 router.get('/get-user-by-phone/:phone', async (req, res) => {
     const phone = req.params.phone;
+    // You can pass branch_id as a query param, otherwise it defaults to 1
+    const branch_id = req.query.branch_id || 1; 
+
     if (!phone) return res.status(400).json({ message: "Phone number is required" });
 
     try {
-        const dataUsers = await queryPromise("SELECT * FROM users WHERE phone = ?", [phone]);
-        if (dataUsers.length > 0) return res.status(200).json(dataUsers[0]);
+        // Fetch company_code dynamically from settings
+        const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
+        const companyCode = settings[0]?.company_code || '26672691';
 
-        const dataCustomers = await queryPromise("SELECT * FROM customers WHERE phone = ?", [phone]);
-        if (dataCustomers.length > 0) return res.status(200).json(dataCustomers[0]);
+        // Call the external API
+        const apiUrl = `https://pos.chulkani.com/branch/all_customer?company_id=${companyCode}&branch_id=${branch_id}`;
+        const response = await axios.get(apiUrl, {
+            headers: { 'Accept': 'application/json' }
+        });
+
+        // Check if data is valid and find the matching customer by phone
+        if (response.data && response.data.success && Array.isArray(response.data.data)) {
+            const customers = response.data.data;
+            
+            // Find customer where phone matches exactly
+            const matchedCustomer = customers.find(c => String(c.phone) === String(phone));
+
+            if (matchedCustomer) {
+                return res.status(200).json({
+                    name: matchedCustomer.name,
+                    address: matchedCustomer.address
+                });
+            }
+        }
 
         return res.status(404).json({ message: "User not found" });
     } catch (err) {
-        console.error("Database Error:", err);
+        console.error("External API Fetch Error:", err.message);
         return res.status(500).json({ message: "Internal server error" });
     }
 });

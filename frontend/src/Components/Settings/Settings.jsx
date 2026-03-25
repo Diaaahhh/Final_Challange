@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaSave, FaTruck } from 'react-icons/fa';
+import { FaBuilding, FaSave, FaTruck, FaClock, FaHourglassHalf } from 'react-icons/fa';
 import api from '../../api';
 
 export default function Settings() {
   const [companyCode, setCompanyCode] = useState('');
-  const [deliveryCharge, setDeliveryCharge] = useState(''); // NEW STATE
+  const [deliveryCharge, setDeliveryCharge] = useState('');
+  
+  // --- NEW STATES FOR RESERVATION SETTINGS ---
+  const [restOpen, setRestOpen] = useState('10:00'); 
+  const [restClose, setRestClose] = useState('22:00');
+  const [tablePrelockDuration, setTablePrelockDuration] = useState('30');
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -16,6 +22,11 @@ export default function Settings() {
            if (res.data.company_code) setCompanyCode(res.data.company_code);
            // Safely check if it exists so we can even load '0'
            if (res.data.delivery_charge !== undefined) setDeliveryCharge(res.data.delivery_charge);
+           
+           // Load new settings (Format time from "10:00:00" to "10:00" for the input)
+           if (res.data.rest_open) setRestOpen(res.data.rest_open.substring(0, 5));
+           if (res.data.rest_close) setRestClose(res.data.rest_close.substring(0, 5));
+           if (res.data.table_prelock_duration !== undefined) setTablePrelockDuration(res.data.table_prelock_duration);
         }
         setLoading(false);
       })
@@ -33,83 +44,94 @@ export default function Settings() {
     try {
       await api.post('/settings/update', { 
           company_code: companyCode,
-          delivery_charge: deliveryCharge // SEND NEW STATE
+          delivery_charge: deliveryCharge,
+          rest_open: restOpen,
+          rest_close: restClose,
+          table_prelock_duration: tablePrelockDuration
       });
       alert("Settings saved successfully!");
-    } catch (error) {
-      console.error("Error saving settings", error);
+    } catch (err) {
+      console.error("Error saving settings", err);
       alert("Failed to save settings.");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center font-['Inter']">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#007BFF]"></div>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0E1014] flex justify-center items-center">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-[#007BFF] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-[#A0A0A0] mt-4 font-mono uppercase tracking-widest text-sm">Loading System...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white py-12 px-4 sm:px-6 lg:px-8 font-['Inter'] flex justify-center">
-      <div className="max-w-xl w-full">
+    <div className="min-h-screen bg-[#0E1014] p-4 md:p-8 text-white font-['Inter'] relative overflow-hidden">
+      {/* Background glowing effects */}
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-[#007BFF] rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+      
+      <div className="max-w-2xl mx-auto relative z-10">
         
-        {/* HEADER SECTION */}
-        <div className="mb-10 text-center space-y-2">
-          <h1 className="text-4xl font-['Barlow_Condensed'] font-bold uppercase tracking-wider bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent">
-            System Settings
-          </h1>
-          <p className="text-[#888] text-sm tracking-wide">
-            Configure your core application preferences
-          </p>
+        {/* Header Section */}
+        <div className="mb-10 flex items-center justify-between">
+          <div>
+            <h2 className="text-4xl font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-white flex items-center gap-3">
+              <span className="w-8 h-8 rounded-lg bg-[#007BFF]/20 flex items-center justify-center border border-[#007BFF]/30">
+                <FaBuilding className="text-[#007BFF] text-lg" />
+              </span>
+              System Settings
+            </h2>
+            <p className="text-[#A0A0A0] text-sm mt-2 ml-11">
+              Manage core configurations for your restaurant.
+            </p>
+          </div>
         </div>
 
-        {/* SETTINGS CARD */}
-        <div className="bg-[#121212] rounded-3xl p-8 border border-[#222] shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative overflow-hidden">
+        {/* Form Section */}
+        <form onSubmit={handleSubmit} className="bg-[#111111] p-8 rounded-2xl shadow-2xl border border-[#222]">
           
-          {/* Subtle top gradient glow */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#007BFF] to-transparent opacity-50"></div>
-
-          <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
+          <div className="space-y-6">
             
-            {/* COMPANY CODE INPUT */}
-            <div className="space-y-3 group">
-              <label className="text-sm font-bold text-[#AAA] uppercase tracking-widest flex items-center gap-2 group-focus-within:text-[#007BFF] transition-colors">
-                <FaBuilding /> Company Code
+            {/* COMPANY CODE */}
+            <div className="group">
+              <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-2 group-focus-within:text-[#007BFF] transition-colors">
+                Company Code
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <span className="text-[#555] font-mono font-bold text-lg">#</span>
+                  <FaBuilding className="text-[#555] group-focus-within:text-[#007BFF] transition-colors" />
                 </div>
                 <input 
                   type="text" 
-                  value={companyCode} 
+                  value={companyCode}
                   onChange={(e) => setCompanyCode(e.target.value)}
-                  placeholder="e.g. 26672691"
                   className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base"
                   required
                 />
               </div>
               <p className="mt-2 text-[10px] text-[#555] uppercase tracking-wide font-bold">
-                * Required for API synchronization
+                * Used for POS integration and synchronization
               </p>
             </div>
 
-            {/* DELIVERY CHARGE INPUT */}
-            <div className="space-y-3 group">
-              <label className="text-sm font-bold text-[#AAA] uppercase tracking-widest flex items-center gap-2 group-focus-within:text-[#007BFF] transition-colors">
-                <FaTruck /> Global Delivery Charge (Tk)
+            {/* DELIVERY CHARGE */}
+            <div className="group pt-4 border-t border-[#222]">
+              <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-2 group-focus-within:text-[#007BFF] transition-colors">
+                Delivery Charge (৳)
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <span className="text-[#555] font-bold text-lg">৳</span>
+                  <FaTruck className="text-[#555] group-focus-within:text-[#007BFF] transition-colors" />
                 </div>
                 <input 
                   type="number" 
-                  min="0"
-                  value={deliveryCharge} 
+                  value={deliveryCharge}
                   onChange={(e) => setDeliveryCharge(e.target.value)}
-                  placeholder="e.g. 100"
+                  min="0"
                   className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base"
                   required
                 />
@@ -117,6 +139,74 @@ export default function Settings() {
               <p className="mt-2 text-[10px] text-[#555] uppercase tracking-wide font-bold">
                 * Applied automatically to all Home Delivery orders
               </p>
+            </div>
+
+            {/* --- NEW SECTION: RESERVATION SETTINGS --- */}
+            <div className="pt-6 pb-2 border-t border-[#222]">
+                <h3 className="text-[#C59D5F] font-bold uppercase tracking-wider text-sm mb-4">Reservation Timings</h3>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* OPENING TIME */}
+                  <div className="group">
+                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-2 group-focus-within:text-[#C59D5F] transition-colors">
+                      Restaurant Open
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaClock className="text-[#555] group-focus-within:text-[#C59D5F] transition-colors" />
+                      </div>
+                      <input 
+                        type="time" 
+                        value={restOpen}
+                        onChange={(e) => setRestOpen(e.target.value)}
+                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all font-mono tracking-wide font-bold shadow-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* CLOSING TIME */}
+                  <div className="group">
+                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-2 group-focus-within:text-[#C59D5F] transition-colors">
+                      Restaurant Close
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <FaClock className="text-[#555] group-focus-within:text-[#C59D5F] transition-colors" />
+                      </div>
+                      <input 
+                        type="time" 
+                        value={restClose}
+                        onChange={(e) => setRestClose(e.target.value)}
+                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all font-mono tracking-wide font-bold shadow-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PRE-RESERVATION BUFFER */}
+                <div className="group">
+                  <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-2 group-focus-within:text-[#C59D5F] transition-colors">
+                    Pre-Reservation Buffer (Minutes)
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <FaHourglassHalf className="text-[#555] group-focus-within:text-[#C59D5F] transition-colors" />
+                    </div>
+                    <input 
+                      type="number" 
+                      value={tablePrelockDuration}
+                      onChange={(e) => setTablePrelockDuration(e.target.value)}
+                      min="0"
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base"
+                      required
+                    />
+                  </div>
+                  <p className="mt-2 text-[10px] text-[#555] uppercase tracking-wide font-bold">
+                    * The table will be locked to walk-ins this many minutes prior to a booking.
+                  </p>
+                </div>
             </div>
 
             {/* SUBMIT BUTTON */}
@@ -127,18 +217,18 @@ export default function Settings() {
             >
               {saving ? (
                 <>
-                  <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full mr-2"></div>
+                  <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
                   Saving...
                 </>
               ) : (
                 <>
-                  <FaSave className="text-xl" /> Save Configuration
+                  <FaSave className="text-xl" /> Save Settings
                 </>
               )}
             </button>
 
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>
   );
