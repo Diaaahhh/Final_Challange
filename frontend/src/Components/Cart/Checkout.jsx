@@ -105,33 +105,45 @@ export default function Checkout() {
   const handlePhoneBlur = async (e) => {
     const phoneNumber = e.target.value;
     if (phoneNumber && phoneNumber.length > 3) {
-      // Unlock the rest of the form!
-      setIsPhoneSubmitted(true); 
       
-      // --- NEW: Extract branch_id dynamically from cartItems ---
+      // --- Extract branch_id dynamically from cartItems ---
       let branchId = 1; // Default fallback
       if (cartItems && cartItems.length > 0) {
         const firstItem = cartItems[0];
-        // Check the different possible keys your cart uses for branch ID
         branchId = firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id || 1;
       }
 
       try {
-        // --- NEW: Append branch_id as a query parameter ---
         const res = await api.get(`/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`);
         
-        if (res.data) {
+        // NEW: Check the 'success' flag we just added to the backend!
+        if (res.data && res.data.success === true) {
+          // User Found! Unlock the form.
+          setIsPhoneSubmitted(true); 
           setFormData((prev) => ({
             ...prev,
             cust_name: res.data.name || prev.cust_name,
             address: res.data.address || prev.address,
           }));
+        } else {
+          // User NOT found. 
+          // Keep form locked and show the customized message from the backend.
+          setIsPhoneSubmitted(false); 
+          alert(res.data.message);
+          
+          setFormData((prev) => ({
+              ...prev,
+              cust_name: "",
+              address: "",
+          }));
         }
       } catch (err) {
-        console.log("User not found by phone, proceeding with manual entry.");
+        // This catch block will only trigger now if the server actually crashes (Status 500)
+        setIsPhoneSubmitted(false); 
+        alert("Server error while verifying phone number.");
       }
     } else {
-      // If they clear the phone number, lock the form again
+      // If they clear the phone number entirely, lock the form
       setIsPhoneSubmitted(false); 
     }
   };

@@ -18,17 +18,16 @@ const queryPromise = (sql, params = []) => {
 // ==========================================
 router.get('/get-user-by-phone/:phone', async (req, res) => {
     const phone = req.params.phone;
-    // You can pass branch_id as a query param, otherwise it defaults to 1
     const branch_id = req.query.branch_id || 1; 
 
-    if (!phone) return res.status(400).json({ message: "Phone number is required" });
+    if (!phone) return res.status(400).json({ success: false, message: "Phone number is required" });
 
     try {
         // Fetch company_code dynamically from settings
         const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
         const companyCode = settings[0]?.company_code || '26672691';
 
-        // Call the external API
+        // 1. Call the external API for customers
         const apiUrl = `https://pos.chulkani.com/branch/all_customer?company_id=${companyCode}&branch_id=${branch_id}`;
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' }
@@ -37,22 +36,55 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         // Check if data is valid and find the matching customer by phone
         if (response.data && response.data.success && Array.isArray(response.data.data)) {
             const customers = response.data.data;
-            
-            // Find customer where phone matches exactly
             const matchedCustomer = customers.find(c => String(c.phone) === String(phone));
 
             if (matchedCustomer) {
                 return res.status(200).json({
+                    success: true, // Tell frontend it was successful
                     name: matchedCustomer.name,
                     address: matchedCustomer.address
                 });
             }
         }
 
-        return res.status(404).json({ message: "User not found" });
+        // ==========================================
+        // 2. IF CUSTOMER NOT FOUND: Fetch Branch Phone
+        // ==========================================
+        let branchPhone = "the restaurant"; // Default fallback
+        try {
+            const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}`;
+            const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
+            
+            let branches = [];
+            if (branchRes.data && branchRes.data.data && branchRes.data.data.branches) {
+                branches = branchRes.data.data.branches;
+            } else if (branchRes.data && Array.isArray(branchRes.data.data)) {
+                branches = branchRes.data.data;
+            } else if (Array.isArray(branchRes.data)) {
+                branches = branchRes.data;
+            }
+
+            // FIX: Check both 'branch_id' and 'id' just in case the API structure varies
+            const matchedBranch = branches.find(b => String(b.branch_id) === String(branch_id) || String(b.id) === String(branch_id));
+            
+            if (matchedBranch) {
+                // FIX: Check multiple possible property names for the phone number
+                branchPhone = matchedBranch.phone || matchedBranch.branch_phone || matchedBranch.contact_number || "the restaurant";
+            }
+        } catch (branchErr) {
+            console.error("Failed to fetch branch info for error message:", branchErr.message);
+        }
+
+        // FIX: Return Status 200 so the console doesn't show a red error!
+        // We use 'success: false' to tell the frontend the user wasn't found.
+        return res.status(200).json({ 
+            success: false, 
+            message: `Only registered customers can order here or, call ${branchPhone}` 
+        });
+
     } catch (err) {
         console.error("External API Fetch Error:", err.message);
-        return res.status(500).json({ message: "Internal server error" });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 });
 
