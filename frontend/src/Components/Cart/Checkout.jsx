@@ -105,46 +105,51 @@ export default function Checkout() {
   const handlePhoneBlur = async (e) => {
     const phoneNumber = e.target.value;
     if (phoneNumber && phoneNumber.length > 3) {
-      
       // --- Extract branch_id dynamically from cartItems ---
       let branchId = 1; // Default fallback
       if (cartItems && cartItems.length > 0) {
         const firstItem = cartItems[0];
-        branchId = firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id || 1;
+        branchId =
+          firstItem.branchId ||
+          firstItem.m_branch_id ||
+          firstItem.branch_id ||
+          1;
       }
 
       try {
-        const res = await api.get(`/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`);
-        
+        const res = await api.get(
+          `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`
+        );
+
         // NEW: Check the 'success' flag we just added to the backend!
         if (res.data && res.data.success === true) {
           // User Found! Unlock the form.
-          setIsPhoneSubmitted(true); 
+          setIsPhoneSubmitted(true);
           setFormData((prev) => ({
             ...prev,
             cust_name: res.data.name || prev.cust_name,
             address: res.data.address || prev.address,
           }));
         } else {
-          // User NOT found. 
+          // User NOT found.
           // Keep form locked and show the customized message from the backend.
-          setIsPhoneSubmitted(false); 
+          setIsPhoneSubmitted(false);
           alert(res.data.message);
-          
+
           setFormData((prev) => ({
-              ...prev,
-              cust_name: "",
-              address: "",
+            ...prev,
+            cust_name: "",
+            address: "",
           }));
         }
       } catch (err) {
         // This catch block will only trigger now if the server actually crashes (Status 500)
-        setIsPhoneSubmitted(false); 
+        setIsPhoneSubmitted(false);
         alert("Server error while verifying phone number.");
       }
     } else {
       // If they clear the phone number entirely, lock the form
-      setIsPhoneSubmitted(false); 
+      setIsPhoneSubmitted(false);
     }
   };
 
@@ -196,7 +201,21 @@ export default function Checkout() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // --- NEW: Phone Number Validation ---
+    let finalValue = value;
 
+    // --- BULLETPROOF PHONE NUMBER VALIDATION ---
+    if (name === "phone") {
+      // 1. If the value contains anything that is NOT a number, stop immediately.
+      if (!/^\d*$/.test(value)) return;
+      
+      // 2. If the value is longer than 11 digits, stop immediately.
+      if (value.length > 11) return;
+      
+      finalValue = value;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: finalValue }));
     if (name === "order_method") {
       if (value === "Dine-in") {
         // Fetch tables using the new API
@@ -414,7 +433,8 @@ export default function Checkout() {
                     // autoComplete="off"
                     onChange={handleChange}
                     onBlur={handlePhoneBlur}
-                    placeholder="Phone Number"
+                    maxLength="11"
+                    placeholder="016XXXXXXXX"
                     className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400"
                     required
                   />
