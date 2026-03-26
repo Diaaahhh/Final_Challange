@@ -13,7 +13,7 @@ const dbConfig = {
     user: "root",      
     password: "" ,  
     database: "restaurant",
-    // port: 3307
+    port: 3307
 };
 
 const db = mysql.createConnection(dbConfig);

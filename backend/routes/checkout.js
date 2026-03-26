@@ -28,7 +28,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         const companyCode = settings[0]?.company_code || '26672691';
 
         // 1. Call the external API for customers
-        const apiUrl = `https://pos.chulkani.com/branch/all_customer?company_id=${companyCode}&branch_id=${branch_id}`;
+        const apiUrl = `https://pos.chulkani.com/branch/all_customer?company_id=${companyCode}`;
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' }
         });
@@ -79,7 +79,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         // We use 'success: false' to tell the frontend the user wasn't found.
         return res.status(200).json({ 
             success: false, 
-            message: `Only registered customers can order here or, call ${branchPhone}` 
+            message: `First-time customers, please call ${branchPhone} to place an online order. ` 
         });
 
     } catch (err) {

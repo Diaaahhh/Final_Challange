@@ -35,6 +35,12 @@ const autofillFixStyles = `
 `;
 
 export default function Checkout() {
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
+const [customerName, setCustomerName] = useState("");
+  const verifyAbortRef = useRef(null);
+const lastVerifiedPhoneRef = useRef(null);
+const verifyingRef = useRef(false);
+const [phoneMessage, setPhoneMessage] = useState("");
   const [isPhoneSubmitted, setIsPhoneSubmitted] = useState(false);
   const [dineInTables, setDineInTables] = useState([]);
   const [loadingTables, setLoadingTables] = useState(false);
@@ -102,57 +108,125 @@ export default function Checkout() {
   const finalShippingCost = isHomeDelivery ? shippingCost : 0;
   const grandTotal = cartTotal + finalShippingCost;
 
-  const handlePhoneBlur = async (e) => {
-    const phoneNumber = e.target.value;
-    if (phoneNumber && phoneNumber.length > 3) {
-      // --- Extract branch_id dynamically from cartItems ---
-      let branchId = 1; // Default fallback
-      if (cartItems && cartItems.length > 0) {
-        const firstItem = cartItems[0];
-        branchId =
-          firstItem.branchId ||
-          firstItem.m_branch_id ||
-          firstItem.branch_id ||
-          1;
-      }
+  // const handlePhoneBlur = async (e) => {
+  //   const phoneNumber = e.target.value;
+  //   if (phoneNumber.length === 11) {
+  //     // --- Extract branch_id dynamically from cartItems ---
+  //     let branchId = 1; // Default fallback
+  //     if (cartItems && cartItems.length > 0) {
+  //       const firstItem = cartItems[0];
+  //       branchId =
+  //         firstItem.branchId ||
+  //         firstItem.m_branch_id ||
+  //         firstItem.branch_id ||
+  //         1;
+  //     }
 
-      try {
-        const res = await api.get(
-          `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`
-        );
+  //     try {
+  //       const res = await api.get(
+  //         `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`
+  //       );
 
-        // NEW: Check the 'success' flag we just added to the backend!
-        if (res.data && res.data.success === true) {
-          // User Found! Unlock the form.
-          setIsPhoneSubmitted(true);
-          setFormData((prev) => ({
-            ...prev,
-            cust_name: res.data.name || prev.cust_name,
-            address: res.data.address || prev.address,
-          }));
-        } else {
-          // User NOT found.
-          // Keep form locked and show the customized message from the backend.
-          setIsPhoneSubmitted(false);
-          alert(res.data.message);
+  //       // NEW: Check the 'success' flag we just added to the backend!
+  //       if (res.data && res.data.success === true) {
+  //         // User Found! Unlock the form.
+  //         setIsPhoneSubmitted(true);
+  //         setFormData((prev) => ({
+  //           ...prev,
+  //           cust_name: res.data.name || prev.cust_name,
+  //           address: res.data.address || prev.address,
+  //         }));
+  //       } else {
+  //         // User NOT found.
+  //         // Keep form locked and show the customized message from the backend.
+  //         setIsPhoneSubmitted(false);
+  //         alert(res.data.message);
 
-          setFormData((prev) => ({
-            ...prev,
-            cust_name: "",
-            address: "",
-          }));
-        }
-      } catch (err) {
-        // This catch block will only trigger now if the server actually crashes (Status 500)
-        setIsPhoneSubmitted(false);
-        alert("Server error while verifying phone number.");
-      }
-    } else {
-      // If they clear the phone number entirely, lock the form
-      setIsPhoneSubmitted(false);
+  //         setFormData((prev) => ({
+  //           ...prev,
+  //           cust_name: "",
+  //           address: "",
+  //         }));
+  //       }
+  //     } catch (err) {
+  //       // This catch block will only trigger now if the server actually crashes (Status 500)
+  //       setIsPhoneSubmitted(false);
+  //       alert("Server error while verifying phone number.");
+  //     }
+  //   } else {
+  //     // If they clear the phone number entirely, lock the form
+  //     setIsPhoneSubmitted(false);
+  //   }
+  // };
+const verifyPhone = async (phoneNumber) => {
+  if (verifyingRef.current) return;
+
+  if (lastVerifiedPhoneRef.current === phoneNumber) return;
+
+  verifyingRef.current = true;
+
+  try {
+    setLoadingCustomer(true);
+    
+    if (verifyAbortRef.current) {
+      verifyAbortRef.current.abort();
     }
-  };
 
+    verifyAbortRef.current = new AbortController();
+
+    let branchId = 1;
+    if (cartItems && cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      branchId =
+        firstItem.branchId ||
+        firstItem.m_branch_id ||
+        firstItem.branch_id ||
+        1;
+    }
+
+    const res = await api.get(
+      `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`,
+      { signal: verifyAbortRef.current.signal }
+    );
+
+    if (res.data && res.data.success === true) {
+      setIsPhoneSubmitted(true);
+
+      setFormData((prev) => ({
+        ...prev,
+        cust_name: res.data.name || prev.cust_name,
+        address: res.data.address || prev.address,
+      }));
+
+      lastVerifiedPhoneRef.current = phoneNumber;
+    } else {
+      setIsPhoneSubmitted(false);
+
+      setFormData((prev) => ({
+        ...prev,
+        cust_name: "",
+        address: "",
+      }));
+
+      setPhoneMessage(res.data.message);
+    }
+  } catch (err) {
+    if (err.name !== "AbortError") {
+      setIsPhoneSubmitted(false);
+      showToastWarning("Server error while verifying phone number.");
+    }
+  } finally {
+    verifyingRef.current = false;
+     setLoadingCustomer(false);
+  }
+};
+useEffect(() => {
+  if (formData.phone.length === 11) {
+    verifyPhone(formData.phone);
+  } else {
+    setIsPhoneSubmitted(false);
+  }
+}, [formData.phone]);
   useEffect(() => {
     const calendar = calendarRef.current;
     if (calendar) {
@@ -206,6 +280,7 @@ export default function Checkout() {
 
     // --- BULLETPROOF PHONE NUMBER VALIDATION ---
     if (name === "phone") {
+      setPhoneMessage(""); // clear message while typing
       // 1. If the value contains anything that is NOT a number, stop immediately.
       if (!/^\d*$/.test(value)) return;
       
@@ -239,7 +314,7 @@ export default function Checkout() {
         setDineInTables([]);
       }
     }
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
   };
 
   const handleTableSelect = (tableNo) => {
@@ -432,13 +507,28 @@ export default function Checkout() {
                     value={formData.phone}
                     // autoComplete="off"
                     onChange={handleChange}
-                    onBlur={handlePhoneBlur}
+                    // onBlur={handlePhoneBlur}
                     maxLength="11"
                     placeholder="016XXXXXXXX"
                     className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400"
                     required
                   />
-                </div>
+                  {phoneMessage && (
+  <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm animate-fadeIn">
+    {phoneMessage}
+  </div>
+)}
+{loadingCustomer && (
+  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
+    
+    <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
+    
+    Checking customer...
+    
+  </div>
+)}
+    
+            </div>
                 <div className="form-group">
                   <label className="block text-gray-500 text-sm mb-2">
                     Full Name
