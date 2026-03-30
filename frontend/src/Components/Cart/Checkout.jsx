@@ -582,23 +582,27 @@ useEffect(() => {
                     </tr>
                   </thead>
                   <tbody className="text-gray-600">
-                    {cartItems.map((item) => (
-                      <tr className="border-b border-gray-100" key={item.id}>
-                        <td className="py-4">
-                          {item.m_menu_name}{" "}
-                          <strong className="text-[#0E1014] ml-2">
-                            × {item.quantity}
-                          </strong>
-                        </td>
-                        <td className="py-4 text-right">
-                          Tk{" "}
-                          {(
-                            Number(item.m_price) * item.quantity
-                          ).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+  {cartItems.map((item, index) => (
+    <tr className="border-b border-gray-100" key={item.id}>
+      <td className="py-4">
+        {/* Styled Serial Number with a space after it */}
+        <span strong className="text-[#0E1014] font-bold mr-1">
+          {index + 1}.
+        </span>
+        {item.m_menu_name}{" "}
+        <strong className="text-[#0E1014] ml-2">
+          × {item.quantity}
+        </strong>
+      </td>
+      <td className="py-4 text-right">
+        Tk{" "}
+        {(
+          Number(item.m_price) * item.quantity
+        ).toLocaleString()}
+      </td>
+    </tr>
+  ))}
+</tbody>
                   <tfoot className="font-bold text-[#0E1014]">
                     <tr className="border-b border-gray-100">
                       <td className="py-4">Cart Subtotal</td>

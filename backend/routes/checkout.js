@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); 
-const axios = require('axios'); 
+const db = require('../db');
+const axios = require('axios');
 
 // Helper function to wrap db.query in Promises
 const queryPromise = (sql, params = []) => {
@@ -18,7 +18,7 @@ const queryPromise = (sql, params = []) => {
 // ==========================================
 router.get('/get-user-by-phone/:phone', async (req, res) => {
     const phone = req.params.phone;
-    const branch_id = req.query.branch_id || 1; 
+    const branch_id = req.query.branch_id || 1;
 
     if (!phone) return res.status(400).json({ success: false, message: "Phone number is required" });
 
@@ -54,7 +54,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         try {
             const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}`;
             const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
-            
+
             let branches = [];
             if (branchRes.data && branchRes.data.data && branchRes.data.data.branches) {
                 branches = branchRes.data.data.branches;
@@ -66,7 +66,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 
             // FIX: Check both 'branch_id' and 'id' just in case the API structure varies
             const matchedBranch = branches.find(b => String(b.branch_id) === String(branch_id) || String(b.id) === String(branch_id));
-            
+
             if (matchedBranch) {
                 // FIX: Check multiple possible property names for the phone number
                 branchPhone = matchedBranch.phone || matchedBranch.branch_phone || matchedBranch.contact_number || "the restaurant";
@@ -77,9 +77,9 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 
         // FIX: Return Status 200 so the console doesn't show a red error!
         // We use 'success: false' to tell the frontend the user wasn't found.
-        return res.status(200).json({ 
-            success: false, 
-            message: `First-time customers, please call ${branchPhone} to place an online order. ` 
+        return res.status(200).json({
+            success: false,
+            message: `First-time customers, please call ${branchPhone} to place an online order. `
         });
 
     } catch (err) {
@@ -112,7 +112,7 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
 
         // 2. Fetch LOCAL reservations for this branch AND company
         const reservations = await queryPromise(
-            "SELECT * FROM reservation WHERE re_com_id = ? AND re_branch_id = ?", 
+            "SELECT * FROM reservation WHERE re_com_id = ? AND re_branch_id = ?",
             [company_id, branch_id]
         );
 
@@ -122,7 +122,7 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
         const processedTables = tables.map(table => {
             let { id, table_no, capacity, person_no } = table;
             const stringTableNo = String(table_no).trim();
-            
+
             // Assume table is available by default
             let isAvailable = true;
             let bookingMessage = null;
@@ -138,7 +138,7 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
             for (const res of tableReservations) {
                 let resDate = "";
                 let resTime = "";
-                
+
                 // Format the new DATETIME column `re_date` into separate Date and Time variables
                 if (res.re_date instanceof Date) {
                     const y = res.re_date.getFullYear();
@@ -165,7 +165,7 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
                 }
 
                 // DYNAMIC DURATION: Convert re_duration (minutes) to hours. Default to 1.5 if null/missing.
-                let durationInHours = 1.5; 
+                let durationInHours = 1.5;
                 if (res.re_duration) {
                     durationInHours = parseInt(res.re_duration, 10) / 60;
                 }
@@ -191,7 +191,7 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
                 // --- LOGIC 2: AVAILABILITY CHECK (USING CURRENT DATE & TIME) ---
                 // We only care if the status is currently 1 (and not expired)
                 if (res.re_status === 1 && resDate === currentDate) {
-                    
+
                     // If the CURRENT time falls within the specific DURATION block of the reserved time, mark it unavailable.
                     if (Math.abs(currentTimeInHours - resTimeInHours) < durationInHours) {
                         isAvailable = false;
@@ -218,8 +218,8 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
         }
 
         // Return the clean data to the frontend in the format Checkout.jsx expects
-        res.status(200).json({ 
-            status: true, 
+        res.status(200).json({
+            status: true,
             data: processedTables,
             summary: {
                 total: processedTables.length,
@@ -230,10 +230,10 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
 
     } catch (error) {
         console.error("Error processing dine-in tables:", error);
-        res.status(500).json({ 
-            status: false, 
+        res.status(500).json({
+            status: false,
             message: "Server error calculating table logic.",
-            error: error.message 
+            error: error.message
         });
     }
 });
@@ -284,85 +284,141 @@ router.post('/place-order', async (req, res) => {
         console.log("Sending to Laravel API:", JSON.stringify(laravelPayload, null, 2));
 
         // 4. Send to main Laravel API with proper headers
-        const apiUrl = 'https://pos.chulkani.com/website/order'; 
+        const apiUrl = 'https://pos.chulkani.com/website/order';
 
         const laravelRes = await axios.post(
             apiUrl,
             laravelPayload,
             {
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Accept': 'application/json'
-               },
-               timeout: 30000
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                timeout: 30000
             }
         );
 
         // ==========================================
-        // 5. UPDATE LOCAL 'tables' STATUS IF DINE-IN
+        // 5. Insert into api: 'tables' STATUS IF DINE-IN
         // ==========================================
         if (laravelRes.data && laravelRes.data.status === true && table_no) {
             try {
-                // Get current local date and time
+
+                // ==========================================
+                // 1. GET RESTAURANT OPEN/CLOSE SETTINGS
+                // ==========================================
+                const settingsSql = "SELECT rest_open, rest_close, company_code FROM settings WHERE id = 1";
+                const settingsResult = await queryPromise(settingsSql);
+
+                const { rest_open, rest_close } = settingsResult[0] || {};
+
+                if (rest_open && rest_close) {
+
+                    const now = new Date();
+                    const currentTotal = now.getHours() * 60 + now.getMinutes();
+
+                    const [openH, openM] = rest_open.split(':').map(Number);
+                    const openTotal = openH * 60 + openM;
+
+                    const [closeH, closeM] = rest_close.split(':').map(Number);
+                    const closeTotal = closeH * 60 + closeM;
+
+                    let isOpen = false;
+
+                    if (closeTotal > openTotal) {
+                        isOpen = currentTotal >= openTotal && currentTotal <= closeTotal;
+                    } else {
+                        isOpen = currentTotal >= openTotal || currentTotal <= closeTotal;
+                    }
+
+                    if (!isOpen) {
+                        console.log("Restaurant is closed. Skipping reservation creation.");
+                        return;
+                    }
+                }
+
+                // ==========================================
+                // 2. CURRENT DATE + TIME
+                // ==========================================
                 const now = new Date();
+
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
                 const day = String(now.getDate()).padStart(2, '0');
-                const currentDate = `${year}-${month}-${day}`; 
 
                 const hours = String(now.getHours()).padStart(2, '0');
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 const seconds = String(now.getSeconds()).padStart(2, '0');
-                const currentTime = `${hours}:${minutes}:${seconds}`;
 
-                // Combine date and formattedTime for the DATETIME column `re_date` (e.g., '2026-03-22 14:30:00')
-                const dateTimeString = `${currentDate} ${currentTime}`;
+                const currentDateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
-                // Format the table_no string (e.g., if array was joined or just a string)
+                // ==========================================
+                // 3. FORMAT TABLE STRING
+                // ==========================================
                 let tableStr = null;
+
                 if (table_no) {
-                    tableStr = Array.isArray(table_no) ? table_no.join(", ") : String(table_no);
+                    tableStr = Array.isArray(table_no)
+                        ? table_no.join(", ")
+                        : String(table_no);
                 }
 
-                // Strictly cast integers
-                const safeBranchId = (branch_id === "" || branch_id == null) ? null : parseInt(branch_id);
-                // We don't have a specific customer_id in this payload directly, so we pass null or parse if you add it later
-                const safeCustomerId = null; 
-                const safeDuration = 90; // Defaulting to 90 mins
+                const safeBranchId = (branch_id === "" || branch_id == null)
+                    ? null
+                    : parseInt(branch_id);
 
-                // Ensure companyCode is ready
-                const compCode = companyCode || await getCompanyCode();
+                const safeDuration = 90;
 
-                // 1. Insert directly into the local reservation table instead of updating external tables API
-                const sql = `
-                    INSERT INTO reservation 
-                    (re_com_id, re_branch_id, re_table_no, re_customer_id, re_date, re_duration, re_status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
+                // ==========================================
+                // 4. SEND TO RESERVATION API
+                // ==========================================
+                const reservationPayload = {
+                    re_com_id: companyCode,
+                    re_branch_id: safeBranchId,
+                    re_table_no: tableStr,
+                    re_customer_id: null,
+                    re_date: dateTimeString,
+                    re_duration: safeDuration,
+                    re_status: 0,
+                    re_adv_payment: 0
+                };
 
-                // Setting re_status to 1 to block the table
-                const values = [compCode, safeBranchId, tableStr, safeCustomerId, dateTimeString, safeDuration, 1];
+                await axios.post(
+                    "https://pos.chulkani.com/reservations",
+                    reservationPayload,
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        },
+                        timeout: 15000
+                    }
+                );
 
-                await queryPromise(sql, values);
-                console.log(`Successfully created a local reservation for table(s) [${tableStr}] to block availability.`);
+                console.log(`Reservation API created for table(s) [${tableStr}]`);
 
-            } catch (dbError) {
-                console.error("Error inserting into local reservation table during checkout:", dbError.message);
-                // We just log this and move on, so the user still sees a successful checkout
+            } catch (reservationError) {
+
+                console.error(
+                    "Reservation API error during checkout:",
+                    reservationError.response?.data || reservationError.message
+                );
+
             }
 
-           // ==========================================
+            // ==========================================
             // 6. SEND TO CUSTOMER ORDER QUEUES API
             // ==========================================
             try {
                 const queueApiUrl = 'https://pos.chulkani.com/branch/order/website/customer-order-queues';
-                
+
                 // Extract order_no if the main API returned it in the response
                 const orderNo = laravelRes.data.order_no || laravelRes.data.data?.order_no || null;
 
                 // FIX: Inject the table_no (and parent data) directly into EACH individual item
                 const queueItems = formattedItems.map(item => ({
                     ...item,
-                    table_no: table_no, 
+                    table_no: table_no,
                     company_id: companyCode,
                     branch_id: parseInt(branch_id || 1),
                     order_no: orderNo
@@ -403,8 +459,8 @@ router.post('/place-order', async (req, res) => {
             data: error.response?.data,
             message: error.message
         });
-        
-        return res.status(error.response?.status || 500).json({ 
+
+        return res.status(error.response?.status || 500).json({
             status: false,
             message: error.response?.data?.message || "Order failed at Laravel API",
             details: error.response?.data || error.message

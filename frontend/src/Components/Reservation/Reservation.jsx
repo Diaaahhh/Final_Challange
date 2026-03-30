@@ -384,6 +384,7 @@ export default function Reservation() {
                     name="guest_number"
                     value={formData.guest_number}
                     onChange={handleChange}
+                    onWheel={(e) => e.target.blur()}
                     disabled={!formData.time}
                     min="1"
                     placeholder="E.g., 4"
@@ -470,38 +471,11 @@ export default function Reservation() {
                     onChange={handleChange}
                     className="w-full text-black bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all font-['Arial']"
                   >
-                    <option className="text-black bg-white" value="Birthday">
-                      Birthday
-                    </option>
                     <option className="text-black bg-white" value="Anniversary">
                       Anniversary
                     </option>
-                    <option
-                      className="text-black bg-white"
-                      value="Business Meeting"
-                    >
-                      Business Meeting
-                    </option>
-                    <option
-                      className="text-black bg-white"
-                      value="Corporate Lunch"
-                    >
-                      Corporate Lunch
-                    </option>
-                    <option
-                      className="text-black bg-white"
-                      value="Family Gathering"
-                    >
-                      Family Gathering
-                    </option>
-                    <option className="text-black bg-white" value="Reunion">
-                      Reunion
-                    </option>
-                    <option
-                      className="text-black bg-white"
-                      value="Valentine’s Day Dinner"
-                    >
-                      Valentine’s Day Dinner
+                    <option className="text-black bg-white" value="Birthday">
+                      Birthday
                     </option>
                     <option
                       className="text-black bg-white"
@@ -511,9 +485,18 @@ export default function Reservation() {
                     </option>
                     <option
                       className="text-black bg-white"
-                      value="VIP Reservation"
+                      value="Family Gathering"
                     >
-                      VIP Reservation
+                      Family Gathering
+                    </option>
+                    <option
+                      className="text-black bg-white"
+                      value="Business Meeting"
+                    >
+                      Official Meeting
+                    </option>
+                   <option className="text-black bg-white" value="Reunion">
+                      Reunion
                     </option>
                     <option className="text-black bg-white" value="Others..">
                       Others...
@@ -532,6 +515,7 @@ export default function Reservation() {
                     name="advance_payment"
                     value={formData.advance_payment}
                     onChange={handleChange}
+                    onWheel={(e) => e.target.blur()}
                     placeholder="e.g. 500 (Optional)"
                     className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-800"
                     min="0"
@@ -728,7 +712,7 @@ export default function Reservation() {
               {/* Notes */}
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                  <FaPen className="text-[#C59D5F]" /> Special Notes
+                  <FaPen className="text-[#C59D5F]" /> Special Note
                 </label>
                 <textarea
                   name="notes"
