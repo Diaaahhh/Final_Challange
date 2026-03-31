@@ -26,7 +26,7 @@ const getCompanyCode = () => {
 };
 
 // ==========================================
-// 1. GET User by Phone Number 
+// 1. GET User by Phone Number
 // ==========================================
 router.get('/get-user-by-phone/:phone', async (req, res) => {
     const phone = req.params.phone;
@@ -157,7 +157,7 @@ router.get('/tables/:branch_id', async (req, res) => {
             tables = tablesResponse.data.data || [];
         }
 
-        // 1. FETCH RESERVATIONS ONCE
+        // 1. FETCH RESERVATIONS
         let reservations = [];
         try {
             const reservationApi = `https://pos.chulkani.com/reservations?company_id=${companyCode}&branch_id=${branch_id}`;
@@ -167,7 +167,6 @@ router.get('/tables/:branch_id', async (req, res) => {
                 headers: { 'Accept': 'application/json' }
             });
 
-            // Extract from paginated structure: { data: { data: [...] } }
             if (
                 reservationResponse.data && 
                 reservationResponse.data.data && 
@@ -188,27 +187,45 @@ router.get('/tables/:branch_id', async (req, res) => {
             console.error("❌ Failed to fetch reservations from API:", apiError.message);
         }
 
+        // 2. FETCH ORDERS
+        let orders = [];
+        try {
+            const ordersApi = `https://pos.chulkani.com/api/website/order?company_id=${companyCode}&branch_id=${branch_id}`;
+            console.log(`📡 Fetching live orders from: ${ordersApi}`);
+
+            const ordersResponse = await axios.get(ordersApi, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (ordersResponse.data && ordersResponse.data.status === true && Array.isArray(ordersResponse.data.data)) {
+                orders = ordersResponse.data.data;
+            }
+
+            console.log(`✅ Success! Fetched ${orders.length} orders from API.`);
+
+        } catch (apiError) {
+            console.error("❌ Failed to fetch orders from API:", apiError.message);
+        }
+
         // ==========================================
-        // 2. AUTO-EXPIRE PENDING RESERVATIONS 
+        // 3. AUTO-EXPIRE & FULFILL RESERVATIONS
         // ==========================================
         const validReservations = [];
-        const nowMs = Date.now(); // Current time in UTC milliseconds
+        const nowMs = Date.now(); 
         const THIRTY_MINS_MS = 30 * 60 * 1000;
 
         for (const res of reservations) {
             const targetStatus = res.status !== undefined ? res.status : res.re_status;
             const targetCreateAt = res.created_at || res.re_create_at;
+            let skipReservation = false; // Flag to determine if we should remove this from the UI
 
-            // If status is 0 (Pending), check its creation time
+            // CONDITION A: Auto-expire Pending (Status 0) after 30 mins
             if (Number(targetStatus) === 0 && targetCreateAt) {
                 const createAtMs = new Date(targetCreateAt).getTime();
                 
-                // If the difference is 30 minutes or more
                 if (nowMs - createAtMs >= THIRTY_MINS_MS) {
                     console.log(`⏳ Auto-expiring Reservation ID [${res.id}] (Pending for >30 mins)...`);
-                    
                     try {
-                        // Fire PUT request to Laravel API to update status to 3
                         await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
                             re_status: 3
                         });
@@ -216,20 +233,44 @@ router.get('/tables/:branch_id', async (req, res) => {
                     } catch (updateErr) {
                         console.error(`❌ Failed to update Reservation ID [${res.id}]:`, updateErr.message);
                     }
-                    
-                    // Skip pushing to validReservations so it frees up the table immediately
-                    continue; 
+                    skipReservation = true; 
+                }
+            }
+
+            // CONDITION B: Auto-fulfill Confirmed (Status 1) if matching Order has Status 1
+            if (!skipReservation && Number(targetStatus) === 1) {
+                const matchingOrder = orders.find(o => 
+                    Number(o.ord_res_id) === Number(res.id) && 
+                    Number(o.ord_status) === 1
+                );
+
+                if (matchingOrder) {
+                    console.log(`🍽️ Found completed order for Reservation ID [${res.id}]. Auto-updating status to 3...`);
+                    try {
+                        await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
+                            re_status: 3
+                        });
+                        console.log(`✅ Successfully fulfilled Reservation ID [${res.id}] to status 3`);
+                    } catch (updateErr) {
+                        console.error(`❌ Failed to update fulfilled Reservation ID [${res.id}]:`, updateErr.message);
+                    }
+                    skipReservation = true;
                 }
             }
             
-            validReservations.push(res);
+            // If the reservation didn't get expired or fulfilled, it remains active!
+            if (!skipReservation) {
+                validReservations.push(res);
+            }
         }
         
-        // Overwrite the reservations array with ONLY the valid ones
+        // Overwrite the reservations array with ONLY the active ones
         reservations = validReservations;
 
 
-        // 3. PROCESS TABLES (DE-DUPLICATED)
+        // ==========================================
+        // 4. PROCESS TABLES
+        // ==========================================
         const normalizedChosenTime = chosenTime.substring(0, 5);
 
         const processedTables = tables.map(table => {
@@ -257,13 +298,10 @@ router.get('/tables/:branch_id', async (req, res) => {
                 const targetDate = res.date || res.re_date;
                 
                 if (targetDate) {
-                    // Convert UTC 'Z' timezone back to Bangladesh Time (+6)
                     if (String(targetDate).includes('Z')) {
                         const dateObj = new Date(targetDate);
-                        
                         const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' });
                         const timeFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: false });
-                        
                         resDate = dateFormatter.format(dateObj);
                         resTime = timeFormatter.format(dateObj);
                     } else {
