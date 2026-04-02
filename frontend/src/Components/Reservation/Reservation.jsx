@@ -43,6 +43,7 @@ const autofillFixStyles = `
 
 export default function Reservation() {
   const [formData, setFormData] = useState({
+    customer_id: null,
     name: "",
     phone: "",
     address: "",
@@ -56,14 +57,20 @@ export default function Reservation() {
     advance_payment: "",
   });
 
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
+  const verifyAbortRef = useRef(null);
+  const lastVerifiedPhoneRef = useRef(null);
+  const verifyingRef = useRef(false);
+  const [phoneMessage, setPhoneMessage] = useState("");
+  const [isPhoneSubmitted, setIsPhoneSubmitted] = useState(false);
   const [branches, setBranches] = useState([]);
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  
+
   // --- NEW: State to hold settings for validation ---
-  const [restaurantSettings, setRestaurantSettings] = useState(null); 
+  const [restaurantSettings, setRestaurantSettings] = useState(null);
 
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef(null);
@@ -110,6 +117,60 @@ export default function Reservation() {
     }
   };
 
+  const verifyPhone = async (phoneNumber) => {
+    if (verifyingRef.current) return;
+
+    if (lastVerifiedPhoneRef.current === phoneNumber) return;
+
+    verifyingRef.current = true;
+
+    try {
+      setLoadingCustomer(true);
+
+      if (verifyAbortRef.current) {
+        verifyAbortRef.current.abort();
+      }
+
+      verifyAbortRef.current = new AbortController();
+
+      const res = await api.get(
+        `/reservation/get-user-by-phone/${phoneNumber}?branch_id=${formData.branch_id}`,
+        { signal: verifyAbortRef.current.signal }
+      );
+
+      if (res.data && res.data.success === true) {
+        setIsPhoneSubmitted(true);
+
+        setFormData((prev) => ({
+          ...prev,
+          customer_id: res.data.customer_id,
+          name: res.data.name || prev.name,
+          address: res.data.address || prev.address,
+        }));
+
+        lastVerifiedPhoneRef.current = phoneNumber;
+      } else {
+        setIsPhoneSubmitted(false);
+
+        setFormData((prev) => ({
+          ...prev,
+          customer_id: null,
+          name: "",
+          address: "",
+        }));
+
+        setPhoneMessage(res.data.message);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        setIsPhoneSubmitted(false);
+        console.error("Server error while verifying phone number.");
+      }
+    } finally {
+      verifyingRef.current = false;
+      setLoadingCustomer(false);
+    }
+  };
   // 3. Handle Calendar Clicks
   useEffect(() => {
     const calendar = calendarRef.current;
@@ -126,33 +187,47 @@ export default function Reservation() {
     }
   }, [showCalendar]);
 
-  // --- Handle Auto-Fill on Phone Blur ---
-  const handlePhoneBlur = async (e) => {
-    const phoneNumber = e.target.value;
-    if (phoneNumber && phoneNumber.length > 3) {
-      try {
-        const res = await api.get(
-          `/reservation/get-user-by-phone/${phoneNumber}`
-        );
-        if (res.data) {
-          setFormData((prev) => ({
-            ...prev,
-            name: res.data.name || prev.name,
-            address: res.data.address || prev.address,
-          }));
-        }
-      } catch (err) {
-        console.log("User not found by phone, proceeding as new customer.");
-      }
+  useEffect(() => {
+    if (formData.phone.length === 11 && formData.branch_id) {
+      verifyPhone(formData.phone);
+    } else {
+      setIsPhoneSubmitted(false);
     }
-  };
+  }, [formData.phone, formData.branch_id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    let finalValue = value;
+
+    // PHONE VALIDATION
+    if (name === "phone") {
+      setPhoneMessage("");
+
+      if (!/^\d*$/.test(value)) return;
+      if (value.length > 11) return;
+
+      finalValue = value;
+    }
+
     if (name === "branch_id") {
-      setFormData((prev) => ({ ...prev, branch_id: value, table_number: [] }));
+      lastVerifiedPhoneRef.current = null;
+      setIsPhoneSubmitted(false);
+
+      setFormData((prev) => ({
+        ...prev,
+        branch_id: finalValue,
+        phone: "",
+        name: "",
+        customer_id: null,
+        address: "",
+        table_number: [],
+      }));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({
+        ...prev,
+        [name]: finalValue,
+      }));
     }
   };
 
@@ -184,36 +259,48 @@ export default function Reservation() {
     }
 
     // --- NEW: Validate Current Time against Restaurant Open/Close Hours ---
-    if (restaurantSettings && restaurantSettings.rest_open && restaurantSettings.rest_close) {
+    if (
+      restaurantSettings &&
+      restaurantSettings.rest_open &&
+      restaurantSettings.rest_close
+    ) {
       const now = new Date();
       const currentTotal = now.getHours() * 60 + now.getMinutes();
 
-      const [openH, openM] = restaurantSettings.rest_open.split(':').map(Number);
+      const [openH, openM] = restaurantSettings.rest_open
+        .split(":")
+        .map(Number);
       const openTotal = openH * 60 + openM;
 
-      const [closeH, closeM] = restaurantSettings.rest_close.split(':').map(Number);
+      const [closeH, closeM] = restaurantSettings.rest_close
+        .split(":")
+        .map(Number);
       const closeTotal = closeH * 60 + closeM;
 
       let isOpen = false;
       if (closeTotal > openTotal) {
-          // Standard hours (e.g., 10 AM to 10 PM)
-          isOpen = currentTotal >= openTotal && currentTotal <= closeTotal;
+        // Standard hours (e.g., 10 AM to 10 PM)
+        isOpen = currentTotal >= openTotal && currentTotal <= closeTotal;
       } else {
-          // Cross-midnight hours (e.g., 10 PM to 2 AM)
-          isOpen = currentTotal >= openTotal || currentTotal <= closeTotal;
+        // Cross-midnight hours (e.g., 10 PM to 2 AM)
+        isOpen = currentTotal >= openTotal || currentTotal <= closeTotal;
       }
 
       if (!isOpen) {
         // NEW: Formats "13:00:00" to "1:00 pm"
         const formatTimeAMPM = (timeString) => {
-          const [hourString, minute] = timeString.split(':');
+          const [hourString, minute] = timeString.split(":");
           let hour = parseInt(hourString, 10);
-          const ampm = hour >= 12 ? 'pm' : 'am';
+          const ampm = hour >= 12 ? "pm" : "am";
           hour = hour % 12 || 12; // Convert 0 to 12
           return `${hour}:${minute} ${ampm}`;
         };
 
-        setError(`The restaurant remains open from ${formatTimeAMPM(restaurantSettings.rest_open)} to ${formatTimeAMPM(restaurantSettings.rest_close)}`);
+        setError(
+          `The restaurant remains open from ${formatTimeAMPM(
+            restaurantSettings.rest_open
+          )} to ${formatTimeAMPM(restaurantSettings.rest_close)}`
+        );
         window.scrollTo({ top: 0, behavior: "smooth" });
         return; // Halts the submission completely
       }
@@ -225,6 +312,7 @@ export default function Reservation() {
       await api.post("/reservation/create", formData);
       setSuccess(true);
       setFormData({
+        customer_id: null,
         name: "",
         phone: "",
         address: "",
@@ -265,7 +353,17 @@ export default function Reservation() {
       </div>
     ));
   };
+  const getCurrentStep = () => {
+    if (!formData.branch_id) return 1;
+    if (!isPhoneSubmitted) return 2;
+    if (!formData.date) return 3;
+    if (!formData.time) return 4;
+    if (!formData.guest_number) return 5;
+    if (formData.table_number.length === 0) return 6;
+    return 7;
+  };
 
+  const currentStep = getCurrentStep();
   return (
     <>
       <style>{autofillFixStyles}</style>
@@ -292,7 +390,66 @@ export default function Reservation() {
                 {error}
               </div>
             )}
+            {/* Reservation Progress Steps */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+                {[
+                  "Branch",
+                  "Phone",
+                  "Date",
+                  "Time",
+                  "Guests",
+                  "Tables",
+                  "Confirm",
+                ].map((step, index) => {
+                  const stepNumber = index + 1;
+                  const isActive = currentStep === stepNumber;
+                  const isCompleted = currentStep > stepNumber;
 
+                  return (
+                    <div
+                      key={step}
+                      className="flex-1 flex flex-col items-center relative"
+                    >
+                      {/* Line */}
+                      {index !== 0 && (
+                        <div
+                          className={`absolute left-0 top-3 w-full h-[2px] -z-10 
+            ${isCompleted ? "bg-[#C59D5F]" : "bg-gray-200"}`}
+                        ></div>
+                      )}
+
+                      {/* Circle */}
+                      <div
+                        className={`w-6 h-6 flex items-center justify-center rounded-full text-xs transition-all duration-300
+            ${
+              isCompleted
+                ? "bg-[#C59D5F] text-white"
+                : isActive
+                ? "bg-black text-white"
+                : "bg-gray-200 text-gray-500"
+            }`}
+                      >
+                        {isCompleted ? "✓" : stepNumber}
+                      </div>
+
+                      {/* Label */}
+                      <span
+                        className={`mt-2 ${
+                          isActive
+                            ? "text-black"
+                            : isCompleted
+                            ? "text-[#C59D5F]"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        {step}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Branch */}
@@ -324,21 +481,39 @@ export default function Reservation() {
                 {/* Phone */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaPhone className="text-[#C59D5F]" /> Phone{" "}
+                    <FaPhone className="text-[#C59D5F]" /> Phone
                     <span className="text-red-500">*</span>
                   </label>
+
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    onBlur={handlePhoneBlur}
-                    placeholder="Phone Number"
+                    maxLength="11"
+                    disabled={!formData.branch_id}
+                    placeholder={
+                      formData.branch_id
+                        ? "Phone Number"
+                        : "Select branch first"
+                    }
                     className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
                     required
                   />
-                </div>
 
+                  {phoneMessage && (
+                    <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                      {phoneMessage}
+                    </div>
+                  )}
+
+                  {loadingCustomer && (
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit">
+                      <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
+                      Checking customer...
+                    </div>
+                  )}
+                </div>
                 {/* Name */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
@@ -350,6 +525,8 @@ export default function Reservation() {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
+                    disabled={!isPhoneSubmitted}
+                    readOnly
                     placeholder="Your Full Name"
                     className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
                     required
@@ -365,6 +542,7 @@ export default function Reservation() {
                   <input
                     type="text"
                     name="address"
+                    disabled={!isPhoneSubmitted}
                     value={formData.address}
                     onChange={handleChange}
                     placeholder="Your Full Address"
@@ -402,8 +580,8 @@ export default function Reservation() {
                   <button
                     type="button"
                     onClick={() => setShowCalendar(!showCalendar)}
-                    disabled={!formData.branch_id}
-                    className="w-full text-left bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700"
+                    disabled={!formData.branch_id || !isPhoneSubmitted}
+                    className="w-full text-left bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 "
                   >
                     {formData.date ? formData.date : "Select Date"}
                   </button>
@@ -468,6 +646,7 @@ export default function Reservation() {
                   <select
                     name="event_name"
                     value={formData.event_name}
+                    disabled={!isPhoneSubmitted}
                     onChange={handleChange}
                     className="w-full text-black bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all font-['Arial']"
                   >
@@ -495,7 +674,7 @@ export default function Reservation() {
                     >
                       Official Meeting
                     </option>
-                   <option className="text-black bg-white" value="Reunion">
+                    <option className="text-black bg-white" value="Reunion">
                       Reunion
                     </option>
                     <option className="text-black bg-white" value="Others..">
@@ -514,6 +693,7 @@ export default function Reservation() {
                     type="number"
                     name="advance_payment"
                     value={formData.advance_payment}
+                    disabled={!isPhoneSubmitted}
                     onChange={handleChange}
                     onWheel={(e) => e.target.blur()}
                     placeholder="e.g. 500 (Optional)"
@@ -610,7 +790,8 @@ export default function Reservation() {
                                   className="text-amber-500"
                                   size={14}
                                 />
-                                Selected capacity is less than your total guests!
+                                Selected capacity is less than your total
+                                guests!
                               </div>
                             )}
                           </div>
@@ -626,9 +807,13 @@ export default function Reservation() {
                           const totalChairs = t.person_no || t.capacity || 4;
                           const topRow = Math.ceil(totalChairs / 2);
                           const bottomRow = Math.floor(totalChairs / 2);
-                          const isSelected = formData.table_number.includes(String(t.table_no));
+                          const isSelected = formData.table_number.includes(
+                            String(t.table_no)
+                          );
                           const isOccupied = !t.isAvailable;
-                          const isSuggested = suggestedTables.includes(String(t.table_no)); 
+                          const isSuggested = suggestedTables.includes(
+                            String(t.table_no)
+                          );
 
                           return (
                             <div
@@ -718,6 +903,7 @@ export default function Reservation() {
                   name="notes"
                   value={formData.notes}
                   onChange={handleChange}
+                  disabled={!isPhoneSubmitted}
                   placeholder="Any special requests?"
                   className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all h-24 text-gray-800"
                 ></textarea>
@@ -725,9 +911,11 @@ export default function Reservation() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isPhoneSubmitted}
                 className={`w-full bg-[#C59D5F] text-white font-bold py-4 rounded-lg uppercase tracking-widest hover:bg-[#0E1014] transition-all duration-300 ${
-                  loading ? "opacity-70 cursor-not-allowed" : ""
+                  loading || !isPhoneSubmitted
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-[#C59D5F] hover:text-white"
                 }`}
               >
                 {loading ? "Processing..." : "Confirm Reservation"}

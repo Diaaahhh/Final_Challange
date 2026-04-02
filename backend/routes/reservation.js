@@ -53,6 +53,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
             if (matchedCustomer) {
                 return res.status(200).json({
                     success: true, // Tell frontend it was successful
+                    customer_id: matchedCustomer.cust_id, 
                     name: matchedCustomer.name,
                     address: matchedCustomer.address
                 });
@@ -369,70 +370,6 @@ router.get('/tables/:branch_id', async (req, res) => {
     }
 });
 
-
-// ==========================================
-// --- HELPER: CHECK AND CREATE CUSTOMER
-// ==========================================
-async function checkAndCreateCustomer(companyCode, branch_id, name, phone, address) {
-    const checkCustSql = `SELECT id FROM customers WHERE company_id = ? AND phone = ?`;
-    const checkRows = await queryPromise(checkCustSql, [companyCode, phone]);
-
-    if (!checkRows || checkRows.length === 0) {
-        console.log("Customer not found. Creating new customer record for reservation...");
-
-        const descResult = await queryPromise("DESCRIBE customers");
-        const columns = descResult.map(col => col.Field);
-
-        const insertFields = [];
-        const insertValues = [];
-        const placeholders = [];
-
-        if (columns.includes('company_id')) {
-            insertFields.push('company_id');
-            insertValues.push(companyCode);
-            placeholders.push('?');
-        }
-
-        const otherFields = {
-            'branch_id': branch_id,
-            'name': name,
-            'phone': phone,
-            'address': address || null,
-            'is_guest': 1,
-            'created_at': 'NOW()',
-            'updated_at': 'NOW()'
-        };
-
-        for (const [field, value] of Object.entries(otherFields)) {
-            if (columns.includes(field) && !insertFields.includes(field)) {
-                insertFields.push(field);
-                if (value === 'NOW()') {
-                    insertValues.push('NOW()');
-                    placeholders.push('NOW()');
-                } else {
-                    insertValues.push(value !== undefined ? value : null);
-                    placeholders.push('?');
-                }
-            }
-        }
-
-        let nextCustId = null;
-        if (columns.includes('cust_id') && !insertFields.includes('cust_id')) {
-            const maxRows = await queryPromise("SELECT MAX(cust_id) as maxId FROM customers WHERE company_id = ?", [companyCode]);
-            nextCustId = 1;
-            if (maxRows && maxRows.length > 0 && maxRows[0].maxId) {
-                nextCustId = parseInt(maxRows[0].maxId) + 1;
-            }
-            insertFields.unshift('cust_id');
-            insertValues.unshift(nextCustId);
-            placeholders.unshift('?');
-        }
-
-        const safeValues = insertValues.filter(v => v !== 'NOW()');
-        const insertSql = `INSERT INTO customers (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')})`;
-        await queryPromise(insertSql, safeValues);
-    }
-}
 
 // ==========================================
 // 5. CREATE NEW RESERVATION

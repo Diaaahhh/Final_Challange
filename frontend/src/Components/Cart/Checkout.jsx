@@ -36,11 +36,10 @@ const autofillFixStyles = `
 
 export default function Checkout() {
   const [loadingCustomer, setLoadingCustomer] = useState(false);
-const [customerName, setCustomerName] = useState("");
   const verifyAbortRef = useRef(null);
-const lastVerifiedPhoneRef = useRef(null);
-const verifyingRef = useRef(false);
-const [phoneMessage, setPhoneMessage] = useState("");
+  const lastVerifiedPhoneRef = useRef(null);
+  const verifyingRef = useRef(false);
+  const [phoneMessage, setPhoneMessage] = useState("");
   const [isPhoneSubmitted, setIsPhoneSubmitted] = useState(false);
   const [dineInTables, setDineInTables] = useState([]);
   const [loadingTables, setLoadingTables] = useState(false);
@@ -52,6 +51,7 @@ const [phoneMessage, setPhoneMessage] = useState("");
   const [shippingCost, setShippingCost] = useState(0);
 
   const [formData, setFormData] = useState({
+    customer_id: null,
     cust_name: "",
     address: "",
     phone: "",
@@ -62,7 +62,7 @@ const [phoneMessage, setPhoneMessage] = useState("");
   const fetchDineInTables = async (companyId, branchId) => {
     setLoadingTables(true);
     try {
-      const res = await api.get(`get-dine-in-tables/${companyId}/${branchId}`);
+      const res = await api.get(`get-dine-in-tables/${branchId}`);
       if (res.data.status) {
         setDineInTables(res.data.data);
       }
@@ -89,8 +89,15 @@ const [phoneMessage, setPhoneMessage] = useState("");
   const [toast, setToast] = useState({ show: false, message: "" });
   const [loading, setLoading] = useState(false);
 
-  const suggestedTables = useTableSuggestion(personCount, availableTables);
+  // Determine which array of tables is currently active in the UI
+  const activeTablesForSuggestion =
+    dineInTables.length > 0 ? dineInTables : availableTables;
 
+  // Feed the active tables into your custom hook
+  const suggestedTables = useTableSuggestion(
+    personCount,
+    activeTablesForSuggestion
+  );
   // --- FETCH DELIVERY SETTING ON PAGE LOAD ---
   useEffect(() => {
     api
@@ -108,125 +115,77 @@ const [phoneMessage, setPhoneMessage] = useState("");
   const finalShippingCost = isHomeDelivery ? shippingCost : 0;
   const grandTotal = cartTotal + finalShippingCost;
 
-  // const handlePhoneBlur = async (e) => {
-  //   const phoneNumber = e.target.value;
-  //   if (phoneNumber.length === 11) {
-  //     // --- Extract branch_id dynamically from cartItems ---
-  //     let branchId = 1; // Default fallback
-  //     if (cartItems && cartItems.length > 0) {
-  //       const firstItem = cartItems[0];
-  //       branchId =
-  //         firstItem.branchId ||
-  //         firstItem.m_branch_id ||
-  //         firstItem.branch_id ||
-  //         1;
-  //     }
+  const verifyPhone = async (phoneNumber) => {
+    if (verifyingRef.current) return;
 
-  //     try {
-  //       const res = await api.get(
-  //         `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`
-  //       );
+    if (lastVerifiedPhoneRef.current === phoneNumber) return;
 
-  //       // NEW: Check the 'success' flag we just added to the backend!
-  //       if (res.data && res.data.success === true) {
-  //         // User Found! Unlock the form.
-  //         setIsPhoneSubmitted(true);
-  //         setFormData((prev) => ({
-  //           ...prev,
-  //           cust_name: res.data.name || prev.cust_name,
-  //           address: res.data.address || prev.address,
-  //         }));
-  //       } else {
-  //         // User NOT found.
-  //         // Keep form locked and show the customized message from the backend.
-  //         setIsPhoneSubmitted(false);
-  //         alert(res.data.message);
+    verifyingRef.current = true;
 
-  //         setFormData((prev) => ({
-  //           ...prev,
-  //           cust_name: "",
-  //           address: "",
-  //         }));
-  //       }
-  //     } catch (err) {
-  //       // This catch block will only trigger now if the server actually crashes (Status 500)
-  //       setIsPhoneSubmitted(false);
-  //       alert("Server error while verifying phone number.");
-  //     }
-  //   } else {
-  //     // If they clear the phone number entirely, lock the form
-  //     setIsPhoneSubmitted(false);
-  //   }
-  // };
-const verifyPhone = async (phoneNumber) => {
-  if (verifyingRef.current) return;
+    try {
+      setLoadingCustomer(true);
 
-  if (lastVerifiedPhoneRef.current === phoneNumber) return;
+      if (verifyAbortRef.current) {
+        verifyAbortRef.current.abort();
+      }
 
-  verifyingRef.current = true;
+      verifyAbortRef.current = new AbortController();
 
-  try {
-    setLoadingCustomer(true);
-    
-    if (verifyAbortRef.current) {
-      verifyAbortRef.current.abort();
+      let branchId = 1;
+      if (cartItems && cartItems.length > 0) {
+        const firstItem = cartItems[0];
+        branchId =
+          firstItem.branchId ||
+          firstItem.m_branch_id ||
+          firstItem.branch_id ||
+          1;
+      }
+
+      const res = await api.get(
+        `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`,
+        { signal: verifyAbortRef.current.signal }
+      );
+
+      if (res.data && res.data.success === true) {
+        setIsPhoneSubmitted(true);
+
+        setFormData((prev) => ({
+          ...prev,
+          customer_id: res.data.customer_id,
+          cust_name: res.data.name || prev.cust_name,
+          address: res.data.address || prev.address,
+        }));
+
+        lastVerifiedPhoneRef.current = phoneNumber;
+      } else {
+        setIsPhoneSubmitted(false);
+
+        setFormData((prev) => ({
+          ...prev,
+          customer_id: null,
+          cust_name: "",
+          address: "",
+        }));
+
+        setPhoneMessage(res.data.message);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        setIsPhoneSubmitted(false);
+        showToastWarning("Server error while verifying phone number.");
+      }
+    } finally {
+      verifyingRef.current = false;
+      setLoadingCustomer(false);
     }
-
-    verifyAbortRef.current = new AbortController();
-
-    let branchId = 1;
-    if (cartItems && cartItems.length > 0) {
-      const firstItem = cartItems[0];
-      branchId =
-        firstItem.branchId ||
-        firstItem.m_branch_id ||
-        firstItem.branch_id ||
-        1;
-    }
-
-    const res = await api.get(
-      `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`,
-      { signal: verifyAbortRef.current.signal }
-    );
-
-    if (res.data && res.data.success === true) {
-      setIsPhoneSubmitted(true);
-
-      setFormData((prev) => ({
-        ...prev,
-        cust_name: res.data.name || prev.cust_name,
-        address: res.data.address || prev.address,
-      }));
-
-      lastVerifiedPhoneRef.current = phoneNumber;
+  };
+  useEffect(() => {
+    if (formData.phone.length === 11) {
+      verifyPhone(formData.phone);
     } else {
       setIsPhoneSubmitted(false);
-
-      setFormData((prev) => ({
-        ...prev,
-        cust_name: "",
-        address: "",
-      }));
-
-      setPhoneMessage(res.data.message);
     }
-  } catch (err) {
-    if (err.name !== "AbortError") {
-      setIsPhoneSubmitted(false);
-      showToastWarning("Server error while verifying phone number.");
-    }
-  } finally {
-    verifyingRef.current = false;
-     setLoadingCustomer(false);
-  }
-};
-useEffect(() => {
-  if (formData.phone.length === 11) {
-    verifyPhone(formData.phone);
-  } else {
-    setIsPhoneSubmitted(false);
-  }
-}, [formData.phone]);
+  }, [formData.phone]);
   useEffect(() => {
     const calendar = calendarRef.current;
     if (calendar) {
@@ -252,7 +211,7 @@ useEffect(() => {
         try {
           // FIX: Changed from /get-occupied-tables to /checkout/get-dine-in-tables
           const response = await api.get(
-            `get-dine-in-tables/${companyId}/${branchId}`
+            `get-dine-in-tables/${branchId}`
           );
 
           if (response.data && response.data.status === true) {
@@ -283,10 +242,10 @@ useEffect(() => {
       setPhoneMessage(""); // clear message while typing
       // 1. If the value contains anything that is NOT a number, stop immediately.
       if (!/^\d*$/.test(value)) return;
-      
+
       // 2. If the value is longer than 11 digits, stop immediately.
       if (value.length > 11) return;
-      
+
       finalValue = value;
     }
 
@@ -314,7 +273,6 @@ useEffect(() => {
         setDineInTables([]);
       }
     }
-    
   };
 
   const handleTableSelect = (tableNo) => {
@@ -407,6 +365,7 @@ useEffect(() => {
         cartItems.length > 0
           ? cartItems[0].branchId || cartItems[0].m_branch_id || 1
           : 1,
+      customer_id: formData.customer_id,
       cust_name: formData.cust_name,
       phone: String(formData.phone),
       email: userEmail || "",
@@ -416,7 +375,6 @@ useEffect(() => {
       discount: cartDiscount,
       delivery: finalShippingCost,
       total: grandTotal,
-      // order_method: formData.order_method,
       table_no:
         bookingData.table_no.length > 0
           ? bookingData.table_no.join(", ")
@@ -514,21 +472,17 @@ useEffect(() => {
                     required
                   />
                   {phoneMessage && (
-  <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm animate-fadeIn">
-    {phoneMessage}
-  </div>
-)}
-{loadingCustomer && (
-  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
-    
-    <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
-    
-    Checking customer...
-    
-  </div>
-)}
-    
-            </div>
+                    <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm animate-fadeIn">
+                      {phoneMessage}
+                    </div>
+                  )}
+                  {loadingCustomer && (
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
+                      <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
+                      Checking customer...
+                    </div>
+                  )}
+                </div>
                 <div className="form-group">
                   <label className="block text-gray-500 text-sm mb-2">
                     Full Name
@@ -582,27 +536,30 @@ useEffect(() => {
                     </tr>
                   </thead>
                   <tbody className="text-gray-600">
-  {cartItems.map((item, index) => (
-    <tr className="border-b border-gray-100" key={item.id}>
-      <td className="py-4">
-        {/* Styled Serial Number with a space after it */}
-        <span strong className="text-[#0E1014] font-bold mr-1">
-          {index + 1}.
-        </span>
-        {item.m_menu_name}{" "}
-        <strong className="text-[#0E1014] ml-2">
-          × {item.quantity}
-        </strong>
-      </td>
-      <td className="py-4 text-right">
-        Tk{" "}
-        {(
-          Number(item.m_price) * item.quantity
-        ).toLocaleString()}
-      </td>
-    </tr>
-  ))}
-</tbody>
+                    {cartItems.map((item, index) => (
+                      <tr className="border-b border-gray-100" key={item.id}>
+                        <td className="py-4">
+                          {/* Styled Serial Number with a space after it */}
+                          <span
+                            strong
+                            className="text-[#0E1014] font-bold mr-1"
+                          >
+                            {index + 1}.
+                          </span>
+                          {item.m_menu_name}{" "}
+                          <strong className="text-[#0E1014] ml-2">
+                            × {item.quantity}
+                          </strong>
+                        </td>
+                        <td className="py-4 text-right">
+                          Tk{" "}
+                          {(
+                            Number(item.m_price) * item.quantity
+                          ).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
                   <tfoot className="font-bold text-[#0E1014]">
                     <tr className="border-b border-gray-100">
                       <td className="py-4">Cart Subtotal</td>
@@ -626,8 +583,7 @@ useEffect(() => {
                         >
                           <option value="">Select Method</option>
                           <option value="Home delivery">Home delivery</option>
-                          <option value="Take a way">Take a way</option>
-                          <option value="Parcel">Parcel</option>
+                          <option value="Parcel">Take a way / Parcel</option>
                           <option value="Dine-in">Dine-in</option>
                         </select>
 
@@ -853,83 +809,102 @@ useEffect(() => {
                           <div className="w-10 h-10 border-4 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></div>
                         </div>
                       ) : dineInTables.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
-                          {dineInTables.map((table) => {
-                            const isSelected = bookingData.table_no.includes(
-                              table.table_no
-                            );
-                            // Calculate if table is suggested based on person count
-                            const isSuggested =
-                              personCount &&
-                              table.person_no &&
-                              Math.abs(
-                                table.person_no - parseInt(personCount)
-                              ) <= 2;
+                        <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 px-2">
+                            {dineInTables.map((table) => {
+                              const totalChairs =
+                                table.person_no || table.capacity || 4;
+                              const topRow = Math.ceil(totalChairs / 2);
+                              const bottomRow = Math.floor(totalChairs / 2);
 
-                            return (
-                              <button
-                                key={table.id}
-                                type="button"
-                                disabled={!table.isAvailable}
-                                onClick={() =>
-                                  handleTableSelect(table.table_no)
-                                }
-                                className={`
-                                  relative pt-7 pb-4 px-2 rounded-xl border-2 transition-all duration-300 
-                                  flex flex-col items-center justify-center min-h-[100px] overflow-hidden
-                                  ${
-                                    table.isAvailable
-                                      ? isSelected
-                                        ? "border-[#C59D5F] bg-[#C59D5F]/20 shadow-md scale-105"
-                                        : "border-[#C59D5F] bg-[#C59D5F]/10 hover:bg-[#C59D5F]/20 cursor-pointer shadow-md"
-                                      : "border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed"
-                                  }
-                                `}
-                              >
-                                {/* PERFECTLY POSITIONED BOOKING MESSAGE */}
-                                {table.isAvailable && table.bookingMessage && (
-                                  <div className="absolute top-0 left-0 w-full bg-[#007BFF] text-white text-[10px] md:text-xs font-bold py-1 px-1 text-center tracking-wide z-10 shadow-sm truncate">
-                                    {table.bookingMessage}
-                                  </div>
-                                )}
+                              const isSelected = bookingData.table_no.includes(
+                                String(table.table_no)
+                              );
+                              const isOccupied = !table.isAvailable;
+                              // CHANGED: Now using the smart array returned from useTableSuggestion.js
+                              const isSuggested = suggestedTables.includes(
+                                String(table.table_no)
+                              );
+                              return (
+                                <div
+                                  key={table.id}
+                                  onClick={() => {
+                                    if (!isOccupied)
+                                      handleTableSelect(String(table.table_no));
+                                  }}
+                                  className={`
+                                    group flex flex-col items-center justify-center p-2 mt-4 mb-5 transition-all duration-300 relative cursor-pointer
+                                    ${
+                                      isOccupied
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : ""
+                                    }
+                                  `}
+                                >
+                                  {isSuggested &&
+                                    !isOccupied &&
+                                    !isSelected && (
+                                      <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap animate-bounce">
+                                        ⭐ BEST FIT
+                                      </div>
+                                    )}
 
-                                {/* BEST FIT SUGGESTION */}
-                                {isSuggested &&
-                                  table.isAvailable &&
-                                  !isSelected && (
-                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm whitespace-nowrap">
-                                      ⭐ BEST FIT
+                                  {isOccupied && (
+                                    <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
+                                      {table.bookingMessage || "BUSY"}
                                     </div>
                                   )}
 
-                                <span className="text-gray-800 font-extrabold text-xl font-['Barlow_Condensed'] tracking-wider">
-                                  Table {table.table_no}
-                                </span>
+                                  {/* Top Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mb-1">
+                                    {renderChairs(topRow, "top")}
+                                  </div>
 
-                                <span className="text-xs text-gray-600 mt-1">
-                                  {table.person_no || table.capacity || "?"}{" "}
-                                  seats
-                                </span>
+                                  {/* The Actual Table Block */}
+                                  <div
+                                    className={`
+                                      w-full h-28 rounded-xl border-2 flex flex-col items-center justify-center shadow-md relative overflow-hidden transition-all duration-300
+                                      ${
+                                        isOccupied
+                                          ? "bg-red-100 border-red-300 text-red-800"
+                                          : isSelected
+                                          ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                          : isSuggested
+                                          ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                          : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                      }
+                                    `}
+                                  >
+                                    {isSelected && (
+                                      <div className="absolute inset-0 opacity-10 bg-black"></div>
+                                    )}
+                                    <span className="font-['Barlow_Condensed'] font-extrabold text-xl relative z-10">
+                                      Table {table.table_no}
+                                    </span>
+                                    <span
+                                      className={`text-[10px] uppercase font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
+                                        isSelected
+                                          ? "bg-black/20 text-white"
+                                          : "bg-gray-200 text-gray-700"
+                                      }`}
+                                    >
+                                      {totalChairs} Seats
+                                    </span>
+                                  </div>
 
-                                <span
-                                  className={`text-[11px] mt-2 font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full ${
-                                    table.isAvailable
-                                      ? "bg-green-500/20 text-green-600"
-                                      : "bg-red-500/20 text-red-600"
-                                  }`}
-                                >
-                                  {table.isAvailable
-                                    ? "Available"
-                                    : "Unavailable"}
-                                </span>
-                              </button>
-                            );
-                          })}
+                                  {/* Bottom Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mt-1">
+                                    {renderChairs(bottomRow, "bottom")}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       ) : /* FALLBACK TO ORIGINAL TABLE RENDERING IF NO DINE-IN TABLES */
                       availableTables.length > 0 ? (
-                        <div className="max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                        <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 px-2">
                             {availableTables.map((t) => {
                               const totalChairs =
                                 t.person_no || t.capacity || 4;
@@ -937,11 +912,11 @@ useEffect(() => {
                               const bottomRow = Math.floor(totalChairs / 2);
 
                               const isSelected = bookingData.table_no.includes(
-                                t.table_no
+                                String(t.table_no)
                               );
                               const isOccupied = t.is_occupied;
                               const isSuggested = suggestedTables.includes(
-                                t.table_no
+                                String(t.table_no)
                               );
 
                               return (
@@ -949,59 +924,70 @@ useEffect(() => {
                                   key={t.id}
                                   onClick={() => {
                                     if (!isOccupied)
-                                      handleTableSelect(t.table_no);
+                                      handleTableSelect(String(t.table_no));
                                   }}
                                   className={`
-                                      group flex flex-col items-center justify-center p-3 mt-4 rounded-xl border-2 transition-all duration-300 relative
-                                      ${
-                                        isOccupied
-                                          ? "border-red-300 bg-red-50 cursor-not-allowed opacity-70"
-                                          : isSelected
-                                          ? "border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer"
-                                          : isSuggested
-                                          ? "border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse"
-                                          : "border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
-                                      }
-                                    `}
+                                    group flex flex-col items-center justify-center p-2 mt-4 mb-5 transition-all duration-300 relative cursor-pointer
+                                    ${
+                                      isOccupied
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : ""
+                                    }
+                                  `}
                                 >
                                   {isSuggested &&
                                     !isOccupied &&
                                     !isSelected && (
-                                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm whitespace-nowrap">
+                                      <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap animate-bounce">
                                         ⭐ BEST FIT
                                       </div>
                                     )}
 
                                   {isOccupied && (
-                                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
+                                    <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
                                       BUSY
                                     </div>
                                   )}
 
-                                  <div className="flex gap-1 mb-1">
+                                  {/* Top Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mb-1">
                                     {renderChairs(topRow, "top")}
                                   </div>
+
+                                  {/* The Actual Table Block */}
                                   <div
                                     className={`
-                                        w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
-                                        ${
-                                          isOccupied
-                                            ? "bg-red-200 text-red-800"
-                                            : isSelected
-                                            ? "bg-[#C59D5F] text-white"
-                                            : "bg-gray-200 text-gray-600"
-                                        }
-                                      `}
+                                      w-full h-28 rounded-xl border-2 flex flex-col items-center justify-center shadow-md relative overflow-hidden transition-all duration-300
+                                      ${
+                                        isOccupied
+                                          ? "bg-red-100 border-red-300 text-red-800"
+                                          : isSelected
+                                          ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                          : isSuggested
+                                          ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                          : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                      }
+                                    `}
                                   >
-                                    <div className="absolute inset-0 opacity-10 bg-black"></div>
-                                    <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
-                                      Table No.{t.table_no}
+                                    {isSelected && (
+                                      <div className="absolute inset-0 opacity-10 bg-black"></div>
+                                    )}
+                                    <span className="font-['Barlow_Condensed'] font-extrabold text-xl relative z-10">
+                                      Table {t.table_no}
                                     </span>
-                                    <span className="text-[10px] uppercase font-bold text-black relative z-10">
+                                    <span
+                                      className={`text-[10px] uppercase font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
+                                        isSelected
+                                          ? "bg-black/20 text-white"
+                                          : "bg-gray-200 text-gray-700"
+                                      }`}
+                                    >
                                       {totalChairs} Seats
                                     </span>
                                   </div>
-                                  <div className="flex gap-1 mt-1">
+
+                                  {/* Bottom Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mt-1">
                                     {renderChairs(bottomRow, "bottom")}
                                   </div>
                                 </div>
