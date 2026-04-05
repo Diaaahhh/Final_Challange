@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 // import "cally";
 import useTableSuggestion from "../Hooks/useTableSuggestion";
-
+import ReCAPTCHA from "react-google-recaptcha";
 // Add this style block to prevent browser autofill from overriding your styles
 const autofillFixStyles = `
   /* Remove browser autofill background */
@@ -35,6 +35,16 @@ const autofillFixStyles = `
 `;
 
 export default function Checkout() {
+  // --- NEW SETTINGS STATE ---
+  const [isOtpEnabled, setIsOtpEnabled] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [isCaptchaEnabled, setIsCaptchaEnabled] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const verifyAbortRef = useRef(null);
   const lastVerifiedPhoneRef = useRef(null);
@@ -108,12 +118,88 @@ export default function Checkout() {
         }
       })
       .catch((err) => console.error("Error fetching delivery charge:", err));
+
+    // 2. Fetch Security Toggles (OTP & Captcha)
+    api
+      .get("/checkout-settings")
+      .then((res) => {
+        if (res.data && res.data.success) {
+          // If value is 1, set to true. Otherwise, false.
+          setIsOtpEnabled(res.data.otp === 1);
+          setIsCaptchaEnabled(res.data.captcha === 1);
+
+          // CRITICAL: If OTP is disabled, we bypass the verified lock
+          if (res.data.otp !== 1) {
+            setIsPhoneVerified(true);
+          }
+        }
+      })
+      .catch((err) => console.error("Error fetching checkout settings:", err));
   }, []);
 
+  // --- TIMER EFFECT ---
+  // This reduces the countdown by 1 every second if it's greater than 0
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // Helper function to format seconds into MM:SS
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
   // Use the dynamic shipping cost!
   const isHomeDelivery = formData.order_method === "Home delivery";
   const finalShippingCost = isHomeDelivery ? shippingCost : 0;
   const grandTotal = cartTotal + finalShippingCost;
+
+  const handleSendOtp = async () => {
+    if (formData.phone.length < 10) {
+      alert("Please enter a valid phone number first.");
+      return;
+    }
+
+    try {
+      const res = await api.post("/send-otp", { phone: formData.phone });
+      if (res.data.success) {
+        setOtpSent(true);
+        setCountdown(300); // <-- ADD THIS LINE to start the 5-minute timer
+        alert("OTP Sent! Check your messages."); // Replace with a nice toast notification
+      }
+    } catch (error) {
+      console.error("Error sending OTP", error);
+      alert("Failed to send OTP.");
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setVerifyingOtp(true);
+    try {
+      const res = await api.post("/verify-otp", {
+        phone: formData.phone,
+        otp: otp,
+      });
+
+      if (res.data.success) {
+        setIsPhoneVerified(true);
+        // Now that they are verified, check if they are an existing customer to autofill data!
+        verifyPhone(formData.phone);
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Invalid OTP");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
 
   const verifyPhone = async (phoneNumber) => {
     if (verifyingRef.current) return;
@@ -210,9 +296,7 @@ export default function Checkout() {
         setLoadingTables(true);
         try {
           // FIX: Changed from /get-occupied-tables to /checkout/get-dine-in-tables
-          const response = await api.get(
-            `get-dine-in-tables/${branchId}`
-          );
+          const response = await api.get(`get-dine-in-tables/${branchId}`);
 
           if (response.data && response.data.status === true) {
             setAvailableTables(response.data.data || []);
@@ -380,6 +464,7 @@ export default function Checkout() {
           ? bookingData.table_no.join(", ")
           : formData.order_method,
       pay_mtd: formData.payment_method.toLowerCase(),
+      captcha: captchaToken,
       items: cartItems.map((item) => ({
         menu_id: item.m_menu_id || item.id,
         menu_name: item.m_menu_name,
@@ -459,30 +544,97 @@ export default function Checkout() {
                   <label className="block text-gray-500 text-sm mb-2">
                     Phone Number
                   </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    // autoComplete="off"
-                    onChange={handleChange}
-                    // onBlur={handlePhoneBlur}
-                    maxLength="11"
-                    placeholder="016XXXXXXXX"
-                    className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400"
-                    required
-                  />
+
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      maxLength="11"
+                      // ONLY lock the input if OTP is enabled AND the phone is verified
+                      disabled={isOtpEnabled ? isPhoneVerified : false}
+                      placeholder="016XXXXXXXX"
+                      className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400 disabled:opacity-50"
+                      required
+                    />
+
+                    {/* Send OTP Button - Hidden if OTP is disabled via settings */}
+                    {isOtpEnabled && !isPhoneVerified && (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={countdown > 0} // Disable button while timer is running
+                        className={`px-6 rounded font-bold transition-all whitespace-nowrap text-lg shadow-sm ${
+                          countdown > 0
+                            ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
+                            : "bg-[#C59D5F] text-white hover:bg-[#0E1014]" // Active styles
+                        }`}
+                      >
+                        {countdown > 0
+                          ? `Resend in ${formatTime(countdown)}`
+                          : otpSent
+                          ? "Resend OTP"
+                          : "Send OTP"}
+                      </button>
+                    )}
+                  </div>
+
                   {phoneMessage && (
                     <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm animate-fadeIn">
                       {phoneMessage}
                     </div>
                   )}
+
                   {loadingCustomer && (
                     <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
                       <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
                       Checking customer...
                     </div>
                   )}
+
+                  {/* Conditional OTP Input Field */}
+                  {isOtpEnabled && otpSent && !isPhoneVerified && (
+                    <div className="mt-4 p-5 border-2 border-[#C59D5F] rounded-lg bg-yellow-50 animate-fadeIn">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
+                          Enter 4-Digit OTP
+                        </label>
+                        {/* Optional: Show an "Expired" badge when time runs out */}
+                        {countdown === 0 && (
+                          <span className="text-red-500 text-xs font-bold uppercase">
+                            OTP Expired
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none tracking-[0.5em] text-center text-[23px] font-bold text-gray-800"
+                          placeholder="----"
+                          maxLength="4"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={
+                            verifyingOtp || otp.length < 4 || countdown === 0
+                          }
+                          className={`px-8 rounded font-bold transition-all text-lg shadow-md ${
+                            verifyingOtp || otp.length < 4 || countdown === 0
+                              ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
+                              : "bg-[#0E1014] text-white hover:bg-[#C59D5F]" // Active styles
+                          }`}
+                        >
+                          {verifyingOtp ? "Checking..." : "Verify"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
                 <div className="form-group">
                   <label className="block text-gray-500 text-sm mb-2">
                     Full Name
@@ -577,7 +729,7 @@ export default function Checkout() {
                           name="order_method"
                           value={formData.order_method}
                           onChange={handleChange}
-                          disabled={!isPhoneSubmitted}
+                          disabled={!isPhoneSubmitted || !isPhoneVerified}
                           className="bg-[#F3F4F7] border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-[#C59D5F] focus:border-[#C59D5F] block w-full p-2.5 outline-none font-['Arial']"
                           required
                         >
@@ -637,14 +789,31 @@ export default function Checkout() {
                     </tr>
                   </tfoot>
                 </table>
-
+                {isCaptchaEnabled && (
+                  <div className="flex flex-col items-center my-6">
+                    <div
+                      className={`transition-all duration-300 "opacity-40 pointer-events-none"`}
+                    >
+                      <ReCAPTCHA
+                        sitekey="6LdKm6csAAAAAGNjH1Wu2XcIg2_Ll6c3ScyCOUtz"
+                        onChange={(token) => setCaptchaToken(token)}
+                        theme="light"
+                      />
+                    </div>
+                  </div>
+                )}
                 <button
                   type="submit"
-                  disabled={loading || !isPhoneSubmitted}
-                  className={`w-full bg-[#0E1014] text-white font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded transition-all duration-300 ${
-                    loading || !isPhoneSubmitted
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-[#C59D5F] hover:text-white"
+                  disabled={
+                    loading ||
+                    !isPhoneSubmitted ||
+                    !isPhoneVerified ||
+                    (isCaptchaEnabled && !captchaToken)
+                  }
+                  className={`w-full font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded transition-all duration-300 ${
+                    loading || !isPhoneSubmitted || !isPhoneVerified
+                      ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
+                      : "bg-[#0E1014] text-white hover:bg-[#C59D5F]" // Active styles
                   }`}
                 >
                   {loading ? "Processing..." : "Place Order"}

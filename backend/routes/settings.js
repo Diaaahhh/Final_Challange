@@ -11,7 +11,9 @@ router.get('/', (req, res) => {
             delivery_charge, 
             rest_open, 
             rest_close, 
-            table_prelock_duration 
+            table_prelock_duration,
+            otp,
+            captcha
         FROM settings 
         WHERE id = 1
     `;
@@ -25,7 +27,9 @@ router.get('/', (req, res) => {
             delivery_charge: 100,
             rest_open: '10:00:00',
             rest_close: '22:00:00',
-            table_prelock_duration: 30
+            table_prelock_duration: 30,
+            otp: 0,
+            captcha: 0
         });
     });
 });
@@ -37,7 +41,9 @@ router.post('/update', (req, res) => {
         delivery_charge, 
         rest_open, 
         rest_close, 
-        table_prelock_duration 
+        table_prelock_duration,
+        otp,
+        captcha
     } = req.body;
     
     // Default delivery charge to 0 if an empty string or invalid number is passed
@@ -46,7 +52,11 @@ router.post('/update', (req, res) => {
     // Default prelock duration to 30 mins if empty or invalid
     const safeTablePrelock = parseInt(table_prelock_duration, 10) || 0;
 
-    // This logic updates all 5 fields
+    // Ensure OTP and Captcha are strictly 0 or 1 before hitting the DB
+    const safeOtp = otp === 1 ? 1 : 0;
+    const safeCaptcha = captcha === 1 ? 1 : 0;
+
+    // This logic updates all 7 fields
     const sql = `
         INSERT INTO settings (
             id, 
@@ -54,15 +64,19 @@ router.post('/update', (req, res) => {
             delivery_charge, 
             rest_open, 
             rest_close, 
-            table_prelock_duration
+            table_prelock_duration,
+            otp,
+            captcha
         ) 
-        VALUES (1, ?, ?, ?, ?, ?) 
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?) 
         ON DUPLICATE KEY UPDATE 
             company_code = VALUES(company_code),
             delivery_charge = VALUES(delivery_charge),
             rest_open = VALUES(rest_open),
             rest_close = VALUES(rest_close),
-            table_prelock_duration = VALUES(table_prelock_duration)
+            table_prelock_duration = VALUES(table_prelock_duration),
+            otp = VALUES(otp),
+            captcha = VALUES(captcha)
     `;
     
     const values = [
@@ -70,7 +84,9 @@ router.post('/update', (req, res) => {
         safeDeliveryCharge, 
         rest_open, 
         rest_close, 
-        safeTablePrelock
+        safeTablePrelock,
+        safeOtp,
+        safeCaptcha
     ];
 
     db.query(sql, values, (err, result) => {

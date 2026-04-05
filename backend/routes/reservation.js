@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const axios = require('axios');
-
+const NodeCache = require("node-cache");
+const otpCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 // Helper function to wrap db.query in Promises for clean async/await syntax
 const queryPromise = (sql, params = []) => {
     return new Promise((resolve, reject) => {
@@ -376,17 +377,39 @@ router.get('/tables/:branch_id', async (req, res) => {
 // ==========================================
 router.post('/create', async (req, res) => {
     try {
-        const { branch_id, date, time, table_number, customer_id, duration, advance_payment, re_adv_payment, guest_number, event_name, notes } = req.body;
+        const { branch_id, date, time, table_number, customer_id, duration, advance_payment, re_adv_payment, guest_number, event_name, notes, captchaToken } = req.body;
 
         const companyCode = await getCompanyCode();
 
-        // --- Time Validation ---
-        const settingsSql = "SELECT rest_open, rest_close FROM settings WHERE id = 1";
+        // --- UNIFIED SETTINGS FETCH (Time Validation & Captcha) ---
+        // We fetch rest_open, rest_close, AND captcha in a single query for better performance
+        const settingsSql = "SELECT rest_open, rest_close, captcha FROM settings WHERE id = 1";
         const settingsResult = await queryPromise(settingsSql);
 
         if (settingsResult && settingsResult.length > 0) {
-            const { rest_open, rest_close } = settingsResult[0];
+            const { rest_open, rest_close, captcha } = settingsResult[0];
 
+            // ==========================================
+            // 1. GOOGLE CAPTCHA VERIFICATION
+            // ==========================================
+            if (captcha === 1) {
+                if (!captchaToken) {
+                    return res.status(400).json({ error: "Captcha token is missing." });
+                }
+
+                const secretKey = "6LdKm6csAAAAAM2egW4Bn4fccolip7XuVggUbzk7"; // <--- REMEMBER TO ADD YOUR SECRET KEY HERE
+                
+                const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
+                const googleRes = await axios.post(verifyUrl);
+
+                if (!googleRes.data.success) {
+                    return res.status(400).json({ error: "Captcha verification failed. Please try again." });
+                }
+            }
+
+            // ==========================================
+            // 2. TIME VALIDATION
+            // ==========================================
             if (rest_open && rest_close) {
                 const now = new Date();
                 const currentTotal = now.getHours() * 60 + now.getMinutes();
@@ -420,6 +443,9 @@ router.post('/create', async (req, res) => {
             }
         }
 
+        // ==========================================
+        // 3. FORMAT DATA & PREPARE PAYLOAD
+        // ==========================================
         let tableStr = null;
         if (table_number) {
             tableStr = Array.isArray(table_number) ? table_number.join(", ") : String(table_number);
@@ -442,10 +468,6 @@ router.post('/create', async (req, res) => {
             dateTimeString = `${date} ${formattedTime}`;
         }
 
-        // ==========================================
-        // NEW: SEND TO CHULKANI RESERVATION API
-        // ==========================================
-
         const payload = {
             re_com_id: companyCode,
             re_branch_id: safeBranchId,
@@ -455,11 +477,14 @@ router.post('/create', async (req, res) => {
             re_duration: safeDuration,
             re_status: 0,
             re_adv_payment: safeAdvPayment,
-            re_guest_no:guest_number,
+            re_guest_no: guest_number,
             re_occasion: event_name,
             re_note: notes
         };
 
+        // ==========================================
+        // 4. SEND TO CHULKANI RESERVATION API
+        // ==========================================
         const apiResponse = await axios.post(
             "https://pos.chulkani.com/reservations",
             payload
@@ -471,10 +496,79 @@ router.post('/create', async (req, res) => {
         });
 
     } catch (error) {
+        // This will catch Google Captcha errors, Database errors, AND Axios Chulkani API errors safely
         console.error("Error creating reservation:", error.response?.data || error.message);
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
+// ==========================================
+// GET RESERVATION SECURITY SETTINGS
+// ==========================================
+router.get('/reservation-settings', async (req, res) => {
+    try {
+        const settings = await queryPromise("SELECT otp, captcha FROM settings WHERE id = 1");
+        if (settings && settings.length > 0) {
+            return res.status(200).json({ success: true, otp: settings[0].otp, captcha: settings[0].captcha });
+        }
+        return res.status(200).json({ success: true, otp: 0, captcha: 0 });
+    } catch (err) {
+        console.error("Settings Fetch Error:", err.message);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+});
+
+// ==========================================
+// POST: Send OTP
+// ==========================================
+router.post('/send-otp', async (req, res) => {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: "Phone required" });
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    otpCache.set(phone, otp);
+
+    let formattedPhone = phone.replace(/\D/g, ''); 
+    if (formattedPhone.startsWith('01') && formattedPhone.length === 11) formattedPhone = '88' + formattedPhone;
+    if (!formattedPhone.startsWith('88') && formattedPhone.length === 13) formattedPhone = '88' + formattedPhone;
+
+    try {
+        const message = `Your reservation OTP is ${otp}. Please do not share this with anyone.`;
+        const apiUrl = `http://sms.iglweb.com/api/v1/send?api_key=4451773340833151773340833&contacts=${formattedPhone}&senderid=01844532630&msg=${encodeURIComponent(message)}`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
+        });
+        
+        if (response.ok) return res.json({ success: true, message: "OTP sent successfully" });
+        return res.status(500).json({ success: false, message: "Failed to send OTP. Gateway rejected." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Internal Error: Could not reach SMS Gateway" });
+    }
+});
+
+// ==========================================
+// POST: Verify OTP
+// ==========================================
+router.post('/verify-otp', async (req, res) => {
+    const { phone, otp } = req.body;
+    const cachedOtp = otpCache.get(phone);
+
+    if (!cachedOtp) return res.status(400).json({ success: false, message: "OTP expired or never requested." });
+
+    if (cachedOtp === otp) {
+        otpCache.del(phone);
+        return res.json({ success: true, message: "Phone verified successfully" });
+    } else {
+        return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+});
+
+
 
 // ==========================================
 // 6. READ ALL RESERVATIONS
@@ -561,5 +655,6 @@ router.put('/update/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 module.exports = router;

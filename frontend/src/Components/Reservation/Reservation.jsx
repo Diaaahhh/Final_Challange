@@ -17,7 +17,7 @@ import {
 } from "react-icons/fa";
 import api from "../../api";
 import useTableSuggestion from "../Hooks/useTableSuggestion";
-
+import ReCAPTCHA from "react-google-recaptcha";
 // Add this style block to prevent browser autofill from overriding your styles
 const autofillFixStyles = `
   /* Remove browser autofill background */
@@ -56,7 +56,15 @@ export default function Reservation() {
     table_number: [],
     advance_payment: "",
   });
-
+// --- OTP & SECURITY STATES ---
+  const [isOtpEnabled, setIsOtpEnabled] = useState(false);
+  const [isCaptchaEnabled, setIsCaptchaEnabled] = useState(false);
+const [captchaToken, setCaptchaToken] = useState(null);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const verifyAbortRef = useRef(null);
   const lastVerifiedPhoneRef = useRef(null);
@@ -114,6 +122,59 @@ export default function Reservation() {
       setTables(tablesRes.data);
     } catch (error) {
       console.error("Error fetching tables:", error);
+    }
+  };
+  // 1. Fetch Settings on Load
+  useEffect(() => {
+    api.get("/reservation/reservation-settings")
+      .then((res) => {
+        if (res.data && res.data.success) {
+          setIsOtpEnabled(res.data.otp === 1);
+          setIsCaptchaEnabled(res.data.captcha === 1);
+          if (res.data.otp !== 1) setIsPhoneVerified(true); // Bypass if disabled
+        }
+      })
+      .catch((err) => console.error("Error fetching reservation settings:", err));
+  }, []);
+
+  // 2. Countdown Timer Logic
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  // 3. Handlers
+  const handleSendOtp = async () => {
+    if (formData.phone.length < 10) return alert("Please enter a valid phone number first.");
+    try {
+      const res = await api.post("/reservation/send-otp", { phone: formData.phone });
+      if (res.data.success) {
+        setOtpSent(true);
+        setCountdown(300);
+      }
+    } catch (error) {
+      alert("Failed to send OTP.");
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setVerifyingOtp(true);
+    try {
+      const res = await api.post("/reservation/verify-otp", { phone: formData.phone, otp: otp });
+      if (res.data.success) setIsPhoneVerified(true);
+    } catch (error) {
+      alert(error.response?.data?.message || "Invalid OTP");
+    } finally {
+      setVerifyingOtp(false);
     }
   };
 
@@ -252,11 +313,20 @@ export default function Reservation() {
     setError("");
     setSuccess(false);
 
+    // --- NEW: CAPTCHA VALIDATION ---
+    if (isCaptchaEnabled && !captchaToken) {
+      setError("Please complete the Captcha verification.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     if (formData.table_number.length === 0) {
       setError("Please select at least one available table.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
+  
 
     // --- NEW: Validate Current Time against Restaurant Open/Close Hours ---
     if (
@@ -309,8 +379,12 @@ export default function Reservation() {
     setLoading(true);
 
     try {
-      await api.post("/reservation/create", formData);
+      await api.post("/reservation/create", {
+  ...formData,
+  captchaToken: captchaToken
+});
       setSuccess(true);
+      setCaptchaToken(null);
       setFormData({
         customer_id: null,
         name: "",
@@ -364,6 +438,16 @@ export default function Reservation() {
   };
 
   const currentStep = getCurrentStep();
+
+  const isTableStepCompleted =
+  formData.branch_id &&
+  isPhoneSubmitted &&
+  isPhoneVerified &&
+  formData.date &&
+  formData.time &&
+  formData.guest_number &&
+  formData.table_number.length > 0;
+
   return (
     <>
       <style>{autofillFixStyles}</style>
@@ -396,10 +480,12 @@ export default function Reservation() {
                 {[
                   "Branch",
                   "Phone",
+                  ...(isOtpEnabled ? ["OTP"] : []),
                   "Date",
                   "Time",
                   "Guests",
                   "Tables",
+                  ...(isCaptchaEnabled ? ["Captcha"] : []),
                   "Confirm",
                 ].map((step, index) => {
                   const stepNumber = index + 1;
@@ -478,42 +564,101 @@ export default function Reservation() {
                   </select>
                 </div>
 
-                {/* Phone */}
-                <div>
-                  <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaPhone className="text-[#C59D5F]" /> Phone
-                    <span className="text-red-500">*</span>
-                  </label>
+                {/* Phone Field (Merged) */}
+            <div>
+              <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                <FaPhone className="text-[#C59D5F]" /> Phone
+                <span className="text-red-500">*</span>
+              </label>
 
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    maxLength="11"
-                    disabled={!formData.branch_id}
-                    placeholder={
-                      formData.branch_id
-                        ? "Phone Number"
-                        : "Select branch first"
-                    }
-                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
-                    required
-                  />
+              <div className="flex gap-2">
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  maxLength="11"
+                  // Merged disabled logic: Disabled if no branch is selected OR if OTP is verified
+                  disabled={!formData.branch_id || (isOtpEnabled ? isPhoneVerified : false)}
+                  // Merged placeholder logic
+                  placeholder={
+                    formData.branch_id
+                      ? "Phone Number (e.g. 017XXXXXXXX)"
+                      : "Select branch first"
+                  }
+                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black disabled:opacity-50"
+                  required
+                />
+                
+                {/* Send OTP Button */}
+                {isOtpEnabled && !isPhoneVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    // Prevent sending if no branch is selected or timer is running
+                    disabled={countdown > 0 || !formData.branch_id}
+                    className={`px-6 rounded font-bold transition-all whitespace-nowrap text-sm shadow-sm ${
+                      countdown > 0 || !formData.branch_id
+                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                        : "bg-[#C59D5F] text-white hover:bg-[#0E1014]"
+                    }`}
+                  >
+                    {countdown > 0 ? `Resend in ${formatTime(countdown)}` : (otpSent ? "Resend OTP" : "Send OTP")}
+                  </button>
+                )}
+              </div>
 
-                  {phoneMessage && (
-                    <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
-                      {phoneMessage}
-                    </div>
-                  )}
-
-                  {loadingCustomer && (
-                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit">
-                      <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
-                      Checking customer...
-                    </div>
-                  )}
+              {/* Existing Logic: Phone Validation Message */}
+              {phoneMessage && (
+                <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                  {phoneMessage}
                 </div>
+              )}
+
+              {/* Existing Logic: Loading Customer State */}
+              {loadingCustomer && (
+                <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit">
+                  <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
+                  Checking customer...
+                </div>
+              )}
+
+              {/* Conditional OTP Input Box */}
+              {isOtpEnabled && otpSent && !isPhoneVerified && (
+                <div className="mt-4 p-5 border-2 border-[#C59D5F] rounded-lg bg-yellow-50 animate-fadeIn">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
+                      Enter 4-Digit OTP
+                    </label>
+                    {countdown === 0 && (
+                      <span className="text-red-500 text-xs font-bold uppercase">OTP Expired</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded px-5 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none tracking-[0.5em] text-center text-xl font-bold text-gray-800"
+                      placeholder="----"
+                      maxLength="4"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={verifyingOtp || otp.length < 4 || countdown === 0}
+                      className={`px-8 rounded font-bold transition-all text-sm shadow-md ${
+                        verifyingOtp || otp.length < 4 || countdown === 0
+                          ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                          : "bg-[#0E1014] text-white hover:bg-[#C59D5F]"
+                      }`}
+                    >
+                      {verifyingOtp ? "Checking..." : "Verify"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
                 {/* Name */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
@@ -542,7 +687,7 @@ export default function Reservation() {
                   <input
                     type="text"
                     name="address"
-                    disabled={!isPhoneSubmitted}
+                    disabled={!isPhoneSubmitted || !isPhoneVerified}
                     value={formData.address}
                     onChange={handleChange}
                     placeholder="Your Full Address"
@@ -563,7 +708,7 @@ export default function Reservation() {
                     value={formData.guest_number}
                     onChange={handleChange}
                     onWheel={(e) => e.target.blur()}
-                    disabled={!formData.time}
+                    disabled={!formData.time || !isPhoneVerified}
                     min="1"
                     placeholder="E.g., 4"
                     className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
@@ -580,7 +725,7 @@ export default function Reservation() {
                   <button
                     type="button"
                     onClick={() => setShowCalendar(!showCalendar)}
-                    disabled={!formData.branch_id || !isPhoneSubmitted}
+                    disabled={!formData.branch_id || !isPhoneSubmitted || !isPhoneVerified}
                     className="w-full text-left bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 "
                   >
                     {formData.date ? formData.date : "Select Date"}
@@ -646,7 +791,7 @@ export default function Reservation() {
                   <select
                     name="event_name"
                     value={formData.event_name}
-                    disabled={!isPhoneSubmitted}
+                    disabled={!isPhoneSubmitted || !isPhoneVerified}
                     onChange={handleChange}
                     className="w-full text-black bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all font-['Arial']"
                   >
@@ -693,7 +838,7 @@ export default function Reservation() {
                     type="number"
                     name="advance_payment"
                     value={formData.advance_payment}
-                    disabled={!isPhoneSubmitted}
+                    disabled={!isPhoneSubmitted || !isPhoneVerified}
                     onChange={handleChange}
                     onWheel={(e) => e.target.blur()}
                     placeholder="e.g. 500 (Optional)"
@@ -903,15 +1048,35 @@ export default function Reservation() {
                   name="notes"
                   value={formData.notes}
                   onChange={handleChange}
-                  disabled={!isPhoneSubmitted}
+                  disabled={!isPhoneSubmitted || !isPhoneVerified}
                   placeholder="Any special requests?"
                   className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all h-24 text-gray-800"
                 ></textarea>
               </div>
+{/* Conditional Google reCAPTCHA */}
+              {isCaptchaEnabled && (
+  <div className="flex justify-center my-6">
+    <div
+      className={`transition-all duration-300 ${
+        isTableStepCompleted
+          ? "opacity-100 pointer-events-auto"
+          : "opacity-40 pointer-events-none"
+      }`}
+    >
+      <ReCAPTCHA
+        sitekey="6LdKm6csAAAAAGNjH1Wu2XcIg2_Ll6c3ScyCOUtz"
+        onChange={(token) => setCaptchaToken(token)}
+        theme="light"
+      />
+    </div>
 
+    
+  </div>
+)}
               <button
                 type="submit"
-                disabled={loading || !isPhoneSubmitted}
+                disabled={loading || !isPhoneSubmitted ||
+  (isCaptchaEnabled && !captchaToken)}
                 className={`w-full bg-[#C59D5F] text-white font-bold py-4 rounded-lg uppercase tracking-widest hover:bg-[#0E1014] transition-all duration-300 ${
                   loading || !isPhoneSubmitted
                     ? "opacity-50 cursor-not-allowed"
