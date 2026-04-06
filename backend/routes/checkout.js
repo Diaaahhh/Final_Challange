@@ -412,4 +412,55 @@ router.post('/place-order', async (req, res) => {
     }
 });
 
+// ==========================================
+// 3. Create Customers
+// ==========================================
+router.post("/create-customer", async (req, res) => {
+  try {
+    const { name, phone, address, branch_id, email } = req.body;
+
+    // Fetch company_code dynamically
+    const settings = await queryPromise(
+      "SELECT company_code FROM settings WHERE id = 1"
+    );
+
+    const companyCode = settings[0]?.company_code || "26672691";
+
+    const payload = {
+      company_id: companyCode,
+      branch_id: branch_id || 1,
+      name,
+      phone,
+      email,
+      address
+    };
+
+    const response = await axios.post(
+      "https://pos.chulkani.com/branch/create_customer",
+      payload,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    res.json(response.data);
+
+  } catch (error) {
+
+    // IMPORTANT: log the real error
+    console.error(
+      "Create customer error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: error.response?.data || "Failed to create customer"
+    });
+  }
+});
+
 module.exports = router;

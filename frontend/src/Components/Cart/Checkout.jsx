@@ -36,11 +36,12 @@ const autofillFixStyles = `
 
 export default function Checkout() {
   const [loadingCustomer, setLoadingCustomer] = useState(false);
-const [customerName, setCustomerName] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [originalAddress, setOriginalAddress] = useState("");
   const verifyAbortRef = useRef(null);
-const lastVerifiedPhoneRef = useRef(null);
-const verifyingRef = useRef(false);
-const [phoneMessage, setPhoneMessage] = useState("");
+  const lastVerifiedPhoneRef = useRef(null);
+  const verifyingRef = useRef(false);
+  const [phoneMessage, setPhoneMessage] = useState("");
   const [isPhoneSubmitted, setIsPhoneSubmitted] = useState(false);
   const [dineInTables, setDineInTables] = useState([]);
   const [loadingTables, setLoadingTables] = useState(false);
@@ -107,126 +108,80 @@ const [phoneMessage, setPhoneMessage] = useState("");
   const isHomeDelivery = formData.order_method === "Home delivery";
   const finalShippingCost = isHomeDelivery ? shippingCost : 0;
   const grandTotal = cartTotal + finalShippingCost;
+  
+  const verifyPhone = async (phoneNumber) => {
+    if (verifyingRef.current) return;
 
-  // const handlePhoneBlur = async (e) => {
-  //   const phoneNumber = e.target.value;
-  //   if (phoneNumber.length === 11) {
-  //     // --- Extract branch_id dynamically from cartItems ---
-  //     let branchId = 1; // Default fallback
-  //     if (cartItems && cartItems.length > 0) {
-  //       const firstItem = cartItems[0];
-  //       branchId =
-  //         firstItem.branchId ||
-  //         firstItem.m_branch_id ||
-  //         firstItem.branch_id ||
-  //         1;
-  //     }
+    if (lastVerifiedPhoneRef.current === phoneNumber) return;
 
-  //     try {
-  //       const res = await api.get(
-  //         `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`
-  //       );
+    verifyingRef.current = true;
 
-  //       // NEW: Check the 'success' flag we just added to the backend!
-  //       if (res.data && res.data.success === true) {
-  //         // User Found! Unlock the form.
-  //         setIsPhoneSubmitted(true);
-  //         setFormData((prev) => ({
-  //           ...prev,
-  //           cust_name: res.data.name || prev.cust_name,
-  //           address: res.data.address || prev.address,
-  //         }));
-  //       } else {
-  //         // User NOT found.
-  //         // Keep form locked and show the customized message from the backend.
-  //         setIsPhoneSubmitted(false);
-  //         alert(res.data.message);
+    try {
+      setLoadingCustomer(true);
 
-  //         setFormData((prev) => ({
-  //           ...prev,
-  //           cust_name: "",
-  //           address: "",
-  //         }));
-  //       }
-  //     } catch (err) {
-  //       // This catch block will only trigger now if the server actually crashes (Status 500)
-  //       setIsPhoneSubmitted(false);
-  //       alert("Server error while verifying phone number.");
-  //     }
-  //   } else {
-  //     // If they clear the phone number entirely, lock the form
-  //     setIsPhoneSubmitted(false);
-  //   }
-  // };
-const verifyPhone = async (phoneNumber) => {
-  if (verifyingRef.current) return;
+      if (verifyAbortRef.current) {
+        verifyAbortRef.current.abort();
+      }
 
-  if (lastVerifiedPhoneRef.current === phoneNumber) return;
+      verifyAbortRef.current = new AbortController();
 
-  verifyingRef.current = true;
+      let branchId = 1;
+      if (cartItems && cartItems.length > 0) {
+        const firstItem = cartItems[0];
+        branchId =
+          firstItem.branchId ||
+          firstItem.m_branch_id ||
+          firstItem.branch_id ||
+          1;
+      }
 
-  try {
-    setLoadingCustomer(true);
-    
-    if (verifyAbortRef.current) {
-      verifyAbortRef.current.abort();
+      const res = await api.get(
+        `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`,
+        { signal: verifyAbortRef.current.signal },
+      );
+
+      if (res.data && res.data.success === true) {
+        setIsPhoneSubmitted(true);
+
+        const fetchedAddress = res.data.address || "";
+
+        setOriginalAddress(fetchedAddress);
+
+        setFormData((prev) => ({
+          ...prev,
+          cust_name: res.data.name || prev.cust_name,
+          address: fetchedAddress || prev.address,
+        }));
+
+        lastVerifiedPhoneRef.current = phoneNumber;
+      } else {
+        setIsPhoneSubmitted(false);
+
+        setFormData((prev) => ({
+          ...prev,
+          cust_name: "",
+          address: "",
+        }));
+
+        setPhoneMessage(res.data.message);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        setIsPhoneSubmitted(false);
+        showToastWarning("Server error while verifying phone number.");
+      }
+    } finally {
+      verifyingRef.current = false;
+      setLoadingCustomer(false);
     }
-
-    verifyAbortRef.current = new AbortController();
-
-    let branchId = 1;
-    if (cartItems && cartItems.length > 0) {
-      const firstItem = cartItems[0];
-      branchId =
-        firstItem.branchId ||
-        firstItem.m_branch_id ||
-        firstItem.branch_id ||
-        1;
-    }
-
-    const res = await api.get(
-      `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`,
-      { signal: verifyAbortRef.current.signal }
-    );
-
-    if (res.data && res.data.success === true) {
-      setIsPhoneSubmitted(true);
-
-      setFormData((prev) => ({
-        ...prev,
-        cust_name: res.data.name || prev.cust_name,
-        address: res.data.address || prev.address,
-      }));
-
-      lastVerifiedPhoneRef.current = phoneNumber;
+  };
+  useEffect(() => {
+    if (formData.phone.length === 11) {
+      verifyPhone(formData.phone);
     } else {
       setIsPhoneSubmitted(false);
-
-      setFormData((prev) => ({
-        ...prev,
-        cust_name: "",
-        address: "",
-      }));
-
-      setPhoneMessage(res.data.message);
     }
-  } catch (err) {
-    if (err.name !== "AbortError") {
-      setIsPhoneSubmitted(false);
-      showToastWarning("Server error while verifying phone number.");
-    }
-  } finally {
-    verifyingRef.current = false;
-     setLoadingCustomer(false);
-  }
-};
-useEffect(() => {
-  if (formData.phone.length === 11) {
-    verifyPhone(formData.phone);
-  } else {
-    setIsPhoneSubmitted(false);
-  }
-}, [formData.phone]);
+  }, [formData.phone]);
   useEffect(() => {
     const calendar = calendarRef.current;
     if (calendar) {
@@ -252,7 +207,7 @@ useEffect(() => {
         try {
           // FIX: Changed from /get-occupied-tables to /checkout/get-dine-in-tables
           const response = await api.get(
-            `get-dine-in-tables/${companyId}/${branchId}`
+            `get-dine-in-tables/${companyId}/${branchId}`,
           );
 
           if (response.data && response.data.status === true) {
@@ -283,10 +238,10 @@ useEffect(() => {
       setPhoneMessage(""); // clear message while typing
       // 1. If the value contains anything that is NOT a number, stop immediately.
       if (!/^\d*$/.test(value)) return;
-      
+
       // 2. If the value is longer than 11 digits, stop immediately.
       if (value.length > 11) return;
-      
+
       finalValue = value;
     }
 
@@ -314,7 +269,6 @@ useEffect(() => {
         setDineInTables([]);
       }
     }
-    
   };
 
   const handleTableSelect = (tableNo) => {
@@ -341,7 +295,7 @@ useEffect(() => {
       alert(
         formData.order_method === "Dine-in"
           ? "Please select at least one table."
-          : "Please select a table."
+          : "Please select a table.",
       );
       return;
     }
@@ -349,12 +303,12 @@ useEffect(() => {
     if (formData.order_method === "Parcel") {
       const isValid = availableTables.some(
         (t) =>
-          String(t.table_no).trim() === String(bookingData.table_no[0]).trim()
+          String(t.table_no).trim() === String(bookingData.table_no[0]).trim(),
       );
 
       if (!isValid) {
         showToastWarning(
-          `Warning: Table "${bookingData.table_no[0]}" does not exist!`
+          `Warning: Table "${bookingData.table_no[0]}" does not exist!`,
         );
         return;
       }
@@ -362,6 +316,50 @@ useEffect(() => {
 
     setShowModal(false);
   };
+
+  const createCustomerIfAddressChanged = async () => {
+  try {
+
+    // Only create if address changed
+    if (originalAddress && originalAddress.trim() !== formData.address.trim()) {
+
+      let branchId = 1;
+      let companyId = 1;
+
+      if (cartItems.length > 0) {
+        const firstItem = cartItems[0];
+
+        branchId =
+          firstItem.branchId ||
+          firstItem.m_branch_id ||
+          firstItem.branch_id ||
+          1;
+
+        companyId =
+          firstItem.m_company_id ||
+          firstItem.company_id ||
+          1;
+      }
+
+      const payload = {
+      
+        branch_id: branchId,
+        name: formData.cust_name,
+        phone: formData.phone,
+        email:"",
+        address: formData.address,
+              };
+
+      await api.post("/create-customer", payload);
+
+      console.log("New customer created due to address change");
+
+    }
+
+  } catch (error) {
+    console.error("Customer creation failed:", error);
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -431,6 +429,8 @@ useEffect(() => {
     };
 
     try {
+        // Create new customer if address changed
+  await createCustomerIfAddressChanged();
       const response = await api.post("/place-order", orderPayload);
 
       if (response.data.status === true) {
@@ -514,21 +514,17 @@ useEffect(() => {
                     required
                   />
                   {phoneMessage && (
-  <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm animate-fadeIn">
-    {phoneMessage}
-  </div>
-)}
-{loadingCustomer && (
-  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
-    
-    <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
-    
-    Checking customer...
-    
-  </div>
-)}
-    
-            </div>
+                    <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm animate-fadeIn">
+                      {phoneMessage}
+                    </div>
+                  )}
+                  {loadingCustomer && (
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
+                      <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
+                      Checking customer...
+                    </div>
+                  )}
+                </div>
                 <div className="form-group">
                   <label className="block text-gray-500 text-sm mb-2">
                     Full Name
@@ -628,7 +624,7 @@ useEffect(() => {
                         </select>
 
                         {["Dine-in", "Parcel"].includes(
-                          formData.order_method
+                          formData.order_method,
                         ) &&
                           bookingData.table_no &&
                           bookingData.table_no.length > 0 && (
@@ -739,17 +735,17 @@ useEffect(() => {
                         // 1. Calculate Summary Data
                         const selectedTableObjects = tablesToUse
                           .filter((t) =>
-                            bookingData.table_no.includes(t.table_no)
+                            bookingData.table_no.includes(t.table_no),
                           )
                           .sort(
-                            (a, b) => Number(a.table_no) - Number(b.table_no)
+                            (a, b) => Number(a.table_no) - Number(b.table_no),
                           ); // Sort ascending
 
                         const totalSelectedCapacity =
                           selectedTableObjects.reduce(
                             (sum, t) =>
                               sum + Number(t.person_no || t.capacity || 4),
-                            0
+                            0,
                           );
                         const parsedGuestCount = Number(personCount) || 0;
                         const capacityMet =
@@ -852,14 +848,14 @@ useEffect(() => {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
                           {dineInTables.map((table) => {
                             const isSelected = bookingData.table_no.includes(
-                              table.table_no
+                              table.table_no,
                             );
                             // Calculate if table is suggested based on person count
                             const isSuggested =
                               personCount &&
                               table.person_no &&
                               Math.abs(
-                                table.person_no - parseInt(personCount)
+                                table.person_no - parseInt(personCount),
                               ) <= 2;
 
                             return (
@@ -933,11 +929,11 @@ useEffect(() => {
                               const bottomRow = Math.floor(totalChairs / 2);
 
                               const isSelected = bookingData.table_no.includes(
-                                t.table_no
+                                t.table_no,
                               );
                               const isOccupied = t.is_occupied;
                               const isSuggested = suggestedTables.includes(
-                                t.table_no
+                                t.table_no,
                               );
 
                               return (
@@ -953,10 +949,10 @@ useEffect(() => {
                                         isOccupied
                                           ? "border-red-300 bg-red-50 cursor-not-allowed opacity-70"
                                           : isSelected
-                                          ? "border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer"
-                                          : isSuggested
-                                          ? "border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse"
-                                          : "border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
+                                            ? "border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer"
+                                            : isSuggested
+                                              ? "border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse"
+                                              : "border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
                                       }
                                     `}
                                 >
@@ -984,8 +980,8 @@ useEffect(() => {
                                           isOccupied
                                             ? "bg-red-200 text-red-800"
                                             : isSelected
-                                            ? "bg-[#C59D5F] text-white"
-                                            : "bg-gray-200 text-gray-600"
+                                              ? "bg-[#C59D5F] text-white"
+                                              : "bg-gray-200 text-gray-600"
                                         }
                                       `}
                                   >
