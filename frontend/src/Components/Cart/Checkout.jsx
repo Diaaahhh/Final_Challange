@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 // import "cally";
 import useTableSuggestion from "../Hooks/useTableSuggestion";
-
+import ReCAPTCHA from "react-google-recaptcha";
 // Add this style block to prevent browser autofill from overriding your styles
 const autofillFixStyles = `
   /* Remove browser autofill background */
@@ -35,9 +35,18 @@ const autofillFixStyles = `
 `;
 
 export default function Checkout() {
+  // --- NEW SETTINGS STATE ---
+  const [isOtpEnabled, setIsOtpEnabled] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [isCaptchaEnabled, setIsCaptchaEnabled] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+const [reservedTablesByCustomer, setReservedTablesByCustomer] = useState([]);
+
   const [loadingCustomer, setLoadingCustomer] = useState(false);
-  const [customerName, setCustomerName] = useState("");
-  const [originalAddress, setOriginalAddress] = useState("");
   const verifyAbortRef = useRef(null);
   const lastVerifiedPhoneRef = useRef(null);
   const verifyingRef = useRef(false);
@@ -53,6 +62,7 @@ export default function Checkout() {
   const [shippingCost, setShippingCost] = useState(0);
 
   const [formData, setFormData] = useState({
+    customer_id: null,
     cust_name: "",
     address: "",
     phone: "",
@@ -63,7 +73,7 @@ export default function Checkout() {
   const fetchDineInTables = async (companyId, branchId) => {
     setLoadingTables(true);
     try {
-      const res = await api.get(`get-dine-in-tables/${companyId}/${branchId}`);
+      const res = await api.get(`get-dine-in-tables/${branchId}`);
       if (res.data.status) {
         setDineInTables(res.data.data);
       }
@@ -74,6 +84,31 @@ export default function Checkout() {
     }
   };
 
+   // ======================================
+  // 2. FETCH CUSTOMER RESERVATIONS
+  // ======================================
+  const fetchCustomerReservations = async (customerId, branchId) => {
+    try {
+      const res = await api.get(
+        `/customer-reservations/${customerId}/${branchId}`
+      );
+
+      if (res.data.success && res.data.isAvailable) {
+        const tables = res.data.tables || [];
+
+        setReservedTablesByCustomer(tables);
+
+        if (tables.length > 0) {
+          setBookingData((prev) => ({
+            ...prev,
+            table_no: tables
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Reservation fetch error:", error);
+    }
+  };
   const [showModal, setShowModal] = useState(false);
   const [availableTables, setAvailableTables] = useState([]);
 
@@ -90,8 +125,15 @@ export default function Checkout() {
   const [toast, setToast] = useState({ show: false, message: "" });
   const [loading, setLoading] = useState(false);
 
-  const suggestedTables = useTableSuggestion(personCount, availableTables);
+  // Determine which array of tables is currently active in the UI
+  const activeTablesForSuggestion =
+    dineInTables.length > 0 ? dineInTables : availableTables;
 
+  // Feed the active tables into your custom hook
+  const suggestedTables = useTableSuggestion(
+    personCount,
+    activeTablesForSuggestion,
+  );
   // --- FETCH DELIVERY SETTING ON PAGE LOAD ---
   useEffect(() => {
     api
@@ -102,13 +144,89 @@ export default function Checkout() {
         }
       })
       .catch((err) => console.error("Error fetching delivery charge:", err));
+
+    // 2. Fetch Security Toggles (OTP & Captcha)
+    api
+      .get("/checkout-settings")
+      .then((res) => {
+        if (res.data && res.data.success) {
+          // If value is 1, set to true. Otherwise, false.
+          setIsOtpEnabled(res.data.otp === 1);
+          setIsCaptchaEnabled(res.data.captcha === 1);
+
+          // CRITICAL: If OTP is disabled, we bypass the verified lock
+          if (res.data.otp !== 1) {
+            setIsPhoneVerified(true);
+          }
+        }
+      })
+      .catch((err) => console.error("Error fetching checkout settings:", err));
   }, []);
 
+  // --- TIMER EFFECT ---
+  // This reduces the countdown by 1 every second if it's greater than 0
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // Helper function to format seconds into MM:SS
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
   // Use the dynamic shipping cost!
   const isHomeDelivery = formData.order_method === "Home delivery";
   const finalShippingCost = isHomeDelivery ? shippingCost : 0;
   const grandTotal = cartTotal + finalShippingCost;
-  
+
+  const handleSendOtp = async () => {
+    if (formData.phone.length < 10) {
+      alert("Please enter a valid phone number first.");
+      return;
+    }
+
+    try {
+      const res = await api.post("/send-otp", { phone: formData.phone });
+      if (res.data.success) {
+        setOtpSent(true);
+        setCountdown(300); // <-- ADD THIS LINE to start the 5-minute timer
+        alert("OTP Sent! Check your messages."); // Replace with a nice toast notification
+      }
+    } catch (error) {
+      console.error("Error sending OTP", error);
+      alert("Failed to send OTP.");
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setVerifyingOtp(true);
+    try {
+      const res = await api.post("/verify-otp", {
+        phone: formData.phone,
+        otp: otp,
+      });
+
+      if (res.data.success) {
+        setIsPhoneVerified(true);
+        // Now that they are verified, check if they are an existing customer to autofill data!
+        verifyPhone(formData.phone);
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Invalid OTP");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
   const verifyPhone = async (phoneNumber) => {
     if (verifyingRef.current) return;
 
@@ -142,15 +260,23 @@ export default function Checkout() {
 
       if (res.data && res.data.success === true) {
         setIsPhoneSubmitted(true);
+        // Fetch reservations for this customer
+if (res.data.customer_id) {
+  const firstItem = cartItems[0] || {};
+  const companyId = firstItem.m_company_id || firstItem.company_id;
+  const branchId =
+    firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
 
-        const fetchedAddress = res.data.address || "";
-
-        setOriginalAddress(fetchedAddress);
+  if (companyId && branchId) {
+    fetchCustomerReservations(res.data.customer_id, branchId);
+  }
+}
 
         setFormData((prev) => ({
           ...prev,
+          customer_id: res.data.customer_id,
           cust_name: res.data.name || prev.cust_name,
-          address: fetchedAddress || prev.address,
+          address: res.data.address || prev.address,
         }));
 
         lastVerifiedPhoneRef.current = phoneNumber;
@@ -159,6 +285,7 @@ export default function Checkout() {
 
         setFormData((prev) => ({
           ...prev,
+          customer_id: null,
           cust_name: "",
           address: "",
         }));
@@ -206,9 +333,7 @@ export default function Checkout() {
         setLoadingTables(true);
         try {
           // FIX: Changed from /get-occupied-tables to /checkout/get-dine-in-tables
-          const response = await api.get(
-            `get-dine-in-tables/${companyId}/${branchId}`,
-          );
+          const response = await api.get(`get-dine-in-tables/${branchId}`);
 
           if (response.data && response.data.status === true) {
             setAvailableTables(response.data.data || []);
@@ -318,48 +443,43 @@ export default function Checkout() {
   };
 
   const createCustomerIfAddressChanged = async () => {
-  try {
+    try {
+      // Only create if address changed
+      if (
+        originalAddress &&
+        originalAddress.trim() !== formData.address.trim()
+      ) {
+        let branchId = 1;
+        let companyId = 1;
 
-    // Only create if address changed
-    if (originalAddress && originalAddress.trim() !== formData.address.trim()) {
+        if (cartItems.length > 0) {
+          const firstItem = cartItems[0];
 
-      let branchId = 1;
-      let companyId = 1;
+          branchId =
+            firstItem.branchId ||
+            firstItem.m_branch_id ||
+            firstItem.branch_id ||
+            1;
 
-      if (cartItems.length > 0) {
-        const firstItem = cartItems[0];
+          companyId = firstItem.m_company_id || firstItem.company_id || 1;
+        }
 
-        branchId =
-          firstItem.branchId ||
-          firstItem.m_branch_id ||
-          firstItem.branch_id ||
-          1;
+        const payload = {
+          branch_id: branchId,
+          name: formData.cust_name,
+          phone: formData.phone,
+          email: "",
+          address: formData.address,
+        };
 
-        companyId =
-          firstItem.m_company_id ||
-          firstItem.company_id ||
-          1;
+        await api.post("/create-customer", payload);
+
+        console.log("New customer created due to address change");
       }
-
-      const payload = {
-      
-        branch_id: branchId,
-        name: formData.cust_name,
-        phone: formData.phone,
-        email:"",
-        address: formData.address,
-              };
-
-      await api.post("/create-customer", payload);
-
-      console.log("New customer created due to address change");
-
+    } catch (error) {
+      console.error("Customer creation failed:", error);
     }
-
-  } catch (error) {
-    console.error("Customer creation failed:", error);
-  }
-};
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -405,6 +525,7 @@ export default function Checkout() {
         cartItems.length > 0
           ? cartItems[0].branchId || cartItems[0].m_branch_id || 1
           : 1,
+      customer_id: formData.customer_id,
       cust_name: formData.cust_name,
       phone: String(formData.phone),
       email: userEmail || "",
@@ -414,12 +535,12 @@ export default function Checkout() {
       discount: cartDiscount,
       delivery: finalShippingCost,
       total: grandTotal,
-      // order_method: formData.order_method,
       table_no:
         bookingData.table_no.length > 0
           ? bookingData.table_no.join(", ")
           : formData.order_method,
       pay_mtd: formData.payment_method.toLowerCase(),
+      captcha: captchaToken,
       items: cartItems.map((item) => ({
         menu_id: item.m_menu_id || item.id,
         menu_name: item.m_menu_name,
@@ -429,8 +550,8 @@ export default function Checkout() {
     };
 
     try {
-        // Create new customer if address changed
-  await createCustomerIfAddressChanged();
+      // Create new customer if address changed
+      await createCustomerIfAddressChanged();
       const response = await api.post("/place-order", orderPayload);
 
       if (response.data.status === true) {
@@ -501,30 +622,97 @@ export default function Checkout() {
                   <label className="block text-gray-500 text-sm mb-2">
                     Phone Number
                   </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    // autoComplete="off"
-                    onChange={handleChange}
-                    // onBlur={handlePhoneBlur}
-                    maxLength="11"
-                    placeholder="016XXXXXXXX"
-                    className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400"
-                    required
-                  />
+
+                  <div className="flex gap-2">
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      maxLength="11"
+                      // ONLY lock the input if OTP is enabled AND the phone is verified
+                      disabled={isOtpEnabled ? isPhoneVerified : false}
+                      placeholder="016XXXXXXXX"
+                      className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400 disabled:opacity-50"
+                      required
+                    />
+
+                    {/* Send OTP Button - Hidden if OTP is disabled via settings */}
+                    {isOtpEnabled && !isPhoneVerified && (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={countdown > 0} // Disable button while timer is running
+                        className={`px-6 rounded font-bold transition-all whitespace-nowrap text-lg shadow-sm ${
+                          countdown > 0
+                            ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
+                            : "bg-[#C59D5F] text-white hover:bg-[#0E1014]" // Active styles
+                        }`}
+                      >
+                        {countdown > 0
+                          ? `Resend in ${formatTime(countdown)}`
+                          : otpSent
+                            ? "Resend OTP"
+                            : "Send OTP"}
+                      </button>
+                    )}
+                  </div>
+
                   {phoneMessage && (
                     <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm animate-fadeIn">
                       {phoneMessage}
                     </div>
                   )}
+
                   {loadingCustomer && (
                     <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
                       <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
                       Checking customer...
                     </div>
                   )}
+
+                  {/* Conditional OTP Input Field */}
+                  {isOtpEnabled && otpSent && !isPhoneVerified && (
+                    <div className="mt-4 p-5 border-2 border-[#C59D5F] rounded-lg bg-yellow-50 animate-fadeIn">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
+                          Enter 4-Digit OTP
+                        </label>
+                        {/* Optional: Show an "Expired" badge when time runs out */}
+                        {countdown === 0 && (
+                          <span className="text-red-500 text-xs font-bold uppercase">
+                            OTP Expired
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none tracking-[0.5em] text-center text-[23px] font-bold text-gray-800"
+                          placeholder="----"
+                          maxLength="4"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={
+                            verifyingOtp || otp.length < 4 || countdown === 0
+                          }
+                          className={`px-8 rounded font-bold transition-all text-lg shadow-md ${
+                            verifyingOtp || otp.length < 4 || countdown === 0
+                              ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
+                              : "bg-[#0E1014] text-white hover:bg-[#C59D5F]" // Active styles
+                          }`}
+                        >
+                          {verifyingOtp ? "Checking..." : "Verify"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
                 <div className="form-group">
                   <label className="block text-gray-500 text-sm mb-2">
                     Full Name
@@ -578,9 +766,16 @@ export default function Checkout() {
                     </tr>
                   </thead>
                   <tbody className="text-gray-600">
-                    {cartItems.map((item) => (
+                    {cartItems.map((item, index) => (
                       <tr className="border-b border-gray-100" key={item.id}>
                         <td className="py-4">
+                          {/* Styled Serial Number with a space after it */}
+                          <span
+                            strong
+                            className="text-[#0E1014] font-bold mr-1"
+                          >
+                            {index + 1}.
+                          </span>
                           {item.m_menu_name}{" "}
                           <strong className="text-[#0E1014] ml-2">
                             × {item.quantity}
@@ -612,14 +807,13 @@ export default function Checkout() {
                           name="order_method"
                           value={formData.order_method}
                           onChange={handleChange}
-                          disabled={!isPhoneSubmitted}
+                          disabled={!isPhoneSubmitted || !isPhoneVerified}
                           className="bg-[#F3F4F7] border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-[#C59D5F] focus:border-[#C59D5F] block w-full p-2.5 outline-none font-['Arial']"
                           required
                         >
                           <option value="">Select Method</option>
                           <option value="Home delivery">Home delivery</option>
-                          <option value="Take a way">Take a way</option>
-                          <option value="Parcel">Parcel</option>
+                          <option value="Parcel">Take a way / Parcel</option>
                           <option value="Dine-in">Dine-in</option>
                         </select>
 
@@ -673,14 +867,31 @@ export default function Checkout() {
                     </tr>
                   </tfoot>
                 </table>
-
+                {isCaptchaEnabled && (
+                  <div className="flex flex-col items-center my-6">
+                    <div
+                      className={`transition-all duration-300 "opacity-40 pointer-events-none"`}
+                    >
+                      <ReCAPTCHA
+                        sitekey="6LdKm6csAAAAAGNjH1Wu2XcIg2_Ll6c3ScyCOUtz"
+                        onChange={(token) => setCaptchaToken(token)}
+                        theme="light"
+                      />
+                    </div>
+                  </div>
+                )}
                 <button
                   type="submit"
-                  disabled={loading || !isPhoneSubmitted}
-                  className={`w-full bg-[#0E1014] text-white font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded transition-all duration-300 ${
-                    loading || !isPhoneSubmitted
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-[#C59D5F] hover:text-white"
+                  disabled={
+                    loading ||
+                    !isPhoneSubmitted ||
+                    !isPhoneVerified ||
+                    (isCaptchaEnabled && !captchaToken)
+                  }
+                  className={`w-full font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded transition-all duration-300 ${
+                    loading || !isPhoneSubmitted || !isPhoneVerified
+                      ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
+                      : "bg-[#0E1014] text-white hover:bg-[#C59D5F]" // Active styles
                   }`}
                 >
                   {loading ? "Processing..." : "Place Order"}
@@ -845,83 +1056,111 @@ export default function Checkout() {
                           <div className="w-10 h-10 border-4 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></div>
                         </div>
                       ) : dineInTables.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-6">
-                          {dineInTables.map((table) => {
-                            const isSelected = bookingData.table_no.includes(
-                              table.table_no,
-                            );
-                            // Calculate if table is suggested based on person count
-                            const isSuggested =
-                              personCount &&
-                              table.person_no &&
-                              Math.abs(
-                                table.person_no - parseInt(personCount),
-                              ) <= 2;
+                        <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 px-2">
+                            {dineInTables.map((table) => {
+                              const totalChairs =
+                                table.person_no || table.capacity || 4;
+                              const topRow = Math.ceil(totalChairs / 2);
+                              const bottomRow = Math.floor(totalChairs / 2);
 
-                            return (
-                              <button
-                                key={table.id}
-                                type="button"
-                                disabled={!table.isAvailable}
-                                onClick={() =>
-                                  handleTableSelect(table.table_no)
-                                }
-                                className={`
-                                  relative pt-7 pb-4 px-2 rounded-xl border-2 transition-all duration-300 
-                                  flex flex-col items-center justify-center min-h-[100px] overflow-hidden
-                                  ${
-                                    table.isAvailable
-                                      ? isSelected
-                                        ? "border-[#C59D5F] bg-[#C59D5F]/20 shadow-md scale-105"
-                                        : "border-[#C59D5F] bg-[#C59D5F]/10 hover:bg-[#C59D5F]/20 cursor-pointer shadow-md"
-                                      : "border-gray-300 bg-gray-100 opacity-60 cursor-not-allowed"
-                                  }
-                                `}
-                              >
-                                {/* PERFECTLY POSITIONED BOOKING MESSAGE */}
-                                {table.isAvailable && table.bookingMessage && (
-                                  <div className="absolute top-0 left-0 w-full bg-[#007BFF] text-white text-[10px] md:text-xs font-bold py-1 px-1 text-center tracking-wide z-10 shadow-sm truncate">
-                                    {table.bookingMessage}
-                                  </div>
-                                )}
+                              const isSelected = bookingData.table_no.includes(
+                                String(table.table_no),
+                              );
+                              const isOccupied = !table.isAvailable;
+                              // CHANGED: Now using the smart array returned from useTableSuggestion.js
+                              const isSuggested = suggestedTables.includes(
+                                String(table.table_no),
+                              );
+                              const isReservedByCustomer = reservedTablesByCustomer.includes(
+  String(table.table_no)
+);
+                              return (
+                                <div
+                                  key={table.id}
+                                  onClick={() => {
+                                    if (!isOccupied)
+                                      handleTableSelect(String(table.table_no));
+                                  }}
+                                  className={`
+                                    group flex flex-col items-center justify-center p-2 mt-4 mb-5 transition-all duration-300 relative cursor-pointer
+                                    ${
+                                      isOccupied
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : ""
+                                    }
+                                  `}
+                                >
+                                  {isSuggested &&
+                                    !isOccupied &&
+                                    !isSelected && (
+                                      <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap animate-bounce">
+                                        ⭐ BEST FIT
+                                      </div>
+                                    )}
 
-                                {/* BEST FIT SUGGESTION */}
-                                {isSuggested &&
-                                  table.isAvailable &&
-                                  !isSelected && (
-                                    <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm whitespace-nowrap">
-                                      ⭐ BEST FIT
+{isReservedByCustomer && (
+  <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
+    
+  </div>
+)}
+                                  {isOccupied && (
+                                    <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
+                                      {table.bookingMessage || "BUSY"}
                                     </div>
                                   )}
 
-                                <span className="text-gray-800 font-extrabold text-xl font-['Barlow_Condensed'] tracking-wider">
-                                  Table {table.table_no}
-                                </span>
+                                  {/* Top Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mb-1">
+                                    {renderChairs(topRow, "top")}
+                                  </div>
 
-                                <span className="text-xs text-gray-600 mt-1">
-                                  {table.person_no || table.capacity || "?"}{" "}
-                                  seats
-                                </span>
+                                  {/* The Actual Table Block */}
+                                  <div
+                                    className={`
+                                      w-full h-28 rounded-xl border-2 flex flex-col items-center justify-center shadow-md relative overflow-hidden transition-all duration-300
+                                      ${
+                                        isOccupied
+                                          ? "bg-red-100 border-red-300 text-red-800"
+                                          : isReservedByCustomer
+      ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
+                                            ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                            : isSuggested
+                                              ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                              : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                      }
+                                    `}
+                                  >
+                                    {isSelected && (
+                                      <div className="absolute inset-0 opacity-10 bg-black"></div>
+                                    )}
+                                    <span className="font-['Barlow_Condensed'] font-extrabold text-xl relative z-10">
+                                      Table {table.table_no}
+                                    </span>
+                                    <span
+                                      className={`text-[10px] uppercase font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
+                                        isSelected
+                                          ? "bg-black/20 text-white"
+                                          : "bg-gray-200 text-gray-700"
+                                      }`}
+                                    >
+                                      {totalChairs} Seats
+                                    </span>
+                                  </div>
 
-                                <span
-                                  className={`text-[11px] mt-2 font-bold tracking-[0.1em] uppercase px-2 py-0.5 rounded-full ${
-                                    table.isAvailable
-                                      ? "bg-green-500/20 text-green-600"
-                                      : "bg-red-500/20 text-red-600"
-                                  }`}
-                                >
-                                  {table.isAvailable
-                                    ? "Available"
-                                    : "Unavailable"}
-                                </span>
-                              </button>
-                            );
-                          })}
+                                  {/* Bottom Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mt-1">
+                                    {renderChairs(bottomRow, "bottom")}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       ) : /* FALLBACK TO ORIGINAL TABLE RENDERING IF NO DINE-IN TABLES */
                       availableTables.length > 0 ? (
-                        <div className="max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                        <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 px-2">
                             {availableTables.map((t) => {
                               const totalChairs =
                                 t.person_no || t.capacity || 4;
@@ -929,71 +1168,89 @@ export default function Checkout() {
                               const bottomRow = Math.floor(totalChairs / 2);
 
                               const isSelected = bookingData.table_no.includes(
-                                t.table_no,
+                                String(t.table_no),
                               );
                               const isOccupied = t.is_occupied;
                               const isSuggested = suggestedTables.includes(
-                                t.table_no,
+                                String(t.table_no),
                               );
-
+const isReservedByCustomer = reservedTablesByCustomer.includes(
+  String(t.table_no)
+);
                               return (
                                 <div
                                   key={t.id}
                                   onClick={() => {
                                     if (!isOccupied)
-                                      handleTableSelect(t.table_no);
+                                      handleTableSelect(String(t.table_no));
                                   }}
                                   className={`
-                                      group flex flex-col items-center justify-center p-3 mt-4 rounded-xl border-2 transition-all duration-300 relative
-                                      ${
-                                        isOccupied
-                                          ? "border-red-300 bg-red-50 cursor-not-allowed opacity-70"
-                                          : isSelected
-                                            ? "border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer"
-                                            : isSuggested
-                                              ? "border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse"
-                                              : "border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
-                                      }
-                                    `}
+                                    group flex flex-col items-center justify-center p-2 mt-4 mb-5 transition-all duration-300 relative cursor-pointer
+                                    ${
+                                      isOccupied
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : ""
+                                    }
+                                  `}
                                 >
                                   {isSuggested &&
                                     !isOccupied &&
                                     !isSelected && (
-                                      <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm whitespace-nowrap">
+                                      <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap animate-bounce">
                                         ⭐ BEST FIT
                                       </div>
                                     )}
-
+{isReservedByCustomer && (
+  <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
+    
+  </div>
+)}
                                   {isOccupied && (
-                                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full z-20 shadow-sm">
+                                    <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
                                       BUSY
                                     </div>
                                   )}
 
-                                  <div className="flex gap-1 mb-1">
+                                  {/* Top Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mb-1">
                                     {renderChairs(topRow, "top")}
                                   </div>
+
+                                  {/* The Actual Table Block */}
                                   <div
                                     className={`
-                                        w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
-                                        ${
-                                          isOccupied
-                                            ? "bg-red-200 text-red-800"
-                                            : isSelected
-                                              ? "bg-[#C59D5F] text-white"
-                                              : "bg-gray-200 text-gray-600"
-                                        }
-                                      `}
+                                      w-full h-28 rounded-xl border-2 flex flex-col items-center justify-center shadow-md relative overflow-hidden transition-all duration-300
+                                      ${
+                                        isOccupied
+                                          ? "bg-red-100 border-red-300 text-red-800"
+                                          : isReservedByCustomer
+      ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
+                                            ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                            : isSuggested
+                                              ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                              : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                      }
+                                    `}
                                   >
-                                    <div className="absolute inset-0 opacity-10 bg-black"></div>
-                                    <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
-                                      Table No.{t.table_no}
+                                    {isSelected && (
+                                      <div className="absolute inset-0 opacity-10 bg-black"></div>
+                                    )}
+                                    <span className="font-['Barlow_Condensed'] font-extrabold text-xl relative z-10">
+                                      Table {t.table_no}
                                     </span>
-                                    <span className="text-[10px] uppercase font-bold text-black relative z-10">
+                                    <span
+                                      className={`text-[10px] uppercase font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
+                                        isSelected
+                                          ? "bg-black/20 text-white"
+                                          : "bg-gray-200 text-gray-700"
+                                      }`}
+                                    >
                                       {totalChairs} Seats
                                     </span>
                                   </div>
-                                  <div className="flex gap-1 mt-1">
+
+                                  {/* Bottom Chairs - OUTSIDE the table block */}
+                                  <div className="flex gap-2 mt-1">
                                     {renderChairs(bottomRow, "bottom")}
                                   </div>
                                 </div>

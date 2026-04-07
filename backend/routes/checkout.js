@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db'); 
-const axios = require('axios'); 
-
+const db = require('../db');
+const axios = require('axios');
+const NodeCache = require("node-cache");
+// Initialize cache: OTPs will automatically self-destruct after 300 seconds (5 minutes)
+const otpCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 // Helper function to wrap db.query in Promises
 const queryPromise = (sql, params = []) => {
     return new Promise((resolve, reject) => {
@@ -18,7 +20,7 @@ const queryPromise = (sql, params = []) => {
 // ==========================================
 router.get('/get-user-by-phone/:phone', async (req, res) => {
     const phone = req.params.phone;
-    const branch_id = req.query.branch_id || 1; 
+    const branch_id = req.query.branch_id || 1;
 
     if (!phone) return res.status(400).json({ success: false, message: "Phone number is required" });
 
@@ -41,6 +43,8 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
             if (matchedCustomer) {
                 return res.status(200).json({
                     success: true, // Tell frontend it was successful
+                    customer_id: matchedCustomer.cust_id,
+
                     name: matchedCustomer.name,
                     address: matchedCustomer.address
                 });
@@ -54,7 +58,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         try {
             const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}`;
             const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
-            
+
             let branches = [];
             if (branchRes.data && branchRes.data.data && branchRes.data.data.branches) {
                 branches = branchRes.data.data.branches;
@@ -66,7 +70,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 
             // FIX: Check both 'branch_id' and 'id' just in case the API structure varies
             const matchedBranch = branches.find(b => String(b.branch_id) === String(branch_id) || String(b.id) === String(branch_id));
-            
+
             if (matchedBranch) {
                 // FIX: Check multiple possible property names for the phone number
                 branchPhone = matchedBranch.phone || matchedBranch.branch_phone || matchedBranch.contact_number || "the restaurant";
@@ -77,9 +81,9 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 
         // FIX: Return Status 200 so the console doesn't show a red error!
         // We use 'success: false' to tell the frontend the user wasn't found.
-        return res.status(200).json({ 
-            success: false, 
-            message: `First-time customers, please call ${branchPhone} to place an online order. ` 
+        return res.status(200).json({
+            success: false,
+            message: `First-time customers, please call ${branchPhone} to place an online order. `
         });
 
     } catch (err) {
@@ -89,116 +93,216 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 });
 
 // ==========================================
-// GET: Fetch and Validate Dine-in Tables
+// 2. GET TABLES & AVAILABILITY BY BRANCH ID
 // ==========================================
-router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
+router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
     try {
-        const { company_id, branch_id } = req.params;
+        const { branch_id } = req.params;
 
-        // --- NEW: Get REAL current date and time (Replaces chosenDate/chosenTime) ---
-        const now = new Date();
-        const realYear = now.getFullYear();
-        const realMonth = String(now.getMonth() + 1).padStart(2, '0');
-        const realDay = String(now.getDate()).padStart(2, '0');
-        const currentDate = `${realYear}-${realMonth}-${realDay}`;
-        const currentTimeInHours = now.getHours() + (now.getMinutes() / 60);
+        // --- FIX: Fetch Company Code internally from DB ---
+        const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
+        const companyCode = settings[0]?.company_code || '26672691';
+        // --- NEW: Generate Current Date and Time (Asia/Dhaka) Internally ---
+        const currentDateObj = new Date();
+        const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' });
+        const timeFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: false });
 
-        // 1. Fetch ALL physical tables from External API
-        const tablesResponse = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${company_id}&branch_id=${branch_id}`);
+        const chosenDate = dateFormatter.format(currentDateObj);
+        const chosenTime = timeFormatter.format(currentDateObj);
+
+        console.log(`\n\n--- 🔍 NEW LIVE AVAILABILITY CHECK ---`);
+        console.log(`System checking: Branch ${branch_id} for RIGHT NOW (${chosenDate} at ${chosenTime})`);
+
+
+        const tablesResponse = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
         let tables = [];
         if (tablesResponse.data && tablesResponse.data.status === true) {
             tables = tablesResponse.data.data || [];
         }
 
-        // 2. Fetch LOCAL reservations for this branch AND company
-        const reservations = await queryPromise(
-            "SELECT * FROM reservation WHERE re_com_id = ? AND re_branch_id = ?", 
-            [company_id, branch_id]
-        );
+        // 1. FETCH RESERVATIONS
+        let reservations = [];
+        try {
+            const reservationApi = `https://pos.chulkani.com/reservations?company_id=${companyCode}&branch_id=${branch_id}`;
+            console.log(`📡 Fetching live reservations from: ${reservationApi}`);
 
-        const updatePromises = [];
+            const reservationResponse = await axios.get(reservationApi, {
+                headers: { 'Accept': 'application/json' }
+            });
 
-        // 3. Process each table according to your NEW logic
+            if (
+                reservationResponse.data &&
+                reservationResponse.data.data &&
+                Array.isArray(reservationResponse.data.data.data)
+            ) {
+                reservations = reservationResponse.data.data.data;
+            }
+            else if (reservationResponse.data && Array.isArray(reservationResponse.data.data)) {
+                reservations = reservationResponse.data.data;
+            }
+            else if (Array.isArray(reservationResponse.data)) {
+                reservations = reservationResponse.data;
+            }
+
+            console.log(`✅ Success! Fetched ${reservations.length} reservations from API.`);
+
+        } catch (apiError) {
+            console.error("❌ Failed to fetch reservations from API:", apiError.message);
+        }
+
+        // 2. FETCH ORDERS
+        let orders = [];
+        try {
+            const ordersApi = `https://pos.chulkani.com/api/website/order?company_id=${companyCode}&branch_id=${branch_id}`;
+            console.log(`📡 Fetching live orders from: ${ordersApi}`);
+
+            const ordersResponse = await axios.get(ordersApi, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (ordersResponse.data && ordersResponse.data.status === true && Array.isArray(ordersResponse.data.data)) {
+                orders = ordersResponse.data.data;
+            }
+
+            console.log(`✅ Success! Fetched ${orders.length} orders from API.`);
+
+        } catch (apiError) {
+            console.error("❌ Failed to fetch orders from API:", apiError.message);
+        }
+
+        // ==========================================
+        // 3. AUTO-EXPIRE & FULFILL RESERVATIONS
+        // ==========================================
+        const validReservations = [];
+        const nowMs = Date.now();
+        const THIRTY_MINS_MS = 30 * 60 * 1000;
+
+        for (const res of reservations) {
+            const targetStatus = res.status !== undefined ? res.status : res.re_status;
+            const targetCreateAt = res.created_at || res.re_create_at;
+            let skipReservation = false;
+
+            // CONDITION A: Auto-expire Pending (Status 0) after 30 mins
+            if (Number(targetStatus) === 0 && targetCreateAt) {
+                const createAtMs = new Date(targetCreateAt).getTime();
+
+                if (nowMs - createAtMs >= THIRTY_MINS_MS) {
+                    console.log(`⏳ Auto-expiring Reservation ID [${res.id}] (Pending for >30 mins)...`);
+                    try {
+                        await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
+                            re_status: 3
+                        });
+                        console.log(`✅ Successfully updated Reservation ID [${res.id}] to status 3 (Expired)`);
+                    } catch (updateErr) {
+                        console.error(`❌ Failed to update Reservation ID [${res.id}]:`, updateErr.message);
+                    }
+                    skipReservation = true;
+                }
+            }
+
+            // CONDITION B: Auto-fulfill Confirmed (Status 1) if matching Order has Status 1
+            if (!skipReservation && Number(targetStatus) === 1) {
+                const matchingOrder = orders.find(o =>
+                    Number(o.ord_res_id) === Number(res.id) &&
+                    Number(o.ord_status) === 1
+                );
+
+                if (matchingOrder) {
+                    console.log(`🍽️ Found completed order for Reservation ID [${res.id}]. Auto-updating status to 3...`);
+                    try {
+                        await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
+                            re_status: 3
+                        });
+                        console.log(`✅ Successfully fulfilled Reservation ID [${res.id}] to status 3`);
+                    } catch (updateErr) {
+                        console.error(`❌ Failed to update fulfilled Reservation ID [${res.id}]:`, updateErr.message);
+                    }
+                    skipReservation = true;
+                }
+            }
+
+            if (!skipReservation) {
+                validReservations.push(res);
+            }
+        }
+
+        reservations = validReservations;
+
+        // ==========================================
+        // 4. PROCESS TABLES
+        // ==========================================
+        const normalizedChosenTime = chosenTime.substring(0, 5);
+
         const processedTables = tables.map(table => {
             let { id, table_no, capacity, person_no } = table;
             const stringTableNo = String(table_no).trim();
-            
-            // Assume table is available by default
+
             let isAvailable = true;
             let bookingMessage = null;
 
-            // Find all local reservations belonging to this specific table
             const tableReservations = reservations.filter(res => {
-                if (!res.re_table_no) return false;
-                const resTables = String(res.re_table_no).split(',').map(t => t.trim());
+                const targetTableNo = res.table_no || res.re_table_no;
+                if (!targetTableNo) return false;
+                const resTables = String(targetTableNo).split(',').map(t => t.trim());
                 return resTables.includes(stringTableNo);
             });
 
-            // Loop through the reservations to check for conflicts
+            if (tableReservations.length > 0) {
+                console.log(`\n👉 Checking Table ${stringTableNo} (Has ${tableReservations.length} associated valid reservations)`);
+            }
+
             for (const res of tableReservations) {
                 let resDate = "";
                 let resTime = "";
-                
-                // Format the new DATETIME column `re_date` into separate Date and Time variables
-                if (res.re_date instanceof Date) {
-                    const y = res.re_date.getFullYear();
-                    const m = String(res.re_date.getMonth() + 1).padStart(2, '0');
-                    const d = String(res.re_date.getDate()).padStart(2, '0');
-                    resDate = `${y}-${m}-${d}`;
 
-                    const hr = String(res.re_date.getHours()).padStart(2, '0');
-                    const min = String(res.re_date.getMinutes()).padStart(2, '0');
-                    resTime = `${hr}:${min}`;
-                } else if (res.re_date && typeof res.re_date === 'string') {
-                    // Handles string formats like "2026-03-22 14:30:00" or "2026-03-22T14:30:00Z"
-                    const parts = res.re_date.split(/T|\s/);
-                    resDate = parts[0];
-                    if (parts[1]) {
-                        resTime = parts[1].substring(0, 5); // Extracts just the "HH:MM"
+                const targetDate = res.date || res.re_date;
+
+                if (targetDate) {
+                    if (String(targetDate).includes('Z')) {
+                        const dateObj = new Date(targetDate);
+                        const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' });
+                        const timeFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: false });
+                        resDate = dateFormatter.format(dateObj);
+                        resTime = timeFormatter.format(dateObj);
+                    } else {
+                        const parts = String(targetDate).split(/T|\s/);
+                        resDate = parts[0];
+                        if (parts[1]) {
+                            resTime = parts[1].substring(0, 5);
+                        }
                     }
                 }
 
-                let resTimeInHours = 0;
-                if (resTime) {
-                    const parts = resTime.split(':');
-                    resTimeInHours = parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
-                }
+                const targetStatus = res.status !== undefined ? res.status : res.re_status;
 
-                // DYNAMIC DURATION: Convert re_duration (minutes) to hours. Default to 1.5 if null/missing.
-                let durationInHours = 1.5; 
-                if (res.re_duration) {
-                    durationInHours = parseInt(res.re_duration, 10) / 60;
-                }
+                console.log(`  -> Res ID [${res.id}]: Status=${targetStatus}, Date=${resDate}, Time=${resTime}`);
 
-                // --- LOGIC 1: AUTO-EXPIRATION ---
-                // If status is 1, dynamically check if it is older than the DURATION in REAL time
-                if (res.re_status === 1) {
-                    let isExpired = false;
-                    if (resDate < currentDate) {
-                        isExpired = true; // The date was in the past
-                    } else if (resDate === currentDate && currentTimeInHours >= (resTimeInHours + durationInHours)) {
-                        isExpired = true; // Today, but it has been past the allowed duration since the booking
-                    }
+                if ((Number(targetStatus) === 0 || Number(targetStatus) === 1) && resDate === chosenDate) {
+                    const [resH, resM] = resTime.split(':').map(Number);
+                    const resTimeMins = (resH * 60) + resM;
+                    const resDuration = parseInt(res.duration || res.re_duration || 90, 10); // Default to 90 mins if missing
 
-                    if (isExpired) {
-                        // Automatically queue DB update to change re_status to 0
-                        const updateSql = "UPDATE reservation SET re_status = 0 WHERE id = ?";
-                        updatePromises.push(queryPromise(updateSql, [res.id]));
-                        res.re_status = 0; // Update local memory so it doesn't block the table below!
-                    }
-                }
+                    const [choH, choM] = normalizedChosenTime.split(':').map(Number);
+                    const currentTimeMins = (choH * 60) + choM;
 
-                // --- LOGIC 2: AVAILABILITY CHECK (USING CURRENT DATE & TIME) ---
-                // We only care if the status is currently 1 (and not expired)
-                if (res.re_status === 1 && resDate === currentDate) {
-                    
-                    // If the CURRENT time falls within the specific DURATION block of the reserved time, mark it unavailable.
-                    if (Math.abs(currentTimeInHours - resTimeInHours) < durationInHours) {
+                    console.log(`     ⚖️ LIVE CHECK: Is current time (${currentTimeMins} mins) between res start (${resTimeMins} mins) and end (${resTimeMins + resDuration} mins)?`);
+
+                    // --- NEW LOGIC: Block table if current time falls within the reservation duration ---
+                    if (currentTimeMins >= resTimeMins && currentTimeMins <= (resTimeMins + resDuration)) {
+                        console.log(`     🛑 RESULT: Table ${stringTableNo} is currently occupied!`);
                         isAvailable = false;
-                        bookingMessage = `Currently Reserved`;
-                        break; // Conflict found, table is blocked!
+                        bookingMessage = Number(targetStatus) === 0 ? `Pending Confirmation` : `Reserved`;
+                        break;
+                    } else {
+                        console.log(`     🟢 RESULT: Table is free right now.`);
                     }
+                } else {
+                    console.log(`     ⏭️ SKIPPED: Date doesn't match today (${chosenDate}) OR Status isn't 0/1.`);
                 }
+            }
+
+            if (tableReservations.length > 0) {
+                console.log(`[FINAL STATUS] Table ${stringTableNo} isAvailable: ${isAvailable}`);
             }
 
             return {
@@ -211,63 +315,158 @@ router.get('/get-dine-in-tables/:company_id/:branch_id', async (req, res) => {
             };
         });
 
-        // 4. Execute auto-expirations in the background before sending response
-        if (updatePromises.length > 0) {
-            await Promise.all(updatePromises);
-            console.log(`Auto-expired ${updatePromises.length} reservations by setting re_status to 0.`);
-        }
-
-        // Return the clean data to the frontend in the format Checkout.jsx expects
-        res.status(200).json({ 
-            status: true, 
-            data: processedTables,
-            summary: {
-                total: processedTables.length,
-                available: processedTables.filter(t => t.isAvailable).length,
-                unavailable: processedTables.filter(t => !t.isAvailable).length
-            }
+        res.status(200).json({
+            status: true,
+            data: processedTables
         });
-
     } catch (error) {
-        console.error("Error processing dine-in tables:", error);
-        res.status(500).json({ 
-            status: false, 
-            message: "Server error calculating table logic.",
-            error: error.message 
+        console.error("Error processing reservation tables:", error);
+        res.status(500).json({
+            error: "Server error calculating table logic.",
+            exact_cause: error.message,
+            stack_trace: error.stack,
+            axios_details: error.response?.data || "Not an Axios error"
         });
     }
 });
 
 
-
 // ==========================================
-// 2. PLACE ORDER API (To Laravel)
+// 3. PLACE ORDER API (To Laravel)
 // ==========================================
 router.post('/place-order', async (req, res) => {
     try {
-        const { branch_id, cust_name, phone, email, address, sub_total, discount, delivery, total, table_no, pay_mtd, items } = req.body;
+        const { branch_id, cust_name, customer_id, phone, email, address, sub_total, order_method, discount, delivery, total, table_no, pay_mtd, captcha, items } = req.body;
 
         if (!phone || !items || items.length === 0) {
             return res.status(400).json({ status: false, message: "Missing required fields" });
         }
 
-        // 1. Get Company Code dynamically
-        const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
-        const companyCode = settings[0]?.company_code || '26672691';
+        const safeCustomerId = (customer_id === "" || customer_id == null) ? null : parseInt(customer_id);
 
-        // 2. Ensure items is properly formatted as an array of objects
+        // ==========================================
+        // 1. Get Company Code + Captcha Setting
+        // ==========================================
+        const settings = await queryPromise("SELECT company_code, captcha FROM settings WHERE id = 1");
+
+        const companyCode = settings[0]?.company_code || '26672691';
+        const isCaptchaEnabled = settings[0]?.captcha === 1;
+
+        // ==========================================
+        // 2. CAPTCHA VERIFICATION
+        // ==========================================
+        if (isCaptchaEnabled) {
+
+            if (!captcha) {
+                return res.status(400).json({
+                    status: false,
+                    message: "Captcha required"
+                });
+            }
+
+            try {
+                const secret = '6LdKm6csAAAAAM2egW4Bn4fccolip7XuVggUbzk7';
+
+                const captchaRes = await axios.post(
+                    `https://www.google.com/recaptcha/api/siteverify`,
+                    null,
+                    {
+                        params: {
+                            secret: secret,
+                            response: captcha
+                        }
+                    }
+                );
+
+                if (!captchaRes.data.success) {
+                    return res.status(400).json({
+                        status: false,
+                        message: "Captcha verification failed"
+                    });
+                }
+
+            } catch (captchaError) {
+                console.error("Captcha verification error:", captchaError.message);
+                return res.status(500).json({
+                    status: false,
+                    message: "Captcha verification error"
+                });
+            }
+        }
+
+        // ==========================================
+        // 3. CHECK AND UPDATE CUSTOMER ADDRESS
+        // ==========================================
+        if (safeCustomerId && address) {
+            try {
+                const custApiUrl = `https://pos.chulkani.com/branch/all_customer?company_id=${companyCode}`;
+                const custRes = await axios.get(custApiUrl, { headers: { 'Accept': 'application/json' } });
+
+                if (custRes.data && custRes.data.success && Array.isArray(custRes.data.data)) {
+
+                    const matchedCustomer = custRes.data.data.find(c => String(c.phone) === String(phone));
+
+                    if (matchedCustomer) {
+                        const oldAddress = (matchedCustomer.address || "").trim();
+                        const newAddress = address.trim();
+
+                        if (oldAddress !== newAddress) {
+
+                            console.log(`🔄 Address changed from "${oldAddress}" to "${newAddress}". Updating customer Primary ID: ${matchedCustomer.id}...`);
+
+                            const updateCustomerPayload = {
+                                company_id: companyCode,
+                                branch_id: parseInt(branch_id || 1),
+                                name: cust_name || matchedCustomer.name || "Website Customer",
+                                phone: phone,
+                                address: newAddress
+                            };
+
+                            const safeEmail = email || matchedCustomer.email;
+                            if (safeEmail && safeEmail.trim() !== "") {
+                                updateCustomerPayload.email = safeEmail.trim();
+                            }
+
+                            await axios.post(
+                                `https://pos.chulkani.com/branch/update_customer/${matchedCustomer.id}`,
+                                updateCustomerPayload,
+                                {
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    },
+                                    timeout: 15000
+                                }
+                            );
+
+                            console.log(`✅ Customer ${matchedCustomer.id} address updated successfully.`);
+                        }
+                    }
+                }
+
+            } catch (updateErr) {
+                console.error("⚠️ Failed to check/update customer address:", updateErr.response?.data || updateErr.message);
+            }
+        }
+
+        // ==========================================
+        // 4. FORMAT ORDER ITEMS
+        // ==========================================
         const formattedItems = items.map(item => ({
             menu_id: parseInt(item.menu_id) || 0,
             menu_name: item.menu_name || '',
             qty: parseInt(item.qty) || 1,
             price: parseFloat(item.price) || 0,
-            size: item.size || null // Added size just in case your frontend passes it
+            size: item.size || null
         }));
 
-        // 3. Construct the payload
+        // ==========================================
+        // 5. CONSTRUCT LARAVEL PAYLOAD
+        // ==========================================
         const laravelPayload = {
             company_id: companyCode,
             branch_id: parseInt(branch_id || 1),
+            customer_id: safeCustomerId,
             cust_name: cust_name || "Website Customer",
             phone: phone,
             email: email || null,
@@ -278,120 +477,117 @@ router.post('/place-order', async (req, res) => {
             total: parseFloat(total || 0),
             table_no: table_no,
             pay_mtd: pay_mtd || "cash",
+            ord_status: 0,
             items: formattedItems
         };
 
         console.log("Sending to Laravel API:", JSON.stringify(laravelPayload, null, 2));
 
-        // 4. Send to main Laravel API with proper headers
-        const apiUrl = 'https://pos.chulkani.com/website/order'; 
+        // ==========================================
+        // 6. SEND ORDER TO LARAVEL
+        // ==========================================
+        const apiUrl = 'https://pos.chulkani.com/website/order';
 
         const laravelRes = await axios.post(
             apiUrl,
             laravelPayload,
             {
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Accept': 'application/json'
-               },
-               timeout: 30000
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                timeout: 30000
             }
         );
 
         // ==========================================
-        // 5. UPDATE LOCAL 'tables' STATUS IF DINE-IN
+        // 6. Insert into api: 'reservation' STATUS IF DINE-IN
         // ==========================================
-        if (laravelRes.data && laravelRes.data.status === true && table_no) {
+        if (laravelRes.data && laravelRes.data.status === true && table_no && order_method == "Dine-in") {
             try {
-                // Get current local date and time
+                // GET RESTAURANT OPEN/CLOSE SETTINGS
+                const settingsSql = "SELECT rest_open, rest_close, company_code FROM settings WHERE id = 1";
+                const settingsResult = await queryPromise(settingsSql);
+
+                const { rest_open, rest_close } = settingsResult[0] || {};
+
+                if (rest_open && rest_close) {
+                    const now = new Date();
+                    const currentTotal = now.getHours() * 60 + now.getMinutes();
+                    const [openH, openM] = rest_open.split(':').map(Number);
+                    const openTotal = openH * 60 + openM;
+                    const [closeH, closeM] = rest_close.split(':').map(Number);
+                    const closeTotal = closeH * 60 + closeM;
+
+                    let isOpen = false;
+                    if (closeTotal > openTotal) {
+                        isOpen = currentTotal >= openTotal && currentTotal <= closeTotal;
+                    } else {
+                        isOpen = currentTotal >= openTotal || currentTotal <= closeTotal;
+                    }
+
+                    if (!isOpen) {
+                        console.log("Restaurant is closed. Skipping reservation creation.");
+                        return res.status(laravelRes.status).json(laravelRes.data); // Exit block if closed
+                    }
+                }
+
+                // CURRENT DATE + TIME
                 const now = new Date();
                 const year = now.getFullYear();
                 const month = String(now.getMonth() + 1).padStart(2, '0');
                 const day = String(now.getDate()).padStart(2, '0');
-                const currentDate = `${year}-${month}-${day}`; 
-
                 const hours = String(now.getHours()).padStart(2, '0');
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 const seconds = String(now.getSeconds()).padStart(2, '0');
-                const currentTime = `${hours}:${minutes}:${seconds}`;
 
-                // Combine date and formattedTime for the DATETIME column `re_date` (e.g., '2026-03-22 14:30:00')
-                const dateTimeString = `${currentDate} ${currentTime}`;
+                const currentDateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
-                // Format the table_no string (e.g., if array was joined or just a string)
+                // FORMAT TABLE STRING
                 let tableStr = null;
                 if (table_no) {
-                    tableStr = Array.isArray(table_no) ? table_no.join(", ") : String(table_no);
+                    tableStr = Array.isArray(table_no)
+                        ? table_no.join(", ")
+                        : String(table_no);
                 }
 
-                // Strictly cast integers
-                const safeBranchId = (branch_id === "" || branch_id == null) ? null : parseInt(branch_id);
-                // We don't have a specific customer_id in this payload directly, so we pass null or parse if you add it later
-                const safeCustomerId = null; 
-                const safeDuration = 90; // Defaulting to 90 mins
+                const safeBranchId = (branch_id === "" || branch_id == null)
+                    ? null
+                    : parseInt(branch_id);
 
-                // Ensure companyCode is ready
-                const compCode = companyCode || await getCompanyCode();
+                const safeDuration = 90;
 
-                // 1. Insert directly into the local reservation table instead of updating external tables API
-                const sql = `
-                    INSERT INTO reservation 
-                    (re_com_id, re_branch_id, re_table_no, re_customer_id, re_date, re_duration, re_status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
-
-                // Setting re_status to 1 to block the table
-                const values = [compCode, safeBranchId, tableStr, safeCustomerId, dateTimeString, safeDuration, 1];
-
-                await queryPromise(sql, values);
-                console.log(`Successfully created a local reservation for table(s) [${tableStr}] to block availability.`);
-
-            } catch (dbError) {
-                console.error("Error inserting into local reservation table during checkout:", dbError.message);
-                // We just log this and move on, so the user still sees a successful checkout
-            }
-
-           // ==========================================
-            // 6. SEND TO CUSTOMER ORDER QUEUES API
-            // ==========================================
-            try {
-                const queueApiUrl = 'https://pos.chulkani.com/branch/order/website/customer-order-queues';
-                
-                // Extract order_no if the main API returned it in the response
-                const orderNo = laravelRes.data.order_no || laravelRes.data.data?.order_no || null;
-
-                // FIX: Inject the table_no (and parent data) directly into EACH individual item
-                const queueItems = formattedItems.map(item => ({
-                    ...item,
-                    table_no: table_no, 
-                    company_id: companyCode,
-                    branch_id: parseInt(branch_id || 1),
-                    order_no: orderNo
-                }));
-
-                const queuePayload = {
-                    company_id: companyCode,
-                    branch_id: parseInt(branch_id || 1),
-                    table_no: table_no,
-                    order_no: orderNo,
-                    items: queueItems // Sending the newly enriched items array
+                // SEND TO RESERVATION API
+                const reservationPayload = {
+                    re_com_id: companyCode,
+                    re_branch_id: safeBranchId,
+                    re_table_no: tableStr,
+                    re_customer_id: safeCustomerId,
+                    re_date: currentDateTime,
+                    re_duration: safeDuration,
+                    re_status: 0,
+                    re_adv_payment: 0
                 };
 
                 await axios.post(
-                    queueApiUrl,
-                    queuePayload,
+                    "https://pos.chulkani.com/reservations",
+                    reservationPayload,
                     {
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
                         },
-                        timeout: 15000 // 15 seconds
+                        timeout: 15000
                     }
                 );
 
-                console.log(`Successfully sent order to customer-order-queues API for table ${table_no}`);
-            } catch (queueError) {
-                console.error("Error sending to customer-order-queues API:", queueError.message);
-                // We just log this and move on, so the user still sees a successful checkout
+                console.log(`Reservation API created for table(s) [${tableStr}]`);
+
+            } catch (reservationError) {
+                console.error(
+                    "Reservation API error during checkout:",
+                    reservationError.response?.data || reservationError.message
+                );
             }
         }
 
@@ -403,8 +599,8 @@ router.post('/place-order', async (req, res) => {
             data: error.response?.data,
             message: error.message
         });
-        
-        return res.status(error.response?.status || 500).json({ 
+
+        return res.status(error.response?.status || 500).json({
             status: false,
             message: error.response?.data?.message || "Order failed at Laravel API",
             details: error.response?.data || error.message
@@ -412,54 +608,180 @@ router.post('/place-order', async (req, res) => {
     }
 });
 
+
 // ==========================================
-// 3. Create Customers
+// 4. POST: Send OTP (USING REAL CACHE)
 // ==========================================
-router.post("/create-customer", async (req, res) => {
-  try {
-    const { name, phone, address, branch_id, email } = req.body;
+router.post('/send-otp', async (req, res) => {
+    const { phone } = req.body;
 
-    // Fetch company_code dynamically
-    const settings = await queryPromise(
-      "SELECT company_code FROM settings WHERE id = 1"
-    );
+    if (!phone) {
+        return res.status(400).json({ success: false, message: "Phone required" });
+    }
 
-    const companyCode = settings[0]?.company_code || "26672691";
+    // Generate 4-digit OTP
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-    const payload = {
-      company_id: companyCode,
-      branch_id: branch_id || 1,
-      name,
-      phone,
-      email,
-      address
-    };
+    // STORE IN CACHE: Set phone as the key, and otp as the value. 
+    // It will automatically expire and delete itself after 5 minutes.
+    otpCache.set(phone, otp);
 
-    const response = await axios.post(
-      "https://pos.chulkani.com/branch/create_customer",
-      payload,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json"
+    // Format phone number to required format (8801XXXXXXXXX)
+    let formattedPhone = phone.replace(/\D/g, ''); // Remove non-digits
+    if (formattedPhone.startsWith('01') && formattedPhone.length === 11) {
+        formattedPhone = '88' + formattedPhone;
+    }
+    // If already has 88 at start, keep as is
+    if (!formattedPhone.startsWith('88') && formattedPhone.length === 13) {
+        formattedPhone = '88' + formattedPhone;
+    }
+
+    try {
+        const message = `Your checkout OTP is ${otp}. Please do not share this with anyone.`;
+        const apiUrl = `http://sms.iglweb.com/api/v1/send?api_key=4451773340833151773340833&contacts=${formattedPhone}&senderid=01844532630&msg=${encodeURIComponent(message)}`;
+        
+        console.log("Sending OTP to:", formattedPhone);
+        
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
+        });
+        
+        const responseText = await response.text(); 
+        console.log("SMS API Response:", responseText);
+        
+        if (response.ok) {
+            return res.json({ success: true, message: "OTP sent successfully" });
+        } else {
+            return res.status(500).json({ success: false, message: "Failed to send OTP. Gateway rejected the request." });
         }
-      }
+
+    } catch (error) {
+        console.error("\n=== 🔴 FETCH CRASH REPORT ===");
+        console.error("Error Message:", error.message);
+        return res.status(500).json({ success: false, message: "Internal Error: Could not reach SMS Gateway" });
+    }
+});
+
+// ==========================================
+// 5. POST: Verify OTP
+// ==========================================
+router.post('/verify-otp', async (req, res) => {
+    const { phone, otp } = req.body;
+
+    // Retrieve the OTP from the cache
+    const cachedOtp = otpCache.get(phone);
+
+    if (!cachedOtp) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "OTP expired or never requested. Please click Resend." 
+        });
+    }
+
+    if (cachedOtp === otp) {
+        // Success! Immediately delete it from cache so it can't be used twice
+        otpCache.del(phone);
+        return res.json({ success: true, message: "Phone verified successfully" });
+    } else {
+        return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+});
+
+
+// ==========================================
+// GET CHECKOUT SECURITY SETTINGS
+// ==========================================
+router.get('/checkout-settings', async (req, res) => {
+    try {
+        // Fetch the otp and captcha columns from the first row
+        const settings = await queryPromise("SELECT otp, captcha FROM settings WHERE id = 1");
+        
+        if (settings && settings.length > 0) {
+            return res.status(200).json({
+                success: true,
+                otp: settings[0].otp,         // Will be 1 (enabled) or 0 (disabled)
+                captcha: settings[0].captcha  // Will be 1 (enabled) or 0 (disabled)
+            });
+        }
+        
+        // Fallback if the row doesn't exist
+        return res.status(200).json({ success: true, otp: 0, captcha: 0 });
+    } catch (err) {
+        console.error("Settings Fetch Error:", err.message);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+});
+
+// ===============================
+// FILE 2: checkout.js (Backend - Node/Express)
+// ===============================
+
+// ADD THIS NEW ROUTE INTO YOUR EXISTING checkout.js
+
+router.get('/customer-reservations/:customer_id/:branch_id', async (req, res) => {
+  try {
+
+    const { customer_id, branch_id } = req.params;
+
+    const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
+    const companyCode = settings[0]?.company_code || '26672691';
+
+    const apiUrl = `https://pos.chulkani.com/reservations?company_id=${companyCode}&branch_id=${branch_id}`;
+
+    const response = await axios.get(apiUrl, {
+      headers: { Accept: 'application/json' }
+    });
+
+    let reservations = [];
+
+    if (
+      response.data &&
+      response.data.data &&
+      Array.isArray(response.data.data.data)
+    ) {
+      reservations = response.data.data.data;
+    }
+
+    const customerReservations = reservations.filter(
+      r =>
+        Number(r.re_customer_id) === Number(customer_id) &&
+        (Number(r.re_status) === 1 || Number(r.re_status) === 0)
     );
 
-    res.json(response.data);
+    let tables = [];
+
+    customerReservations.forEach(r => {
+      if (r.re_table_no) {
+        const splitTables = r.re_table_no.split(',').map(t => t.trim());
+        tables.push(...splitTables);
+      }
+    });
+
+    // Remove duplicate tables
+    tables = [...new Set(tables)];
+
+    // Check availability
+    const isAvailable = customerReservations.length > 0;
+
+    return res.json({
+      success: true,
+      isAvailable,
+      tables
+    });
 
   } catch (error) {
 
-    // IMPORTANT: log the real error
-    console.error(
-      "Create customer error:",
-      error.response?.data || error.message
-    );
+    console.error("Customer reservation fetch error:", error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: error.response?.data || "Failed to create customer"
+      message: "Reservation fetch failed"
     });
+
   }
 });
 

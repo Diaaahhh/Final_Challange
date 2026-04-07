@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { FaBuilding, FaSave, FaTruck, FaClock, FaHourglassHalf } from 'react-icons/fa';
+import { FaBuilding, FaSave, FaTruck, FaClock, FaHourglassHalf, FaMobileAlt, FaShieldAlt } from 'react-icons/fa';
 import api from '../../api';
 
 export default function Settings() {
   const [companyCode, setCompanyCode] = useState('');
   const [deliveryCharge, setDeliveryCharge] = useState('');
   
-  // --- NEW STATES FOR RESERVATION SETTINGS ---
+  // --- EXISTING STATES FOR RESERVATION SETTINGS ---
   const [restOpen, setRestOpen] = useState('10:00'); 
   const [restClose, setRestClose] = useState('22:00');
   const [tablePrelockDuration, setTablePrelockDuration] = useState('30');
+
+  // --- NEW STATES FOR SECURITY SETTINGS ---
+  const [otpEnabled, setOtpEnabled] = useState(false);
+  const [captchaEnabled, setCaptchaEnabled] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -20,13 +24,15 @@ export default function Settings() {
       .then(res => {
         if (res.data) {
            if (res.data.company_code) setCompanyCode(res.data.company_code);
-           // Safely check if it exists so we can even load '0'
            if (res.data.delivery_charge !== undefined) setDeliveryCharge(res.data.delivery_charge);
            
-           // Load new settings (Format time from "10:00:00" to "10:00" for the input)
            if (res.data.rest_open) setRestOpen(res.data.rest_open.substring(0, 5));
            if (res.data.rest_close) setRestClose(res.data.rest_close.substring(0, 5));
            if (res.data.table_prelock_duration !== undefined) setTablePrelockDuration(res.data.table_prelock_duration);
+
+           // Load Security Settings (Convert 1/0 from DB to true/false for UI)
+           if (res.data.otp !== undefined) setOtpEnabled(res.data.otp === 1);
+           if (res.data.captcha !== undefined) setCaptchaEnabled(res.data.captcha === 1);
         }
         setLoading(false);
       })
@@ -47,7 +53,10 @@ export default function Settings() {
           delivery_charge: deliveryCharge,
           rest_open: restOpen,
           rest_close: restClose,
-          table_prelock_duration: tablePrelockDuration
+          table_prelock_duration: tablePrelockDuration,
+          // Convert true/false back to 1/0 for DB
+          otp: otpEnabled ? 1 : 0,
+          captcha: captchaEnabled ? 1 : 0
       });
       alert("Settings saved successfully!");
     } catch (err) {
@@ -141,7 +150,7 @@ export default function Settings() {
               </p>
             </div>
 
-            {/* --- NEW SECTION: RESERVATION SETTINGS --- */}
+            {/* --- RESERVATION SETTINGS --- */}
             <div className="pt-6 pb-2 border-t border-[#222]">
                 <h3 className="text-[#C59D5F] font-bold uppercase tracking-wider text-sm mb-4">Reservation Timings</h3>
                 
@@ -206,6 +215,59 @@ export default function Settings() {
                   <p className="mt-2 text-[10px] text-[#555] uppercase tracking-wide font-bold">
                     * The table will be locked to walk-ins this many minutes prior to a booking.
                   </p>
+                </div>
+            </div>
+
+            {/* --- NEW SECTION: SECURITY SETTINGS --- */}
+            <div className="pt-6 pb-2 border-t border-[#222]">
+                <h3 className="text-[#007BFF] font-bold uppercase tracking-wider text-sm mb-4">Security & Verification</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  
+                  {/* OTP Switch */}
+                  <div className={`flex items-center justify-between bg-[#1A1A1A] border ${otpEnabled ? 'border-[#007BFF]/50' : 'border-[#2A2A2A]'} rounded-xl p-4 shadow-sm transition-all duration-300`}>
+                    <div className="flex items-center gap-3">
+                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${otpEnabled ? 'bg-[#007BFF]/20 text-[#007BFF]' : 'bg-[#333] text-[#555]'} transition-colors`}>
+                         <FaMobileAlt />
+                       </div>
+                       <div>
+                         <span className="text-sm font-bold text-white uppercase tracking-wider block">OTP Gateway</span>
+                         <span className="text-[10px] text-[#555] font-bold uppercase tracking-wide">SMS Verification</span>
+                       </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={otpEnabled} 
+                        onChange={() => setOtpEnabled(!otpEnabled)} 
+                      />
+                      <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007BFF]"></div>
+                    </label>
+                  </div>
+
+                  {/* Captcha Switch */}
+                  <div className={`flex items-center justify-between bg-[#1A1A1A] border ${captchaEnabled ? 'border-[#007BFF]/50' : 'border-[#2A2A2A]'} rounded-xl p-4 shadow-sm transition-all duration-300`}>
+                    <div className="flex items-center gap-3">
+                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${captchaEnabled ? 'bg-[#007BFF]/20 text-[#007BFF]' : 'bg-[#333] text-[#555]'} transition-colors`}>
+                         <FaShieldAlt />
+                       </div>
+                       <div>
+                         <span className="text-sm font-bold text-white uppercase tracking-wider block">Google Captcha</span>
+                         <span className="text-[10px] text-[#555] font-bold uppercase tracking-wide">Bot Protection</span>
+                       </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={captchaEnabled} 
+                        onChange={() => setCaptchaEnabled(!captchaEnabled)} 
+                      />
+                      <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007BFF]"></div>
+                    </label>
+                  </div>
+
                 </div>
             </div>
 

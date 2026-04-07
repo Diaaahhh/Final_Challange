@@ -5,7 +5,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const db = require('./db'); 
 const axios = require('axios');
-
+require('dotenv').config();
 const app = express();
 
 // --- CRASH REPORTER (Keeps your site alive & logs errors) ---
