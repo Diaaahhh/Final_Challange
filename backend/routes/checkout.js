@@ -716,5 +716,73 @@ router.get('/checkout-settings', async (req, res) => {
     }
 });
 
+// ===============================
+// FILE 2: checkout.js (Backend - Node/Express)
+// ===============================
+
+// ADD THIS NEW ROUTE INTO YOUR EXISTING checkout.js
+
+router.get('/customer-reservations/:customer_id/:branch_id', async (req, res) => {
+  try {
+
+    const { customer_id, branch_id } = req.params;
+
+    const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
+    const companyCode = settings[0]?.company_code || '26672691';
+
+    const apiUrl = `https://pos.chulkani.com/reservations?company_id=${companyCode}&branch_id=${branch_id}`;
+
+    const response = await axios.get(apiUrl, {
+      headers: { Accept: 'application/json' }
+    });
+
+    let reservations = [];
+
+    if (
+      response.data &&
+      response.data.data &&
+      Array.isArray(response.data.data.data)
+    ) {
+      reservations = response.data.data.data;
+    }
+
+    const customerReservations = reservations.filter(
+      r =>
+        Number(r.re_customer_id) === Number(customer_id) &&
+        (Number(r.re_status) === 1 || Number(r.re_status) === 0)
+    );
+
+    let tables = [];
+
+    customerReservations.forEach(r => {
+      if (r.re_table_no) {
+        const splitTables = r.re_table_no.split(',').map(t => t.trim());
+        tables.push(...splitTables);
+      }
+    });
+
+    // Remove duplicate tables
+    tables = [...new Set(tables)];
+
+    // Check availability
+    const isAvailable = customerReservations.length > 0;
+
+    return res.json({
+      success: true,
+      isAvailable,
+      tables
+    });
+
+  } catch (error) {
+
+    console.error("Customer reservation fetch error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Reservation fetch failed"
+    });
+
+  }
+});
 
 module.exports = router;

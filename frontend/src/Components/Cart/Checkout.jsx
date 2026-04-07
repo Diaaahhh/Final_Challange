@@ -44,6 +44,7 @@ export default function Checkout() {
   const [otpSent, setOtpSent] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+const [reservedTablesByCustomer, setReservedTablesByCustomer] = useState([]);
 
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const verifyAbortRef = useRef(null);
@@ -83,6 +84,31 @@ export default function Checkout() {
     }
   };
 
+   // ======================================
+  // 2. FETCH CUSTOMER RESERVATIONS
+  // ======================================
+  const fetchCustomerReservations = async (customerId, branchId) => {
+    try {
+      const res = await api.get(
+        `/customer-reservations/${customerId}/${branchId}`
+      );
+
+      if (res.data.success && res.data.isAvailable) {
+        const tables = res.data.tables || [];
+
+        setReservedTablesByCustomer(tables);
+
+        if (tables.length > 0) {
+          setBookingData((prev) => ({
+            ...prev,
+            table_no: tables
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Reservation fetch error:", error);
+    }
+  };
   const [showModal, setShowModal] = useState(false);
   const [availableTables, setAvailableTables] = useState([]);
 
@@ -106,7 +132,7 @@ export default function Checkout() {
   // Feed the active tables into your custom hook
   const suggestedTables = useTableSuggestion(
     personCount,
-    activeTablesForSuggestion
+    activeTablesForSuggestion,
   );
   // --- FETCH DELIVERY SETTING ON PAGE LOAD ---
   useEffect(() => {
@@ -229,11 +255,22 @@ export default function Checkout() {
 
       const res = await api.get(
         `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`,
-        { signal: verifyAbortRef.current.signal }
+        { signal: verifyAbortRef.current.signal },
       );
 
       if (res.data && res.data.success === true) {
         setIsPhoneSubmitted(true);
+        // Fetch reservations for this customer
+if (res.data.customer_id) {
+  const firstItem = cartItems[0] || {};
+  const companyId = firstItem.m_company_id || firstItem.company_id;
+  const branchId =
+    firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
+
+  if (companyId && branchId) {
+    fetchCustomerReservations(res.data.customer_id, branchId);
+  }
+}
 
         setFormData((prev) => ({
           ...prev,
@@ -383,7 +420,7 @@ export default function Checkout() {
       alert(
         formData.order_method === "Dine-in"
           ? "Please select at least one table."
-          : "Please select a table."
+          : "Please select a table.",
       );
       return;
     }
@@ -391,18 +428,57 @@ export default function Checkout() {
     if (formData.order_method === "Parcel") {
       const isValid = availableTables.some(
         (t) =>
-          String(t.table_no).trim() === String(bookingData.table_no[0]).trim()
+          String(t.table_no).trim() === String(bookingData.table_no[0]).trim(),
       );
 
       if (!isValid) {
         showToastWarning(
-          `Warning: Table "${bookingData.table_no[0]}" does not exist!`
+          `Warning: Table "${bookingData.table_no[0]}" does not exist!`,
         );
         return;
       }
     }
 
     setShowModal(false);
+  };
+
+  const createCustomerIfAddressChanged = async () => {
+    try {
+      // Only create if address changed
+      if (
+        originalAddress &&
+        originalAddress.trim() !== formData.address.trim()
+      ) {
+        let branchId = 1;
+        let companyId = 1;
+
+        if (cartItems.length > 0) {
+          const firstItem = cartItems[0];
+
+          branchId =
+            firstItem.branchId ||
+            firstItem.m_branch_id ||
+            firstItem.branch_id ||
+            1;
+
+          companyId = firstItem.m_company_id || firstItem.company_id || 1;
+        }
+
+        const payload = {
+          branch_id: branchId,
+          name: formData.cust_name,
+          phone: formData.phone,
+          email: "",
+          address: formData.address,
+        };
+
+        await api.post("/create-customer", payload);
+
+        console.log("New customer created due to address change");
+      }
+    } catch (error) {
+      console.error("Customer creation failed:", error);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -474,6 +550,8 @@ export default function Checkout() {
     };
 
     try {
+      // Create new customer if address changed
+      await createCustomerIfAddressChanged();
       const response = await api.post("/place-order", orderPayload);
 
       if (response.data.status === true) {
@@ -574,8 +652,8 @@ export default function Checkout() {
                         {countdown > 0
                           ? `Resend in ${formatTime(countdown)}`
                           : otpSent
-                          ? "Resend OTP"
-                          : "Send OTP"}
+                            ? "Resend OTP"
+                            : "Send OTP"}
                       </button>
                     )}
                   </div>
@@ -740,7 +818,7 @@ export default function Checkout() {
                         </select>
 
                         {["Dine-in", "Parcel"].includes(
-                          formData.order_method
+                          formData.order_method,
                         ) &&
                           bookingData.table_no &&
                           bookingData.table_no.length > 0 && (
@@ -868,17 +946,17 @@ export default function Checkout() {
                         // 1. Calculate Summary Data
                         const selectedTableObjects = tablesToUse
                           .filter((t) =>
-                            bookingData.table_no.includes(t.table_no)
+                            bookingData.table_no.includes(t.table_no),
                           )
                           .sort(
-                            (a, b) => Number(a.table_no) - Number(b.table_no)
+                            (a, b) => Number(a.table_no) - Number(b.table_no),
                           ); // Sort ascending
 
                         const totalSelectedCapacity =
                           selectedTableObjects.reduce(
                             (sum, t) =>
                               sum + Number(t.person_no || t.capacity || 4),
-                            0
+                            0,
                           );
                         const parsedGuestCount = Number(personCount) || 0;
                         const capacityMet =
@@ -987,13 +1065,16 @@ export default function Checkout() {
                               const bottomRow = Math.floor(totalChairs / 2);
 
                               const isSelected = bookingData.table_no.includes(
-                                String(table.table_no)
+                                String(table.table_no),
                               );
                               const isOccupied = !table.isAvailable;
                               // CHANGED: Now using the smart array returned from useTableSuggestion.js
                               const isSuggested = suggestedTables.includes(
-                                String(table.table_no)
+                                String(table.table_no),
                               );
+                              const isReservedByCustomer = reservedTablesByCustomer.includes(
+  String(table.table_no)
+);
                               return (
                                 <div
                                   key={table.id}
@@ -1018,6 +1099,11 @@ export default function Checkout() {
                                       </div>
                                     )}
 
+{isReservedByCustomer && (
+  <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
+    
+  </div>
+)}
                                   {isOccupied && (
                                     <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
                                       {table.bookingMessage || "BUSY"}
@@ -1036,11 +1122,12 @@ export default function Checkout() {
                                       ${
                                         isOccupied
                                           ? "bg-red-100 border-red-300 text-red-800"
-                                          : isSelected
-                                          ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
-                                          : isSuggested
-                                          ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
-                                          : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                          : isReservedByCustomer
+      ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
+                                            ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                            : isSuggested
+                                              ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                              : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
                                       }
                                     `}
                                   >
@@ -1081,13 +1168,15 @@ export default function Checkout() {
                               const bottomRow = Math.floor(totalChairs / 2);
 
                               const isSelected = bookingData.table_no.includes(
-                                String(t.table_no)
+                                String(t.table_no),
                               );
                               const isOccupied = t.is_occupied;
                               const isSuggested = suggestedTables.includes(
-                                String(t.table_no)
+                                String(t.table_no),
                               );
-
+const isReservedByCustomer = reservedTablesByCustomer.includes(
+  String(t.table_no)
+);
                               return (
                                 <div
                                   key={t.id}
@@ -1111,7 +1200,11 @@ export default function Checkout() {
                                         ⭐ BEST FIT
                                       </div>
                                     )}
-
+{isReservedByCustomer && (
+  <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
+    
+  </div>
+)}
                                   {isOccupied && (
                                     <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
                                       BUSY
@@ -1130,11 +1223,12 @@ export default function Checkout() {
                                       ${
                                         isOccupied
                                           ? "bg-red-100 border-red-300 text-red-800"
-                                          : isSelected
-                                          ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
-                                          : isSuggested
-                                          ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
-                                          : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                          : isReservedByCustomer
+      ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
+                                            ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                            : isSuggested
+                                              ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                              : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
                                       }
                                     `}
                                   >
