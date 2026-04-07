@@ -45,7 +45,7 @@ export default function Checkout() {
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 const [reservedTablesByCustomer, setReservedTablesByCustomer] = useState([]);
-
+const [maxTableSelection, setMaxTableSelection] = useState(1);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const verifyAbortRef = useRef(null);
   const lastVerifiedPhoneRef = useRef(null);
@@ -76,6 +76,8 @@ const [reservedTablesByCustomer, setReservedTablesByCustomer] = useState([]);
       const res = await api.get(`get-dine-in-tables/${branchId}`);
       if (res.data.status) {
         setDineInTables(res.data.data);
+          setMaxTableSelection(res.data.max_table_selection || 1);
+
       }
     } catch (error) {
       console.error("Error fetching dine-in tables:", error);
@@ -93,10 +95,10 @@ const [reservedTablesByCustomer, setReservedTablesByCustomer] = useState([]);
         `/customer-reservations/${customerId}/${branchId}`
       );
 
-      if (res.data.success && res.data.isAvailable) {
+      if (res.data.success) {
         const tables = res.data.tables || [];
 
-        setReservedTablesByCustomer(tables);
+        setReservedTablesByCustomer(tables || []);
 
         if (tables.length > 0) {
           setBookingData((prev) => ({
@@ -307,6 +309,8 @@ if (res.data.customer_id) {
       verifyPhone(formData.phone);
     } else {
       setIsPhoneSubmitted(false);
+      setReservedTablesByCustomer([]); 
+      lastVerifiedPhoneRef.current = null;
     }
   }, [formData.phone]);
   useEffect(() => {
@@ -396,19 +400,52 @@ if (res.data.customer_id) {
     }
   };
 
+  const getTableCapacity = (tableNo) => {
+  const tables =
+    dineInTables.length > 0 ? dineInTables : availableTables;
+
+  const table = tables.find(
+    (t) => String(t.table_no) === String(tableNo)
+  );
+
+  return Number(table?.person_no || table?.capacity || 4);
+};
+
   const handleTableSelect = (tableNo) => {
-    setBookingData((prev) => {
-      const currentTables = Array.isArray(prev.table_no) ? prev.table_no : [];
-      if (currentTables.includes(tableNo)) {
-        return {
-          ...prev,
-          table_no: currentTables.filter((t) => t !== tableNo),
-        };
-      } else {
-        return { ...prev, table_no: [...currentTables, tableNo] };
-      }
-    });
-  };
+  setBookingData((prev) => {
+    const currentTables = Array.isArray(prev.table_no) ? prev.table_no : [];
+
+    // remove if already selected
+    if (currentTables.includes(tableNo)) {
+      return {
+        ...prev,
+        table_no: currentTables.filter((t) => t !== tableNo),
+      };
+    }
+
+    // calculate current seat capacity
+    const currentSeatTotal = currentTables.reduce(
+      (sum, t) => sum + getTableCapacity(t),
+      0
+    );
+
+    const newTableSeats = getTableCapacity(tableNo);
+    const newSeatTotal = currentSeatTotal + newTableSeats;
+
+    // LIMIT CHECK (SEATS instead of tables)
+    if (newSeatTotal > maxTableSelection) {
+      showToastWarning(
+        `You can select maximum ${maxTableSelection} seat(s).`
+      );
+      return prev;
+    }
+
+    return {
+      ...prev,
+      table_no: [...currentTables, tableNo],
+    };
+  });
+};
 
   const showToastWarning = (msg) => {
     setToast({ show: true, message: msg });
@@ -593,7 +630,21 @@ if (res.data.customer_id) {
       </div>
     ));
   };
+useEffect(() => {
+  if (
+    formData.customer_id &&
+    reservedTablesByCustomer.length === 0 &&
+    dineInTables.length > 0
+  ) {
+    const firstItem = cartItems[0] || {};
+    const branchId =
+      firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
 
+    if (branchId) {
+      fetchCustomerReservations(formData.customer_id, branchId);
+    }
+  }
+}, [dineInTables]);
   return (
     <>
       <style>{autofillFixStyles}</style>
@@ -1101,7 +1152,7 @@ if (res.data.customer_id) {
 
 {isReservedByCustomer && (
   <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
-    
+   reserved
   </div>
 )}
                                   {isOccupied && (
@@ -1202,7 +1253,7 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                                     )}
 {isReservedByCustomer && (
   <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
-    
+   
   </div>
 )}
                                   {isOccupied && (

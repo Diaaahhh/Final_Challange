@@ -19,56 +19,51 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
   const { handleAddToCart, setIsCartOpen, cartItems } = useCart();
 
   const [localQty, setLocalQty] = useState(0);
+  
   const handleQtyChange = (value) => {
-  const newQty = Number(value);
+    const newQty = Number(value);
+    if (isNaN(newQty) || newQty < 0) return;
+    const diff = newQty - localQty;
+    setLocalQty(newQty);
+    if (diff !== 0) {
+      handleAddToCart(item, diff, branchId, branchName);
+    }
+  };
 
-  if (isNaN(newQty) || newQty < 0) return;
-
-  const diff = newQty - localQty;
-
-  setLocalQty(newQty);
-
-  if (diff !== 0) {
-    handleAddToCart(item, diff, branchId, branchName);
-  }
-};
   useEffect(() => {
     const cartItem = cartItems.find(
       (c) => String(c.m_menu_sl) === String(item.m_menu_sl)
     );
-
     if (cartItem) {
       setLocalQty(cartItem.quantity);
     } else {
-      setLocalQty(0); // if removed from cart
+      setLocalQty(0);
     }
   }, [cartItems, item.m_menu_sl]);
+
   const increment = () => {
-  setLocalQty((prev) => prev + 1);
-  handleAddToCart(item, 1, branchId, branchName);
-};
-const decrement = () => {
-  if (localQty > 0) {
-    setLocalQty((prev) => prev - 1);
-    handleAddToCart(item, -1, branchId, branchName);
-  }
-};
+    setLocalQty((prev) => prev + 1);
+    handleAddToCart(item, 1, branchId, branchName);
+  };
+
+  const decrement = () => {
+    if (localQty > 0) {
+      setLocalQty((prev) => prev - 1);
+      handleAddToCart(item, -1, branchId, branchName);
+    }
+  };
+
   const onAddToCart = () => {
     let qtyToAdd = localQty;
-
-    // If UI shows 0, add 1
     if (localQty === 0) {
       qtyToAdd = 1;
-      setLocalQty(1); // update UI
+      setLocalQty(1);
     }
-
     handleAddToCart(item, qtyToAdd, branchId, branchName);
-
     if (setIsCartOpen) setIsCartOpen(true);
   };
 
   const isActive = Number(item.m_status) === 1;
-  // const isAddDisabled = localQty === 0;
 
   // --- DISCOUNT JSON PARSING & MATH ---
   const basePrice = Number(item.m_price) || 0;
@@ -145,13 +140,13 @@ const decrement = () => {
                 <span className="text-[10px] text-gray-400 line-through">
                   {basePrice.toLocaleString()} Tk
                 </span>
-                <span className="text-base font-bold text-amber-600 whitespace-nowrap">
+                <span className="text-base font-bold theme-accent whitespace-nowrap">
                   {effectivePrice.toLocaleString()}{" "}
                   <span className="text-xs font-normal text-gray-500">Tk</span>
                 </span>
               </>
             ) : (
-              <span className="text-base font-bold text-amber-600 whitespace-nowrap">
+              <span className="text-base font-bold theme-accent whitespace-nowrap">
                 {basePrice.toLocaleString()}{" "}
                 <span className="text-xs font-normal text-gray-500">Tk</span>
               </span>
@@ -176,48 +171,39 @@ const decrement = () => {
           )}
 
           {isActive && (
-  <div className="flex items-center gap-3 w-full">
-
-    {/* SHOW ADD BUTTON IF QTY = 0 */}
-    {localQty === 0 ? (
-      <button
-        onClick={onAddToCart}
-        className="flex-1 h-8 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-sm bg-[#C59D5F] hover:bg-[#0E1014] text-white cursor-pointer"
-      >
-        Add <FaCartPlus size={12} />
-      </button>
-    ) : (
-
-      /* SHOW QUANTITY SELECTOR IF QTY > 0 */
-      <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
-
-  <button
-    onClick={decrement}
-    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-l-lg transition-colors flex items-center justify-center"
-  >
-    <FaMinus size={8} />
-  </button>
-
-  <input
-    type="number"
-    min="0"
-    value={localQty}
-    onChange={(e) => handleQtyChange(e.target.value)}
-    className="w-10 text-center font-bold text-sm text-gray-800 bg-transparent outline-none"
-  />
-
-  <button
-    onClick={increment}
-    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
-  >
-    <FaPlus size={8} />
-  </button>
-
-</div>
-    )}
-
-  </div>
-)}
+            <div className="flex items-center gap-3 w-full">
+              {localQty === 0 ? (
+                <button
+                  onClick={onAddToCart}
+                  className="flex-1 h-8 rounded-lg font-bold text-xs uppercase tracking-wider transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm theme-accent-bg text-white cursor-pointer"
+                >
+                  Add <FaCartPlus size={12} />
+                </button>
+              ) : (
+                <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
+                  <button
+                    onClick={decrement}
+                    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-l-lg transition-colors flex items-center justify-center"
+                  >
+                    <FaMinus size={8} />
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    value={localQty}
+                    onChange={(e) => handleQtyChange(e.target.value)}
+                    className="w-10 text-center font-bold text-sm text-gray-800 bg-transparent outline-none"
+                  />
+                  <button
+                    onClick={increment}
+                    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
+                  >
+                    <FaPlus size={8} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -257,28 +243,21 @@ export default function MenuUser() {
   const [selectedBranch, setSelectedBranch] = useState(initialBranch);
   const [showBranchModal, setShowBranchModal] = useState(!initialBranch);
 
-  // 1. Fetch Branches and All Menu Items ONCE on load
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-
         const [branchRes, itemRes] = await Promise.all([
           api.get("/menu_user/branches"),
           api.get("/menu_user/list"),
         ]);
 
-        console.log("Branch API raw:", branchRes);
-
         let branchList = [];
-
         if (Array.isArray(branchRes.data)) {
           branchList = branchRes.data;
         } else if (Array.isArray(branchRes.data?.data)) {
           branchList = branchRes.data.data;
         }
-
-        console.log("Parsed branches:", branchList);
 
         setBranches(
           branchList.map((b) => ({
@@ -286,7 +265,6 @@ export default function MenuUser() {
             branch_id: b.branch_id ?? b.id,
           }))
         );
-
         setAllMenuItems(Array.isArray(itemRes.data) ? itemRes.data : []);
       } catch (err) {
         console.error("Error loading initial data:", err);
@@ -294,14 +272,11 @@ export default function MenuUser() {
         setLoading(false);
       }
     };
-
     fetchInitialData();
   }, []);
 
-  // 2. Fetch Categories DYNAMICALLY whenever the branch changes
   useEffect(() => {
     if (!selectedBranch) return;
-
     const fetchCategoriesForBranch = async () => {
       try {
         const catRes = await api.get(`/menu_user/categories/${selectedBranch}`);
@@ -311,11 +286,9 @@ export default function MenuUser() {
         setAllCategories([]);
       }
     };
-
     fetchCategoriesForBranch();
   }, [selectedBranch]);
 
-  // Local filtering based on Branch AND Category
   const filteredItems = allMenuItems.filter((item) => {
     const branchArray = String(item.m_branch_id).split("-");
     const matchesBranch =
@@ -342,7 +315,10 @@ export default function MenuUser() {
       ?.branch_name || "Unknown Branch";
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans relative">
+    <div 
+      className="min-h-screen p-4 md:p-8 font-sans relative transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }} // Dynamically pulled from theme
+    >
       {/* --- BRANCH SELECTION MODAL --- */}
       {showBranchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -351,8 +327,8 @@ export default function MenuUser() {
               branches.length > 5 ? "max-w-2xl" : "max-w-md"
             }`}
           >
-            {/* Modal Header - Fixed at Top */}
-            <div className="bg-[#0E1014] p-6 text-center border-b border-gray-800 relative shrink-0">
+            {/* Modal Header dynamically themed */}
+            <div className="p-6 text-center border-b border-gray-800 relative shrink-0 theme-bg">
               <button
                 onClick={() => navigate(-1)}
                 className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
@@ -361,18 +337,18 @@ export default function MenuUser() {
                 <FaArrowLeft size={20} />
               </button>
               <h2 className="text-2xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
-                Select A <span className="text-[#C59D5F]">Branch</span>
+                Select A <span className="theme-accent">Branch</span>
               </h2>
               <p className="text-gray-400 text-xs mt-2">
                 Choose a location to view the menu
               </p>
             </div>
 
-            {/* Modal Body - Scrollable Area */}
+            {/* Modal Body */}
             <div className="p-6 overflow-y-auto custom-scrollbar">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-8">
-                  <span className="loading loading-spinner text-[#C59D5F] loading-lg"></span>
+                  <span className="loading loading-spinner theme-accent loading-lg"></span>
                   <p className="text-gray-500 text-sm mt-3 font-bold">
                     Loading Locations...
                   </p>
@@ -380,9 +356,7 @@ export default function MenuUser() {
               ) : branches.length > 0 ? (
                 <div
                   className={`grid gap-3 ${
-                    branches.length > 5
-                      ? "grid-cols-1 sm:grid-cols-2"
-                      : "grid-cols-1"
+                    branches.length > 5 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
                   }`}
                 >
                   {branches.map((branch) => (
@@ -392,11 +366,11 @@ export default function MenuUser() {
                       className="group flex items-center justify-between p-4 rounded-xl border border-gray-200 hover:border-[#C59D5F] hover:bg-amber-50 transition-all duration-200 text-left h-full"
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-[#C59D5F] transition-colors shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:theme-accent-bg transition-colors shrink-0">
                           <FaStore className="text-gray-500 group-hover:text-white" />
                         </div>
                         <div className="truncate">
-                          <h3 className="font-bold text-gray-800 group-hover:text-[#C59D5F] text-lg truncate">
+                          <h3 className="font-bold text-gray-800 hover-theme-accent text-lg truncate">
                             {branch.branch_name}
                           </h3>
                           <p className="text-xs text-gray-500 truncate">
@@ -404,7 +378,7 @@ export default function MenuUser() {
                           </p>
                         </div>
                       </div>
-                      <span className="text-gray-300 group-hover:text-[#C59D5F] text-xl ml-2 shrink-0">
+                      <span className="text-gray-300 hover-theme-accent text-xl ml-2 shrink-0">
                         →
                       </span>
                     </button>
@@ -428,7 +402,7 @@ export default function MenuUser() {
       >
         <div className="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
           <div className="flex items-center gap-2">
-            <FaStore className="text-[#C59D5F]" />
+            <FaStore className="theme-accent" />
             <span className="text-gray-500 text-sm">Viewing Menu For:</span>
             <span className="font-bold text-gray-800 uppercase">
               {currentBranchName}
@@ -436,7 +410,8 @@ export default function MenuUser() {
           </div>
           <button
             onClick={() => setShowBranchModal(true)}
-            className="text-sm font-bold text-[#000000] hover:text-[#C59D5F] border-b-2 border-[#000000] hover:border-[#C59D5F] transition-all duration-300 uppercase tracking-wider pb-1"
+            className="text-sm font-bold border-b-2 transition-all duration-300 uppercase tracking-wider pb-1"
+            style={{ color: 'var(--theme-navbar)', borderColor: 'var(--theme-navbar)' }}
           >
             Choose another branch
           </button>
@@ -446,8 +421,9 @@ export default function MenuUser() {
           {/* LEFT SIDEBAR (Categories) */}
           <div className="md:col-span-3 lg:col-span-3">
             <div className="bg-white rounded-2xl shadow-xl overflow-hidden sticky top-8 border border-gray-100">
-              <div className="p-6 bg-gray-900 text-white">
-                <h2 className="text-xl font-bold flex items-center gap-2 text-amber-400">
+              {/* Dynamic Theme Category Header */}
+              <div className="p-6 text-white theme-bg">
+                <h2 className="text-xl font-bold flex items-center gap-2 theme-accent">
                   <FaUtensils /> Categories
                 </h2>
               </div>
@@ -458,7 +434,7 @@ export default function MenuUser() {
                   }
                   className={`text-left px-6 py-4 transition-all duration-300 border-b border-gray-100 last:border-0 flex items-center justify-between group ${
                     activeCategory.id === "All"
-                      ? "bg-amber-50 text-gray-900 border-l-4 border-l-amber-500 font-bold shadow-inner"
+                      ? "bg-amber-50 text-gray-900 border-l-4 theme-border font-bold shadow-inner"
                       : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"
                   }`}
                 >
@@ -473,7 +449,7 @@ export default function MenuUser() {
                     onClick={() => setActiveCategory(cat)}
                     className={`text-left px-6 py-4 transition-all duration-300 border-b border-gray-100 last:border-0 flex items-center justify-between group ${
                       activeCategory.id === cat.id
-                        ? "bg-amber-50 text-gray-900 border-l-4 border-l-amber-500 font-bold shadow-inner"
+                        ? "bg-amber-50 text-gray-900 border-l-4 theme-border font-bold shadow-inner"
                         : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"
                     }`}
                   >
@@ -494,7 +470,7 @@ export default function MenuUser() {
                   <h1 className="text-3xl font-extrabold text-gray-900 uppercase tracking-tight">
                     {activeCategory.menu_name}
                   </h1>
-                  <span className="text-amber-600 font-serif italic text-sm">
+                  <span className="theme-accent font-serif italic text-sm">
                     Delicious Selections
                   </span>
                 </div>
@@ -506,7 +482,7 @@ export default function MenuUser() {
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {loading ? (
                   <div className="col-span-2 text-center py-20 flex flex-col items-center">
-                    <span className="loading loading-spinner text-[#C59D5F] loading-lg"></span>
+                    <span className="loading loading-spinner theme-accent loading-lg"></span>
                   </div>
                 ) : filteredItems.length > 0 ? (
                   filteredItems.map((item) => (

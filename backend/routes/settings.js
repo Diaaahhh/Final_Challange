@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db'); 
 
+// Helper function to wrap db.query in Promises
+const queryPromise = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        db.query(sql, params, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+        });
+    });
+};
 // 1. GET Current Settings
 router.get('/', (req, res) => {
     // Select all the columns from the settings table
@@ -98,4 +107,20 @@ router.post('/update', (req, res) => {
     });
 });
 
+// GET Theme Setting
+router.get('/get-theme', async (req, res) => {
+    try {
+        const sql = "SELECT theme_id FROM settings WHERE id = 1";
+        const result = await queryPromise(sql);
+        
+        if (result && result.length > 0) {
+            res.json({ success: true, theme_id: result[0].theme_id });
+        } else {
+            res.json({ success: true, theme_id: 1 }); // Default fallback
+        }
+    } catch (error) {
+        console.error("Error fetching theme:", error);
+        res.status(500).json({ success: false, theme_id: 1 });
+    }
+});
 module.exports = router;

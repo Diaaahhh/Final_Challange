@@ -54,7 +54,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
             if (matchedCustomer) {
                 return res.status(200).json({
                     success: true, // Tell frontend it was successful
-                    customer_id: matchedCustomer.cust_id, 
+                    customer_id: matchedCustomer.cust_id,
                     name: matchedCustomer.name,
                     address: matchedCustomer.address
                 });
@@ -147,10 +147,13 @@ router.get('/tables/:branch_id', async (req, res) => {
 
         const companyCode = await getCompanyCode();
 
-        const settingsRes = await queryPromise("SELECT table_prelock_duration FROM settings WHERE id = 1");
-        let table_prelock_duration = 30; 
+        const settingsRes = await queryPromise("SELECT table_prelock_duration,max_table_selection  FROM settings WHERE id = 1");
+        let table_prelock_duration = 30;
+        let max_table_selection = 10;
         if (settingsRes && settingsRes.length > 0) {
             table_prelock_duration = parseInt(settingsRes[0].table_prelock_duration, 10) || 30;
+            max_table_selection = parseInt(settingsRes[0].max_table_selection, 10) || 10;
+
         }
 
         const tablesResponse = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
@@ -170,15 +173,15 @@ router.get('/tables/:branch_id', async (req, res) => {
             });
 
             if (
-                reservationResponse.data && 
-                reservationResponse.data.data && 
+                reservationResponse.data &&
+                reservationResponse.data.data &&
                 Array.isArray(reservationResponse.data.data.data)
             ) {
                 reservations = reservationResponse.data.data.data;
-            } 
+            }
             else if (reservationResponse.data && Array.isArray(reservationResponse.data.data)) {
                 reservations = reservationResponse.data.data;
-            } 
+            }
             else if (Array.isArray(reservationResponse.data)) {
                 reservations = reservationResponse.data;
             }
@@ -213,7 +216,7 @@ router.get('/tables/:branch_id', async (req, res) => {
         // 3. AUTO-EXPIRE & FULFILL RESERVATIONS
         // ==========================================
         const validReservations = [];
-        const nowMs = Date.now(); 
+        const nowMs = Date.now();
         const THIRTY_MINS_MS = 30 * 60 * 1000;
 
         for (const res of reservations) {
@@ -224,7 +227,7 @@ router.get('/tables/:branch_id', async (req, res) => {
             // CONDITION A: Auto-expire Pending (Status 0) after 30 mins
             if (Number(targetStatus) === 0 && targetCreateAt) {
                 const createAtMs = new Date(targetCreateAt).getTime();
-                
+
                 if (nowMs - createAtMs >= THIRTY_MINS_MS) {
                     console.log(`⏳ Auto-expiring Reservation ID [${res.id}] (Pending for >30 mins)...`);
                     try {
@@ -235,14 +238,14 @@ router.get('/tables/:branch_id', async (req, res) => {
                     } catch (updateErr) {
                         console.error(`❌ Failed to update Reservation ID [${res.id}]:`, updateErr.message);
                     }
-                    skipReservation = true; 
+                    skipReservation = true;
                 }
             }
 
             // CONDITION B: Auto-fulfill Confirmed (Status 1) if matching Order has Status 1
             if (!skipReservation && Number(targetStatus) === 1) {
-                const matchingOrder = orders.find(o => 
-                    Number(o.ord_res_id) === Number(res.id) && 
+                const matchingOrder = orders.find(o =>
+                    Number(o.ord_res_id) === Number(res.id) &&
                     Number(o.ord_status) === 1
                 );
 
@@ -259,13 +262,13 @@ router.get('/tables/:branch_id', async (req, res) => {
                     skipReservation = true;
                 }
             }
-            
+
             // If the reservation didn't get expired or fulfilled, it remains active!
             if (!skipReservation) {
                 validReservations.push(res);
             }
         }
-        
+
         // Overwrite the reservations array with ONLY the active ones
         reservations = validReservations;
 
@@ -283,7 +286,7 @@ router.get('/tables/:branch_id', async (req, res) => {
             let bookingMessage = null;
 
             const tableReservations = reservations.filter(res => {
-                const targetTableNo = res.table_no || res.re_table_no; 
+                const targetTableNo = res.table_no || res.re_table_no;
                 if (!targetTableNo) return false;
                 const resTables = String(targetTableNo).split(',').map(t => t.trim());
                 return resTables.includes(stringTableNo);
@@ -298,7 +301,7 @@ router.get('/tables/:branch_id', async (req, res) => {
                 let resTime = "";
 
                 const targetDate = res.date || res.re_date;
-                
+
                 if (targetDate) {
                     if (String(targetDate).includes('Z')) {
                         const dateObj = new Date(targetDate);
@@ -316,7 +319,7 @@ router.get('/tables/:branch_id', async (req, res) => {
                 }
 
                 const targetStatus = res.status !== undefined ? res.status : res.re_status;
-                
+
                 console.log(`  -> Res ID [${res.id}]: Status=${targetStatus}, Date=${resDate}, Time=${resTime}`);
 
                 if ((Number(targetStatus) === 0 || Number(targetStatus) === 1) && resDate === chosenDate) {
@@ -356,13 +359,16 @@ router.get('/tables/:branch_id', async (req, res) => {
             };
         });
 
-        res.status(200).json(processedTables);
+        res.status(200).json({
+            tables: processedTables,
+            max_table_selection
+        });
 
     } catch (error) {
         console.error("Error processing reservation tables:", error);
-        
+
         // TEMPORARILY SEND THE REAL ERROR TO THE FRONTEND
-        res.status(500).json({ 
+        res.status(500).json({
             error: "Server error calculating table logic.",
             exact_cause: error.message,
             stack_trace: error.stack,
@@ -398,7 +404,7 @@ router.post('/create', async (req, res) => {
                 }
 
                 const secretKey = "6LdKm6csAAAAAM2egW4Bn4fccolip7XuVggUbzk7"; // <--- REMEMBER TO ADD YOUR SECRET KEY HERE
-                
+
                 const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${captchaToken}`;
                 const googleRes = await axios.post(verifyUrl);
 
@@ -528,14 +534,14 @@ router.post('/send-otp', async (req, res) => {
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     otpCache.set(phone, otp);
 
-    let formattedPhone = phone.replace(/\D/g, ''); 
+    let formattedPhone = phone.replace(/\D/g, '');
     if (formattedPhone.startsWith('01') && formattedPhone.length === 11) formattedPhone = '88' + formattedPhone;
     if (!formattedPhone.startsWith('88') && formattedPhone.length === 13) formattedPhone = '88' + formattedPhone;
 
     try {
         const message = `Your reservation OTP is ${otp}. Please do not share this with anyone.`;
         const apiUrl = `http://sms.iglweb.com/api/v1/send?api_key=4451773340833151773340833&contacts=${formattedPhone}&senderid=01844532630&msg=${encodeURIComponent(message)}`;
-        
+
         const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
@@ -543,7 +549,7 @@ router.post('/send-otp', async (req, res) => {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
             }
         });
-        
+
         if (response.ok) return res.json({ success: true, message: "OTP sent successfully" });
         return res.status(500).json({ success: false, message: "Failed to send OTP. Gateway rejected." });
     } catch (error) {

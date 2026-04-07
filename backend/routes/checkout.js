@@ -100,7 +100,8 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
         const { branch_id } = req.params;
 
         // --- FIX: Fetch Company Code internally from DB ---
-        const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
+        const settings = await queryPromise("SELECT company_code, max_table_selection  FROM settings WHERE id = 1");
+        const maxTableSelection = settings[0]?.max_table_selection || 1;
         const companyCode = settings[0]?.company_code || '26672691';
         // --- NEW: Generate Current Date and Time (Asia/Dhaka) Internally ---
         const currentDateObj = new Date();
@@ -110,8 +111,8 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
         const chosenDate = dateFormatter.format(currentDateObj);
         const chosenTime = timeFormatter.format(currentDateObj);
 
-        console.log(`\n\n--- 🔍 NEW LIVE AVAILABILITY CHECK ---`);
-        console.log(`System checking: Branch ${branch_id} for RIGHT NOW (${chosenDate} at ${chosenTime})`);
+        // console.log(`\n\n--- 🔍 NEW LIVE AVAILABILITY CHECK ---`);
+        // console.log(`System checking: Branch ${branch_id} for RIGHT NOW (${chosenDate} at ${chosenTime})`);
 
 
         const tablesResponse = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
@@ -124,7 +125,7 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
         let reservations = [];
         try {
             const reservationApi = `https://pos.chulkani.com/reservations?company_id=${companyCode}&branch_id=${branch_id}`;
-            console.log(`📡 Fetching live reservations from: ${reservationApi}`);
+            // console.log(`📡 Fetching live reservations from: ${reservationApi}`);
 
             const reservationResponse = await axios.get(reservationApi, {
                 headers: { 'Accept': 'application/json' }
@@ -144,17 +145,17 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
                 reservations = reservationResponse.data;
             }
 
-            console.log(`✅ Success! Fetched ${reservations.length} reservations from API.`);
+            // console.log(`✅ Success! Fetched ${reservations.length} reservations from API.`);
 
         } catch (apiError) {
-            console.error("❌ Failed to fetch reservations from API:", apiError.message);
+            // console.error("❌ Failed to fetch reservations from API:", apiError.message);
         }
 
         // 2. FETCH ORDERS
         let orders = [];
         try {
             const ordersApi = `https://pos.chulkani.com/api/website/order?company_id=${companyCode}&branch_id=${branch_id}`;
-            console.log(`📡 Fetching live orders from: ${ordersApi}`);
+            // console.log(`📡 Fetching live orders from: ${ordersApi}`);
 
             const ordersResponse = await axios.get(ordersApi, {
                 headers: { 'Accept': 'application/json' }
@@ -164,10 +165,10 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
                 orders = ordersResponse.data.data;
             }
 
-            console.log(`✅ Success! Fetched ${orders.length} orders from API.`);
+            // console.log(`✅ Success! Fetched ${orders.length} orders from API.`);
 
         } catch (apiError) {
-            console.error("❌ Failed to fetch orders from API:", apiError.message);
+            // console.error("❌ Failed to fetch orders from API:", apiError.message);
         }
 
         // ==========================================
@@ -192,9 +193,9 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
                         await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
                             re_status: 3
                         });
-                        console.log(`✅ Successfully updated Reservation ID [${res.id}] to status 3 (Expired)`);
+                        // console.log(`✅ Successfully updated Reservation ID [${res.id}] to status 3 (Expired)`);
                     } catch (updateErr) {
-                        console.error(`❌ Failed to update Reservation ID [${res.id}]:`, updateErr.message);
+                        // console.error(`❌ Failed to update Reservation ID [${res.id}]:`, updateErr.message);
                     }
                     skipReservation = true;
                 }
@@ -208,14 +209,14 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
                 );
 
                 if (matchingOrder) {
-                    console.log(`🍽️ Found completed order for Reservation ID [${res.id}]. Auto-updating status to 3...`);
+                    // console.log(`🍽️ Found completed order for Reservation ID [${res.id}]. Auto-updating status to 3...`);
                     try {
                         await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
                             re_status: 3
                         });
-                        console.log(`✅ Successfully fulfilled Reservation ID [${res.id}] to status 3`);
+                        // console.log(`✅ Successfully fulfilled Reservation ID [${res.id}] to status 3`);
                     } catch (updateErr) {
-                        console.error(`❌ Failed to update fulfilled Reservation ID [${res.id}]:`, updateErr.message);
+                        // console.error(`❌ Failed to update fulfilled Reservation ID [${res.id}]:`, updateErr.message);
                     }
                     skipReservation = true;
                 }
@@ -248,7 +249,7 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
             });
 
             if (tableReservations.length > 0) {
-                console.log(`\n👉 Checking Table ${stringTableNo} (Has ${tableReservations.length} associated valid reservations)`);
+                // console.log(`\n👉 Checking Table ${stringTableNo} (Has ${tableReservations.length} associated valid reservations)`);
             }
 
             for (const res of tableReservations) {
@@ -275,7 +276,7 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
 
                 const targetStatus = res.status !== undefined ? res.status : res.re_status;
 
-                console.log(`  -> Res ID [${res.id}]: Status=${targetStatus}, Date=${resDate}, Time=${resTime}`);
+                // console.log(`  -> Res ID [${res.id}]: Status=${targetStatus}, Date=${resDate}, Time=${resTime}`);
 
                 if ((Number(targetStatus) === 0 || Number(targetStatus) === 1) && resDate === chosenDate) {
                     const [resH, resM] = resTime.split(':').map(Number);
@@ -285,7 +286,7 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
                     const [choH, choM] = normalizedChosenTime.split(':').map(Number);
                     const currentTimeMins = (choH * 60) + choM;
 
-                    console.log(`     ⚖️ LIVE CHECK: Is current time (${currentTimeMins} mins) between res start (${resTimeMins} mins) and end (${resTimeMins + resDuration} mins)?`);
+                    // console.log(`     ⚖️ LIVE CHECK: Is current time (${currentTimeMins} mins) between res start (${resTimeMins} mins) and end (${resTimeMins + resDuration} mins)?`);
 
                     // --- NEW LOGIC: Block table if current time falls within the reservation duration ---
                     if (currentTimeMins >= resTimeMins && currentTimeMins <= (resTimeMins + resDuration)) {
@@ -294,15 +295,15 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
                         bookingMessage = Number(targetStatus) === 0 ? `Pending Confirmation` : `Reserved`;
                         break;
                     } else {
-                        console.log(`     🟢 RESULT: Table is free right now.`);
+                        // console.log(`     🟢 RESULT: Table is free right now.`);
                     }
                 } else {
-                    console.log(`     ⏭️ SKIPPED: Date doesn't match today (${chosenDate}) OR Status isn't 0/1.`);
+                    // console.log(`     ⏭️ SKIPPED: Date doesn't match today (${chosenDate}) OR Status isn't 0/1.`);
                 }
             }
 
             if (tableReservations.length > 0) {
-                console.log(`[FINAL STATUS] Table ${stringTableNo} isAvailable: ${isAvailable}`);
+                // console.log(`[FINAL STATUS] Table ${stringTableNo} isAvailable: ${isAvailable}`);
             }
 
             return {
@@ -317,10 +318,12 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
 
         res.status(200).json({
             status: true,
-            data: processedTables
+            data: processedTables,
+              max_table_selection: maxTableSelection
+
         });
     } catch (error) {
-        console.error("Error processing reservation tables:", error);
+        // console.error("Error processing reservation tables:", error);
         res.status(500).json({
             error: "Server error calculating table logic.",
             exact_cause: error.message,
@@ -745,13 +748,13 @@ router.get('/customer-reservations/:customer_id/:branch_id', async (req, res) =>
     ) {
       reservations = response.data.data.data;
     }
-
+console.log("All reservations:", reservations);
     const customerReservations = reservations.filter(
       r =>
         Number(r.re_customer_id) === Number(customer_id) &&
         (Number(r.re_status) === 1 || Number(r.re_status) === 0)
     );
-
+console.log("Filtered reservations:", customerReservations);
     let tables = [];
 
     customerReservations.forEach(r => {

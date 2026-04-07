@@ -38,23 +38,23 @@ app.get('/', (req, res) => {
 });
 
 // 3. AUTH ROUTES (Login/Signup)
-app.post('/signup', async (req, res) => {
-    const { name, email, password } = req.body;
-    const checkEmailQuery = "SELECT * FROM users WHERE email = ?";
-    db.query(checkEmailQuery, [email], async (err, data) => {
-        if (err) return res.status(500).json({ error: "Database error" });
-        if (data.length > 0) return res.status(409).json({ message: "Email already exists" });
+// app.post('/signup', async (req, res) => {
+//     const { name, email, password } = req.body;
+//     const checkEmailQuery = "SELECT * FROM users WHERE email = ?";
+//     db.query(checkEmailQuery, [email], async (err, data) => {
+//         if (err) return res.status(500).json({ error: "Database error" });
+//         if (data.length > 0) return res.status(409).json({ message: "Email already exists" });
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        const insertQuery = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
+//         const salt = await bcrypt.genSalt(10);
+//         const hashedPassword = await bcrypt.hash(password, salt);
+//         const insertQuery = "INSERT INTO users (name, email, password) VALUES (?, ?, ?)";
 
-        db.query(insertQuery, [name, email, hashedPassword], (err, data) => {
-            if (err) return res.status(500).json({ error: "Error creating user" });
-            return res.status(200).json({ message: "User registered successfully" });
-        });
-    });
-});
+//         db.query(insertQuery, [name, email, hashedPassword], (err, data) => {
+//             if (err) return res.status(500).json({ error: "Error creating user" });
+//             return res.status(200).json({ message: "User registered successfully" });
+//         });
+//     });
+// });
 
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
@@ -87,6 +87,9 @@ app.use('/api', require('./routes/Profile'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/branches', require('./routes/branches'));
 app.use('/api/portfolio', require('./routes/portfolio'));
+const navbarRoutes = require("./routes/navbar");
+
+app.use("/api/navbar", navbarRoutes);
 // --- UPDATED CHECKOUT ROUTE MOUNTING ---
 // Changed from '/api/proxy' to '/api' because checkout.js now handles:
 // 1. /get-user-by-phone/:phone

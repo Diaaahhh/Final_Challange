@@ -13,6 +13,7 @@ import footerIcon33 from "../../assets/img/icon/footer-1-33.png";
 import footerIcon4 from "../../assets/img/icon/footer-1-4.png";
 import footerIcon5 from "../../assets/img/icon/footer-1-5.png";
 import Logo from "../Logo/Logo.jsx"
+
 const Footer = () => {
   const [showScroll, setShowScroll] = useState(false);
 
@@ -32,10 +33,11 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-
-
   return (
-    <footer className="relative bg-[#0E1014] text-white pt-20 overflow-hidden font-['Inter']">
+    <footer 
+      className="relative text-white pt-20 overflow-hidden font-['Inter'] transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-footer)' }}
+    >
       
       {/* ANIMATIONS */}
       <style>{`
@@ -47,7 +49,7 @@ const Footer = () => {
         .font-barlow { font-family: 'Barlow Condensed', sans-serif; }
       `}</style>
 
-      {/* FLOATING IMAGES (Unchanged) */}
+      {/* FLOATING IMAGES */}
       <div className="absolute left-0 top-0 hidden 2xl:block animate-jump"><img src={footerIcon1} alt="" /></div>
       <div className="absolute left-0 top-0 z-0 opacity-50"><img src={footerIcon11} alt="" /></div>
       <div className="absolute left-[40%] top-0 hidden 2xl:block animate-movingX"><img src={footerIcon2} alt="" /></div>
@@ -60,53 +62,52 @@ const Footer = () => {
       <div className="container mx-auto px-4 relative z-10">
         
         {/* LOGO AREA */}
-       
         <Logo/>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {/* LINKS */}
           <div className="text-center lg:text-left">
-            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Useful Links</h3>
+            {/* Dynamic theme-accent color */}
+            <h3 className="text-2xl font-bold font-barlow theme-accent mb-6 uppercase tracking-wide">Useful Links</h3>
             <ul className="space-y-3">
-  {[
-    { name: 'IGL Web Ltd.', link: 'https://iglweb.com/web/' },
-    { name: 'FelnaTech',           link: 'https://felnatech.com' },
-    { name: 'Felna Online',  link: 'https://felnaonline.com/' },
-    { name: '',             link: '' }
-  ].map((item, i) => (
-    <li key={i}>
-      <a 
-        href={item.link} 
-        target={item.link !== '#' ? "_blank" : "_self"} 
-        rel={item.link !== '#' ? "noopener noreferrer" : ""}
-        className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg"
-      >
-        {item.name}
-      </a>
-    </li>
-  ))}
-</ul>
+              {[
+                { name: 'IGL Web Ltd.', link: 'https://iglweb.com/web/' },
+                { name: 'FelnaTech',           link: 'https://felnatech.com' },
+                { name: 'Felna Online',  link: 'https://felnaonline.com/' },
+                { name: '',             link: '' }
+              ].map((item, i) => (
+                <li key={i}>
+                  <a 
+                    href={item.link} 
+                    target={item.link !== '#' ? "_blank" : "_self"} 
+                    rel={item.link !== '#' ? "noopener noreferrer" : ""}
+                    className="text-gray-400 hover-theme-accent transition-colors duration-300 text-lg"
+                  >
+                    {item.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/* CENTER WIDGET */}
           <div className="text-center">
-            <div className="relative inline-block p-8 border border-[#C59D5F]/30 rounded-full bg-[#0b0d10] mb-6">
+            {/* Darkened the inner circle using bg-black/20 to adapt to any footer color */}
+            <div className="relative inline-block p-8 border theme-border rounded-full bg-black/20 mb-6">
               <div className="flex flex-col items-center justify-center">
-                <div className="text-4xl text-[#C59D5F] mb-3">
+                <div className="text-4xl theme-accent mb-3">
                   {/* Standard clock icon */}
                   <i className="fa-regular fa-clock"></i> 
                 </div>
-                <p className="text-[#C59D5F] font-semibold mb-1 uppercase tracking-wider">We’re currently open!</p>
+                <p className="theme-accent font-semibold mb-1 uppercase tracking-wider">We’re currently open!</p>
                 <p className="text-gray-300 text-sm">Opening Hours: 10:00AM To 9:00PM</p>
               </div>
             </div>
-
-            
           </div>
 
           {/* MENUS */}
           <div className="text-center lg:text-right">
-            <h3 className="text-2xl font-bold font-barlow text-[#C59D5F] mb-6 uppercase tracking-wide">Links</h3>
+            <h3 className="text-2xl font-bold font-barlow theme-accent mb-6 uppercase tracking-wide">Links</h3>
             <ul className="space-y-3">
               {[
                 {
@@ -121,7 +122,7 @@ const Footer = () => {
                     href={item.link}
                     target={item.link !== "#" ? "_blank" : "_self"}
                     rel={item.link !== "#" ? "noopener noreferrer" : ""}
-                    className="text-gray-400 hover:text-[#C59D5F] transition-colors duration-300 text-lg"
+                    className="text-gray-400 hover-theme-accent transition-colors duration-300 text-lg"
                   >
                     {item.name}
                   </a>
@@ -133,47 +134,47 @@ const Footer = () => {
       </div>
 
       {/* COPYRIGHT */}
-      <div className="border-t border-white/10 bg-[#08090C] py-6">
+      {/* Darkened background dynamically using bg-black/30 */}
+      <div className="border-t border-white/10 bg-black/30 py-6 relative z-10">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4">
           <p className="text-gray-400 text-sm text-center md:text-left">
-  Copyright © 2026 RamBD. All rights reserved | 
-  <a 
-    href="https://iglweb.com/web/domains-services.php" 
-    className="text-[#C59D5F] hover:text-white ml-1 mr-2 font-['Arial_Black'] transition-colors"
-  >
-    Domain Registration by: IGL Web Ltd.
-</a> 
-| All Rights Reserved.
-<a
-    href="https://iglweb.com/web/hosting-regular-shared.php" 
-    className="text-[#C59D5F] hover:text-white ml-1 font-['Arial_Black']"
-  >
-    Web Hosting by: IGL Web Ltd.
-  </a> | <a 
-    href="href="https://iglweb.com/web/web-development.php"" 
-    className="text-[#C59D5F] hover:text-white ml-1 font-['Arial_Black']"
-  >
-    Web Design & Development by: IGL Web Ltd
-  </a>
-</p>
-        
+            Copyright © 2026 RamBD. All rights reserved | 
+            <a 
+              href="https://iglweb.com/web/domains-services.php" 
+              className="theme-accent hover:text-white ml-1 mr-2 font-['Arial_Black'] transition-colors"
+            >
+              Domain Registration by: IGL Web Ltd.
+            </a> 
+            | All Rights Reserved.
+            <a
+              href="https://iglweb.com/web/hosting-regular-shared.php" 
+              className="theme-accent hover:text-white ml-1 font-['Arial_Black'] transition-colors"
+            >
+              Web Hosting by: IGL Web Ltd.
+            </a> | <a 
+              href="https://iglweb.com/web/web-development.php" 
+              className="theme-accent hover:text-white ml-1 font-['Arial_Black'] transition-colors"
+            >
+              Web Design & Development by: IGL Web Ltd
+            </a>
+          </p>
         </div>
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4 mt-2">
           <p className="text-gray-400 text-sm text-center md:text-left">
             A Concern of
-<a 
-    href="https://iglgroup.com.bd/" 
-    className="text-[#C59D5F] hover:text-white ml-1 font-['Arial_Black']"
-  >
-    IGL Group
-  </a>
+            <a 
+              href="https://iglgroup.com.bd/" 
+              className="theme-accent hover:text-white ml-1 font-['Arial_Black'] transition-colors"
+            >
+              IGL Group
+            </a>
           </p>
         </div>
       </div>
 
       {/* SCROLL TO TOP */}
       <div onClick={scrollToTop} className={`fixed bottom-8 right-8 z-50 transition-all duration-300 cursor-pointer ${showScroll ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-        <div className="btn btn-circle bg-[#C59D5F] hover:bg-[#C59D5F] border-none text-black shadow-lg relative w-12 h-12 flex items-center justify-center overflow-hidden group">
+        <div className="btn btn-circle theme-accent-bg hover-theme-accent-bg border-none text-black shadow-lg relative w-12 h-12 flex items-center justify-center overflow-hidden group">
           <FaArrowUp className="group-hover:-translate-y-1 transition-transform" />
           <svg className="absolute top-0 left-0 w-full h-full rotate-[-90deg]" viewBox="-1 -1 102 102">
             <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98" fill="none" stroke="white" strokeWidth="4" strokeDasharray="307.919" strokeDashoffset="250" className="opacity-30" />

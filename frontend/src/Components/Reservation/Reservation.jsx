@@ -15,6 +15,7 @@ import {
   FaExclamationCircle,
   FaMoneyBillWave,
 } from "react-icons/fa";
+import toast from "react-hot-toast";
 import api from "../../api";
 import useTableSuggestion from "../Hooks/useTableSuggestion";
 import ReCAPTCHA from "react-google-recaptcha";
@@ -76,6 +77,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [maxTableSelection, setMaxTableSelection] = useState(10);
 
   // --- NEW: State to hold settings for validation ---
   const [restaurantSettings, setRestaurantSettings] = useState(null);
@@ -119,7 +121,8 @@ const [captchaToken, setCaptchaToken] = useState(null);
       const tablesRes = await api.get(
         `/reservation/tables/${formData.branch_id}?date=${formData.date}&time=${formData.time}`
       );
-      setTables(tablesRes.data);
+      setTables(tablesRes.data.tables);
+      setMaxTableSelection(tablesRes.data.max_table_selection || 10);
     } catch (error) {
       console.error("Error fetching tables:", error);
     }
@@ -292,21 +295,52 @@ const [captchaToken, setCaptchaToken] = useState(null);
     }
   };
 
+  const getTableCapacity = (tableNo) => {
+  const table = tables.find(
+    (t) => String(t.table_no) === String(tableNo)
+  );
+
+  return Number(table?.person_no || table?.capacity || 4);
+};
+
   const handleTableSelect = (tableNo) => {
-    setFormData((prev) => {
-      const currentTables = Array.isArray(prev.table_number)
-        ? prev.table_number
-        : [];
-      if (currentTables.includes(tableNo)) {
-        return {
-          ...prev,
-          table_number: currentTables.filter((t) => t !== tableNo),
-        };
-      } else {
-        return { ...prev, table_number: [...currentTables, tableNo] };
-      }
-    });
-  };
+  setFormData((prev) => {
+    const currentTables = Array.isArray(prev.table_number)
+      ? prev.table_number
+      : [];
+
+    // remove if already selected
+    if (currentTables.includes(tableNo)) {
+      return {
+        ...prev,
+        table_number: currentTables.filter((t) => t !== tableNo),
+      };
+    }
+
+    // calculate current seat capacity
+    const currentSeatTotal = currentTables.reduce(
+      (sum, t) => sum + getTableCapacity(t),
+      0
+    );
+
+    const newTableSeats = getTableCapacity(tableNo);
+    const newSeatTotal = currentSeatTotal + newTableSeats;
+
+    // seat limit check
+    if (newSeatTotal > maxTableSelection) {
+      // const remaining = maxTableSelection - currentSeatTotal;
+
+      toast.error(`You can select maximum ${maxTableSelection} seat(s).`);
+
+      return prev;
+    }
+
+    return {
+      ...prev,
+      table_number: [...currentTables, tableNo],
+    };
+  });
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();

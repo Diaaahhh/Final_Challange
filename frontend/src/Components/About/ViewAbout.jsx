@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom"; // Import Link for navigation
+import { Link } from "react-router-dom"; 
 import { FaUtensils, FaQuoteLeft } from "react-icons/fa";
 import api from '../../api'
 import { IMAGE_BASE_URL } from "../../config";
+
 export default function ViewAbout({ isHome = false }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,11 @@ export default function ViewAbout({ isHome = false }) {
 
   if (loading) {
     return (
-      <div className="min-h-[400px] flex items-center justify-center bg-gray-900 text-amber-500">
+      // Changed to use the body color instead of navbar color
+      <div 
+        className="min-h-[400px] flex items-center justify-center theme-accent"
+        style={{ backgroundColor: 'var(--theme-body)' }}
+      >
         <span className="loading loading-ring loading-lg"></span>
       </div>
     );
@@ -40,60 +45,59 @@ export default function ViewAbout({ isHome = false }) {
     : data?.text;
 
   return (
-    <section className="relative w-full bg-gray-900 overflow-hidden py-20 px-6 md:px-12 lg:px-24">
+    <section 
+      className="relative w-full overflow-hidden py-20 px-6 md:px-12 lg:px-24 transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }} // <-- Dynamically pulls your body color
+    >
       
       {/* Background Decor */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-600 rounded-full opacity-5 blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-72 h-72 bg-amber-800 rounded-full opacity-10 blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 theme-accent-bg rounded-full opacity-5 blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-72 h-72 theme-accent-bg rounded-full opacity-10 blur-[100px] pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row items-center gap-16">
           
-          {/* --- LEFT SIDE: IMAGE (Original Size: w-1/2) --- */}
+          {/* --- LEFT SIDE: IMAGE --- */}
           <div className="w-full lg:w-1/2 relative group">
             
-            <div className="absolute -inset-4 border-2 border-amber-500/30 rounded-xl transform rotate-2 transition-transform group-hover:rotate-0 duration-500"></div>
+            {/* Dynamic themed border with opacity */}
+            <div className="absolute -inset-4 border-2 theme-border opacity-30 rounded-xl transform rotate-2 transition-all group-hover:rotate-0 duration-500"></div>
             
-            <div className="relative rounded-lg overflow-hidden shadow-2xl shadow-black/50 aspect-[4/3]">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+            <div className="relative rounded-lg overflow-hidden shadow-2xl shadow-black/20 aspect-[4/3]">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10"></div>
               <img 
                 src={imageUrl} 
                 alt="About Us" 
                 className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
               />
-              
-              {/* <div className="absolute bottom-6 left-6 z-20 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-lg text-white">
-                <FaUtensils className="text-amber-400 text-xl mb-1" />
-                <p className="text-xs font-light uppercase tracking-widest">Est. 1998</p>
-              </div> */}
             </div>
           </div>
 
-          {/* --- RIGHT SIDE: CONTENT (Original Size: w-1/2) --- */}
+          {/* --- RIGHT SIDE: CONTENT --- */}
           <div className="w-full lg:w-1/2 text-center lg:text-left space-y-8">
             
-            {/* <div className="inline-flex items-center gap-2 text-amber-500 text-sm font-bold tracking-[0.2em] uppercase">
-              <span className="w-8 h-[2px] bg-amber-500"></span>
-              Our Story
-            </div> */}
-
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white leading-tight">
+            {/* Changed from text-white to dynamically use the dark navbar color so it's readable on light body bg */}
+            <h2 
+              className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight"
+              style={{ color: 'var(--theme-navbar)' }} 
+            >
               {data?.heading || "The Essence of Taste"}
             </h2>
 
             <div className="relative">
-              <FaQuoteLeft className="absolute -top-6 -left-8 text-6xl text-amber-500/10 hidden lg:block" />
-              <p className="text-gray-400 text-lg leading-relaxed relative z-10 text-justify">
+              <FaQuoteLeft className="absolute -top-6 -left-8 text-6xl theme-accent opacity-10 hidden lg:block" />
+              {/* Changed from text-gray-400 to text-gray-700 for better contrast */}
+              <p className="text-gray-700 text-lg leading-relaxed relative z-10 text-justify">
                 {displayText || "Discover the finest culinary experience..."}
               </p>
             </div>
 
-            {/* --- BUTTON (Only Visible if isHome is TRUE) --- */}
+            {/* --- BUTTON --- */}
             {isHome && (
               <div className="pt-4">
                 <Link 
                   to="/about"
-                  className="px-8 py-3 bg-transparent border border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-gray-900 transition-all duration-300 font-semibold uppercase tracking-wider text-sm rounded-sm inline-block"
+                  className="px-8 py-3 bg-transparent border theme-border theme-accent hover-theme-accent-bg hover-theme-bg-text transition-all duration-300 font-semibold uppercase tracking-wider text-sm rounded-sm inline-block"
                 >
                   Read More
                 </Link>
