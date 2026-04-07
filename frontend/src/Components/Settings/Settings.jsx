@@ -247,7 +247,7 @@ export default function Settings() {
                   </div>
 
                   {/* Captcha Switch */}
-                  <div className={`flex items-center justify-between bg-[#1A1A1A] border ${captchaEnabled ? 'border-[#007BFF]/50' : 'border-[#2A2A2A]'} rounded-xl p-4 shadow-sm transition-all duration-300`}>
+                  {/* <div className={`flex items-center justify-between bg-[#1A1A1A] border ${captchaEnabled ? 'border-[#007BFF]/50' : 'border-[#2A2A2A]'} rounded-xl p-4 shadow-sm transition-all duration-300`}>
                     <div className="flex items-center gap-3">
                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${captchaEnabled ? 'bg-[#007BFF]/20 text-[#007BFF]' : 'bg-[#333] text-[#555]'} transition-colors`}>
                          <FaShieldAlt />
@@ -266,7 +266,7 @@ export default function Settings() {
                       />
                       <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007BFF]"></div>
                     </label>
-                  </div>
+                  </div> */}
 
                 </div>
             </div>

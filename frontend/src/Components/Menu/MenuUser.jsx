@@ -19,6 +19,19 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
   const { handleAddToCart, setIsCartOpen, cartItems } = useCart();
 
   const [localQty, setLocalQty] = useState(0);
+  const handleQtyChange = (value) => {
+  const newQty = Number(value);
+
+  if (isNaN(newQty) || newQty < 0) return;
+
+  const diff = newQty - localQty;
+
+  setLocalQty(newQty);
+
+  if (diff !== 0) {
+    handleAddToCart(item, diff, branchId, branchName);
+  }
+};
   useEffect(() => {
     const cartItem = cartItems.find(
       (c) => String(c.m_menu_sl) === String(item.m_menu_sl)
@@ -30,9 +43,16 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
       setLocalQty(0); // if removed from cart
     }
   }, [cartItems, item.m_menu_sl]);
-  const increment = () => setLocalQty((prev) => prev + 1);
-  const decrement = () => setLocalQty((prev) => (prev > 0 ? prev - 1 : 0));
-
+  const increment = () => {
+  setLocalQty((prev) => prev + 1);
+  handleAddToCart(item, 1, branchId, branchName);
+};
+const decrement = () => {
+  if (localQty > 0) {
+    setLocalQty((prev) => prev - 1);
+    handleAddToCart(item, -1, branchId, branchName);
+  }
+};
   const onAddToCart = () => {
     let qtyToAdd = localQty;
 
@@ -156,49 +176,48 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
           )}
 
           {isActive && (
-            <div className="flex items-center gap-3 w-full">
-              {/* Local Quantity Selector */}
-              <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
-                <button
-                  onClick={decrement}
-                  disabled={localQty === 0}
-                  className={`px-2 h-full rounded-l-lg transition-colors flex items-center justify-center ${
-                    localQty === 0
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-600 hover:bg-gray-200"
-                  }`}
-                >
-                  <FaMinus size={8} />
-                </button>
-                <span
-                  className={`w-6 text-center font-bold text-sm ${
-                    localQty === 0 ? "text-gray-400" : "text-gray-800"
-                  }`}
-                >
-                  {localQty}
-                </span>
-                <button
-                  onClick={increment}
-                  className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
-                >
-                  <FaPlus size={8} />
-                </button>
-              </div>
+  <div className="flex items-center gap-3 w-full">
 
-              {/* Add to Cart Button */}
-              <button
-                onClick={onAddToCart}
-                disabled={!isActive}
-                className={`flex-1 h-8 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-sm ${
-                  !isActive
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : "bg-[#C59D5F] hover:bg-[#0E1014] text-white cursor-pointer"
-                }`}
-              >
-                Add <FaCartPlus size={12} />
-              </button>
-            </div>
-          )}
+    {/* SHOW ADD BUTTON IF QTY = 0 */}
+    {localQty === 0 ? (
+      <button
+        onClick={onAddToCart}
+        className="flex-1 h-8 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 shadow-sm bg-[#C59D5F] hover:bg-[#0E1014] text-white cursor-pointer"
+      >
+        Add <FaCartPlus size={12} />
+      </button>
+    ) : (
+
+      /* SHOW QUANTITY SELECTOR IF QTY > 0 */
+      <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
+
+  <button
+    onClick={decrement}
+    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-l-lg transition-colors flex items-center justify-center"
+  >
+    <FaMinus size={8} />
+  </button>
+
+  <input
+    type="number"
+    min="0"
+    value={localQty}
+    onChange={(e) => handleQtyChange(e.target.value)}
+    className="w-10 text-center font-bold text-sm text-gray-800 bg-transparent outline-none"
+  />
+
+  <button
+    onClick={increment}
+    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
+  >
+    <FaPlus size={8} />
+  </button>
+
+</div>
+    )}
+
+  </div>
+)}
         </div>
       </div>
     </div>

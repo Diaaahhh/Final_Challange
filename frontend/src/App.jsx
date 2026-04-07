@@ -89,9 +89,9 @@ const HomeDecision = () => {
 function App() {
   const location = useLocation();
 
-  const isAuthPage = ["/signup", "/login"].includes(location.pathname);
+  // const isAuthPage = ["/signup", "/login"].includes(location.pathname);
   const isAdminPage = location.pathname.startsWith("/admin");
-  const shouldHideNavbarFooter = isAuthPage || isAdminPage;
+  const shouldHideNavbarFooter = isAdminPage;
 
   return (
     <CartProvider>

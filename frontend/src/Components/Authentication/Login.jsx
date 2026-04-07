@@ -55,7 +55,7 @@ export default function Login() {
     } catch (err) {
       if (err.response) {
         if (err.response.status === 404) {
-             toast.error("User not found! Please sign up.", { theme: "dark" });
+             toast.error("User not found!", { theme: "dark" });
         } else if (err.response.status === 401) {
              toast.error("Incorrect Password!", { theme: "dark" });
         } else {
@@ -113,9 +113,10 @@ export default function Login() {
              </div>
           </form>
 
-          <div className="mt-8 text-center pt-6 border-t border-white/10">
-             <p className="text-gray-400 text-sm">Don't have an account? <Link to="/signup" className="text-[#C59D5F] font-bold hover:text-white transition-colors uppercase font-['Barlow_Condensed'] tracking-wide ml-1">Sign Up Here</Link></p>
-          </div>
+          {/* <div className="mt-8 text-center pt-6 border-t border-white/10">
+             <p className="text-gray-400 text-sm">Don't have an account? 
+              <Link to="/signup" className="text-[#C59D5F] font-bold hover:text-white transition-colors uppercase font-['Barlow_Condensed'] tracking-wide ml-1">Sign Up Here</Link></p>
+          </div> */}
        </div>
     </div>
   );
