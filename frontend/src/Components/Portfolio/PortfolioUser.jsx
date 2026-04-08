@@ -86,30 +86,38 @@ export default function PortfolioUser() {
   // RENDER
   // =========================================================
   if (loading) return (
-    <div className="min-h-screen bg-[#0D0D0D] flex flex-col items-center justify-center">
-      <div className="w-16 h-16 border-4 border-[#C59D5F] border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p className="text-[#E0E0E0] text-lg font-bold tracking-widest uppercase font-['Barlow_Condensed']">Loading Showcase...</p>
+    <div 
+      className="min-h-screen flex flex-col items-center justify-center transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }}
+    >
+      <span className="loading loading-spinner theme-accent loading-lg mb-4"></span>
+      <p className="text-gray-800 text-lg font-bold tracking-widest uppercase font-['Barlow_Condensed']">
+        Loading Showcase...
+      </p>
     </div>
   );
 
   return (
-    <div className="bg-[#0D0D0D] min-h-screen text-[#E0E0E0] font-sans pb-20 pt-24 relative">
+    <div 
+      className="min-h-screen text-gray-800 font-sans pb-20 pt-24 relative transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }}
+    >
       <div className="max-w-7xl mx-auto px-6">
         
         {/* HEADER */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center justify-center gap-3 mb-4">
-            <span className="w-12 h-[2px] bg-[#C59D5F]"></span>
-            <FaUtensils className="text-[#C59D5F]" />
-            <span className="w-12 h-[2px] bg-[#C59D5F]"></span>
+            <span className="w-12 h-[2px] theme-accent-bg"></span>
+            <FaUtensils className="theme-accent" />
+            <span className="w-12 h-[2px] theme-accent-bg"></span>
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-['Playfair_Display'] font-bold text-[#E0E0E0] mb-4">
-            Our <span className="text-[#C59D5F]"></span> Gallery
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-['Playfair_Display'] font-bold text-gray-900 mb-4">
+            Our <span className="theme-accent"></span> Gallery
           </h1>
         </div>
 
         {/* CATEGORY TABS */}
-        <div className="border-b border-[#2A2A2A] mb-12 overflow-x-auto">
+        <div className="border-b border-gray-200 mb-12 overflow-x-auto">
           <div className="flex flex-row items-center justify-center gap-x-2 md:gap-x-4 min-w-max pb-px">
             {categories.map((category) => {
               const isActive = selectedCategory === category;
@@ -117,10 +125,14 @@ export default function PortfolioUser() {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`px-5 py-4 transition-all duration-300 relative group font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm hover:text-white ${isActive ? 'text-[#C59D5F]' : 'text-[#A0A0A0]'}`}
+                  className={`px-5 py-4 transition-all duration-300 relative group font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm hover:text-gray-900 ${
+                    isActive ? 'theme-accent' : 'text-gray-500'
+                  }`}
                 >
                   {category}
-                  <span className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-t transition-all duration-300 ${isActive ? 'bg-[#C59D5F] scale-x-100' : 'bg-[#C59D5F]/0 scale-x-0 group-hover:scale-x-50'}`}></span>
+                  <span className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-t transition-all duration-300 ${
+                    isActive ? 'theme-accent-bg scale-x-100' : 'bg-transparent scale-x-0 group-hover:scale-x-50 group-hover:bg-gray-300'
+                  }`}></span>
                 </button>
               );
             })}
@@ -136,15 +148,15 @@ export default function PortfolioUser() {
               <div 
                 key={item.id} 
                 onClick={() => openModal(item)}
-                className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden  hover:border-[#C59D5F]/50 hover:-translate-y-2 transition-all duration-300 group cursor-pointer"
+                className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-2 transition-all duration-300 group cursor-pointer"
               >
-                <div className="aspect-[4/3] overflow-hidden relative">
+                <div className="aspect-[4/3] overflow-hidden relative bg-gray-100">
                   <img
                     src={displayImageUrl} 
                     alt={item.title}
                     className="w-full h-full object-cover relative z-10 group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-20"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-20"></div>
                   
                   {/* Icon showing there are multiple images */}
                   {item.images && item.images.length > 0 && (
@@ -155,11 +167,11 @@ export default function PortfolioUser() {
                 </div>
                 
                 <div className="p-5">
-                  <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-[#2A2A2A] border border-[#333333] rounded-full text-xs font-bold uppercase tracking-wider text-[#C59D5F] mb-3">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold uppercase tracking-wider theme-accent mb-3">
                     <FaStar size={10} />
                     {item.category}
                   </div>
-                  <h3 className="text-lg font-semibold text-[#E0E0E0] group-hover:text-[#C59D5F] transition-colors font-['Barlow_Condensed'] uppercase tracking-wider">
+                  <h3 className="text-lg font-bold text-gray-800 hover-theme-accent transition-colors font-['Barlow_Condensed'] uppercase tracking-wider line-clamp-1">
                     {item.title}
                   </h3>
                 </div>
@@ -179,23 +191,23 @@ export default function PortfolioUser() {
         >
           {/* Modal Content Box */}
           <div 
-            className="bg-[#1A1A1A] w-full max-w-4xl rounded-2xl border border-[#2A2A2A] overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.8)] relative flex flex-col max-h-[90vh]"
+            className="bg-white w-full max-w-4xl rounded-2xl border border-gray-100 overflow-hidden shadow-2xl relative flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()} // Prevent clicks inside modal from closing it
           >
             {/* Close Button */}
             <button 
               onClick={closeModal}
-              className="absolute top-4 right-4 z-50 bg-black/50 hover:bg-[#C59D5F] text-white p-2 rounded-full transition-colors"
+              className="absolute top-4 right-4 z-50 bg-black/50 hover-theme-accent-bg text-white p-2 rounded-full transition-colors"
             >
               <FaTimes size={20} />
             </button>
 
             {/* Slider Section */}
-            <div className="relative w-full max-w-[895px] h-[500px] mx-auto bg-black flex items-center justify-center group shrink-0">
+            <div className="relative w-full max-w-[895px] h-[500px] mx-auto bg-gray-900 flex items-center justify-center group shrink-0">
               <img 
                 src={getImageUrl(getAllImages(selectedItem)[currentImageIndex])} 
                 alt="Slider" 
-                className="max-w-full max-h-full w-auto h-auto object-contain drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]"
+                className="max-w-full max-h-full w-auto h-auto object-contain drop-shadow-md"
               />
 
               {/* Slider Controls (Only show if more than 1 image) */}
@@ -203,13 +215,13 @@ export default function PortfolioUser() {
                 <>
                   <button 
                     onClick={prevImage}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-[#C59D5F] text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover-theme-accent-bg text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
                   >
                     <FaChevronLeft size={20} />
                   </button>
                   <button 
                     onClick={nextImage}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-[#C59D5F] text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover-theme-accent-bg text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 z-20"
                   >
                     <FaChevronRight size={20} />
                   </button>
@@ -223,16 +235,16 @@ export default function PortfolioUser() {
             </div>
 
             {/* Content Section */}
-            <div className="p-6 md:p-8 overflow-y-auto">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#2A2A2A] border border-[#333333] rounded-full text-xs font-bold uppercase tracking-wider text-[#C59D5F] mb-4">
+            <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold uppercase tracking-wider theme-accent mb-4">
                 <FaStar size={12} />
                 {selectedItem.category}
               </div>
-              <h2 className="text-3xl font-bold text-white font-['Playfair_Display'] mb-4">
+              <h2 className="text-3xl font-bold text-gray-900 font-['Playfair_Display'] mb-4">
                 {selectedItem.title}
               </h2>
               
-              <div className="text-[#A0A0A0] leading-relaxed whitespace-pre-wrap">
+              <div className="text-gray-600 leading-relaxed whitespace-pre-wrap">
                 {selectedItem.description ? selectedItem.description : <span className="italic">No description provided for this item.</span>}
               </div>
             </div>

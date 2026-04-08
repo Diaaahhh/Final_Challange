@@ -33,36 +33,45 @@ export default function Branches() {
   }, []);
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center font-['Barlow_Condensed'] uppercase tracking-widest text-xl">
-        <span className="loading loading-spinner text-[#007BFF] mr-3"></span>
-        <span className="text-[#E0E0E0]">Loading Branches...</span>
+    <div 
+      className="min-h-screen flex items-center justify-center font-['Barlow_Condensed'] uppercase tracking-widest text-xl transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }}
+    >
+        <span className="loading loading-spinner theme-accent mr-3"></span>
+        <span style={{ color: 'var(--theme-navbar)' }}>Loading Branches...</span>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white pt-24 pb-12 px-4 font-['Inter']">
+    <div 
+      className="min-h-screen pt-24 pb-12 px-4 font-['Inter'] transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }}
+    >
       <div className="container mx-auto">
         
         {/* HEADER */}
         <div className="mb-12 text-left">
-          <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold uppercase text-white">
-              Branch <span className="text-[#007BFF]">List</span>
+          <h1 
+            className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold uppercase"
+            style={{ color: 'var(--theme-navbar)' }}
+          >
+              Branch <span className="theme-accent">List</span>
           </h1>
-          <div className="w-24 h-1 bg-[#007BFF] mt-4 rounded-full shadow-[0_0_10px_rgba(0,123,255,0.5)]"></div>
+          <div className="w-24 h-1 theme-accent-bg mt-4 rounded-full"></div>
         </div>
 
         {/* ERROR MESSAGE */}
         {error && (
-            <div className="alert bg-red-500/10 border border-red-500/30 text-red-400 max-w-2xl mx-auto mb-8 flex items-center gap-3 rounded-lg p-4">
+            <div className="alert bg-red-500/10 border border-red-500/30 text-red-500 max-w-2xl mx-auto mb-8 flex items-center gap-3 rounded-lg p-4 font-bold">
                 <FaInfoCircle /> {error}
             </div>
         )}
 
         {/* EMPTY STATE */}
         {!loading && !error && branches.length === 0 && (
-            <div className="text-center text-[#555] py-12 bg-[#111111] rounded-xl border border-[#1E1E1E]">
-                <FaStore className="text-6xl mx-auto mb-4 opacity-20" />
-                <p className="text-[#A0A0A0] text-lg">No branches found.</p>
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-200 shadow-sm">
+                <FaStore className="text-6xl mx-auto mb-4 text-gray-200" />
+                <p className="text-gray-400 text-lg font-bold">No branches found.</p>
             </div>
         )}
 
@@ -78,41 +87,43 @@ export default function Branches() {
                 return (
                     <div 
                         key={id} 
-                        className="group bg-[#111111] border border-[#1E1E1E] rounded-xl overflow-hidden hover:border-[#007BFF] transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-[0_0_25px_rgba(0,123,255,0.15)]"
+                        className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-[var(--theme-accent)] transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-xl relative flex flex-col"
                     >
-                        {/* Card Header */}
-                        <div className="bg-[#0A0A0A] p-6 border-b border-[#1E1E1E] flex items-start justify-between">
+                        {/* Card Header (Dynamic Dark Theme) */}
+                        <div className="theme-bg p-6 flex items-start justify-between shrink-0">
                             <div>
-                                <h3 className="text-xl font-['Barlow_Condensed'] font-bold uppercase text-white group-hover:text-[#007BFF] transition-colors tracking-wide">
+                                {/* group-hover:text-[var(--theme-accent)] applies the custom color perfectly on hover */}
+                                <h3 className="text-xl font-['Barlow_Condensed'] font-bold uppercase text-white group-hover:text-[var(--theme-accent)] transition-colors tracking-wide">
                                     {displayName}
                                 </h3>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-[#007BFF]/10 flex items-center justify-center text-[#007BFF]">
+                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center theme-accent shrink-0">
                                 <FaStore />
                             </div>
                         </div>
 
-                        {/* Card Body */}
-                        <div className="p-6 space-y-4 text-sm text-[#A0A0A0]">
+                        {/* Card Body (Light Theme for readability) */}
+                        <div className="p-6 space-y-4 text-sm flex-1">
                             <div className="flex items-start gap-3">
-                                <FaMapMarkerAlt className="mt-1 text-[#C59D5F] flex-shrink-0" />
-                                <p className="leading-relaxed font-semibold text-[#E0E0E0]">
+                                <FaMapMarkerAlt className="mt-1 theme-accent flex-shrink-0" />
+                                <p className="leading-relaxed font-bold text-gray-800">
                                     {locationName}
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-3 border-t border-[#1E1E1E] pt-4">
-                                <FaPhoneAlt className="text-[#007BFF] flex-shrink-0" />
-                                <p className="text-[#C0C0C0]">{phone}</p>
+                            <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
+                                <FaPhoneAlt className="theme-accent flex-shrink-0" />
+                                <p className="text-gray-600 font-medium">{phone}</p>
                             </div>
 
-                            <div className="flex items-center gap-3 border-t border-[#1E1E1E] pt-4">
-                                <FaEnvelope className="text-[#007BFF] flex-shrink-0" />
-                                <p className="text-[#C0C0C0]">{email}</p>
+                            <div className="flex items-center gap-3 border-t border-gray-100 pt-4">
+                                <FaEnvelope className="theme-accent flex-shrink-0" />
+                                <p className="text-gray-600 font-medium">{email}</p>
                             </div>
                         </div>
                         
-                        <div className="bg-[#007BFF] h-0.5 w-0 group-hover:w-full transition-all duration-500 shadow-[0_0_10px_rgba(0,123,255,0.5)]"></div>
+                        {/* Animated Bottom Line */}
+                        <div className="theme-accent-bg h-1 w-0 group-hover:w-full transition-all duration-500 absolute bottom-0 left-0"></div>
                     </div>
                 );
             })}

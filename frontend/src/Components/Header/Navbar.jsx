@@ -151,9 +151,9 @@ const handleLogout = () => {
                 <li tabIndex={0} className="dropdown dropdown-hover group">
                   <span className="hover-theme-accent p-0 bg-transparent cursor-pointer">Contact</span>
                   <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-52 text-sm mt-5 border-t-4 theme-border">
-                    <li><Link to="/address" className="hover-theme-accent hover:bg-transparent">Address</Link></li>
+                    {/* <li><Link to="/address" className="hover-theme-accent hover:bg-transparent">Address</Link></li> */}
                     <li><Link to="/branch_user" className="hover-theme-accent hover:bg-transparent">Branches</Link></li>
-                    <li><Link to="/review" className="hover-theme-accent hover:bg-transparent">Feedback</Link></li>
+                    {/* <li><Link to="/review" className="hover-theme-accent hover:bg-transparent">Feedback</Link></li> */}
                     <li><Link to="/map" className="hover-theme-accent hover:bg-transparent">Location Map</Link></li>
                   </ul>
                 </li>

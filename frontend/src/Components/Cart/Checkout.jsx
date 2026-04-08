@@ -649,7 +649,7 @@ useEffect(() => {
     <>
       <style>{autofillFixStyles}</style>
 
-      <div className="bg-white min-h-screen font-['Inter'] relative">
+      <div className="background-color: var(--theme-body); min-h-screen font-['Inter'] relative">
         <div className="container mx-auto px-4 py-16 md:py-24">
           {toast.show && (
             <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[60] animate-bounce">
@@ -665,7 +665,7 @@ useEffect(() => {
             className="grid grid-cols-1 lg:grid-cols-2 gap-12"
           >
             <div>
-              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-[#0E1014] mb-8 border-l-4 border-[#C59D5F] pl-4">
+              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-gray-900 mb-8 border-l-4 theme-border pl-4">
                 Billing Details
               </h3>
               <div className="space-y-6">
@@ -684,7 +684,7 @@ useEffect(() => {
                       // ONLY lock the input if OTP is enabled AND the phone is verified
                       disabled={isOtpEnabled ? isPhoneVerified : false}
                       placeholder="016XXXXXXXX"
-                      className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400 disabled:opacity-50"
+                      className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 theme-ring outline-none transition-all text-gray-700 text-[23px] placeholder-gray-400 disabled:opacity-50"
                       required
                     />
 
@@ -697,7 +697,7 @@ useEffect(() => {
                         className={`px-6 rounded font-bold transition-all whitespace-nowrap text-lg shadow-sm ${
                           countdown > 0
                             ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
-                            : "bg-[#C59D5F] text-white hover:bg-[#0E1014]" // Active styles
+                            : "theme-accent-bg text-white hover:theme-bg" // Active styles
                         }`}
                       >
                         {countdown > 0
@@ -716,15 +716,15 @@ useEffect(() => {
                   )}
 
                   {loadingCustomer && (
-                    <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
-                      <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium theme-accent bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit animate-fadeIn">
+                      <span className="w-4 h-4 border-2 theme-border border-t-transparent rounded-full animate-spin"></span>
                       Checking customer...
                     </div>
                   )}
 
                   {/* Conditional OTP Input Field */}
                   {isOtpEnabled && otpSent && !isPhoneVerified && (
-                    <div className="mt-4 p-5 border-2 border-[#C59D5F] rounded-lg bg-yellow-50 animate-fadeIn">
+                    <div className="mt-4 p-5 border-2 theme-border rounded-lg bg-yellow-50 animate-fadeIn">
                       <div className="flex justify-between items-center mb-2">
                         <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
                           Enter 4-Digit OTP
@@ -741,7 +741,7 @@ useEffect(() => {
                           type="text"
                           value={otp}
                           onChange={(e) => setOtp(e.target.value)}
-                          className="w-full bg-white border border-gray-300 rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none tracking-[0.5em] text-center text-[23px] font-bold text-gray-800"
+                          className="w-full bg-white border border-gray-300 rounded px-5 py-4 focus:ring-2 theme-ring outline-none tracking-[0.5em] text-center text-[23px] font-bold text-gray-800"
                           placeholder="----"
                           maxLength="4"
                         />
@@ -754,7 +754,7 @@ useEffect(() => {
                           className={`px-8 rounded font-bold transition-all text-lg shadow-md ${
                             verifyingOtp || otp.length < 4 || countdown === 0
                               ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
-                              : "bg-[#0E1014] text-white hover:bg-[#C59D5F]" // Active styles
+                              : "theme-bg text-white hover:theme-accent-bg" // Active styles
                           }`}
                         >
                           {verifyingOtp ? "Checking..." : "Verify"}
@@ -777,7 +777,7 @@ useEffect(() => {
                     disabled={!isPhoneSubmitted}
                     readOnly
                     placeholder="Your Name"
-                    className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 placeholder-gray-400"
+                    className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 theme-ring outline-none transition-all text-gray-700 placeholder-gray-400"
                     required
                   />
                 </div>
@@ -793,7 +793,7 @@ useEffect(() => {
                     onChange={handleChange}
                     disabled={!isPhoneSubmitted}
                     placeholder="House number and street name"
-                    className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 placeholder-gray-400"
+                    className="w-full bg-[#F3F4F7] border-none rounded px-5 py-4 focus:ring-2 theme-ring outline-none transition-all text-gray-700 placeholder-gray-400"
                     required
                   />
                 </div>
@@ -801,17 +801,17 @@ useEffect(() => {
             </div>
 
             <div>
-              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-[#0E1014] mb-8 border-l-4 border-[#C59D5F] pl-4">
+              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-gray-900 mb-8 border-l-4 theme-border pl-4">
                 Your Order
               </h3>
               <div className="bg-white border border-gray-100 rounded-lg shadow-sm p-8">
                 <table className="w-full mb-8">
                   <thead>
                     <tr className="border-b-2 border-gray-100">
-                      <th className="text-left font-['Barlow_Condensed'] uppercase text-[#0E1014] pb-4 text-lg">
+                      <th className="text-left font-['Barlow_Condensed'] uppercase text-gray-900 pb-4 text-lg">
                         Product
                       </th>
-                      <th className="text-right font-['Barlow_Condensed'] uppercase text-[#0E1014] pb-4 text-lg">
+                      <th className="text-right font-['Barlow_Condensed'] uppercase text-gray-900 pb-4 text-lg">
                         Total
                       </th>
                     </tr>
@@ -823,12 +823,12 @@ useEffect(() => {
                           {/* Styled Serial Number with a space after it */}
                           <span
                             strong
-                            className="text-[#0E1014] font-bold mr-1"
+                            className="text-gray-900 font-bold mr-1"
                           >
                             {index + 1}.
                           </span>
                           {item.m_menu_name}{" "}
-                          <strong className="text-[#0E1014] ml-2">
+                          <strong className="text-gray-900 ml-2">
                             × {item.quantity}
                           </strong>
                         </td>
@@ -841,7 +841,7 @@ useEffect(() => {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="font-bold text-[#0E1014]">
+                  <tfoot className="font-bold text-gray-900">
                     <tr className="border-b border-gray-100">
                       <td className="py-4">Cart Subtotal</td>
                       <td className="py-4 text-right text-[#38260c]">
@@ -859,7 +859,7 @@ useEffect(() => {
                           value={formData.order_method}
                           onChange={handleChange}
                           disabled={!isPhoneSubmitted || !isPhoneVerified}
-                          className="bg-[#F3F4F7] border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-[#C59D5F] focus:border-[#C59D5F] block w-full p-2.5 outline-none font-['Arial']"
+                          className="bg-[#F3F4F7] border border-gray-200 text-gray-700 text-sm rounded-lg theme-ring focus:theme-border block w-full p-2.5 outline-none font-['Arial']"
                           required
                         >
                           <option value="">Select Method</option>
@@ -892,7 +892,7 @@ useEffect(() => {
                               <button
                                 type="button"
                                 onClick={() => setShowModal(true)}
-                                className="ml-3 text-sm underline text-gray-500 hover:text-[#C59D5F] transition-colors"
+                                className="ml-3 text-sm underline text-gray-500 hover:theme-accent transition-colors"
                               >
                                 Edit
                               </button>
@@ -942,7 +942,7 @@ useEffect(() => {
                   className={`w-full font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded transition-all duration-300 ${
                     loading || !isPhoneSubmitted || !isPhoneVerified
                       ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
-                      : "bg-[#0E1014] text-white hover:bg-[#C59D5F]" // Active styles
+                      : "theme-bg text-white hover:theme-accent-bg" // Active styles
                   }`}
                 >
                   {loading ? "Processing..." : "Place Order"}
@@ -954,16 +954,16 @@ useEffect(() => {
           {showModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col relative">
-                <div className="bg-[#0E1014] p-5 flex justify-between items-center shrink-0 rounded-t-2xl">
+                <div className="theme-bg p-5 flex justify-between items-center shrink-0 rounded-t-2xl">
                   <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
                     Order Method:{" "}
-                    <span className="text-[#C59D5F]">
+                    <span className="theme-accent">
                       {formData.order_method}
                     </span>
                   </h3>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="text-gray-400 hover:text-white transition-colors"
+                    className="text-gray-400 hover:opacity-90 text-white transition-colors"
                   >
                     <FaTimes size={20} />
                   </button>
@@ -982,7 +982,7 @@ useEffect(() => {
                           value={personCount}
                           onChange={(e) => setPersonCount(e.target.value)}
                           placeholder="Enter number of guests"
-                          className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700"
+                          className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none text-gray-700"
                         />
                       </div>
 
@@ -1045,7 +1045,7 @@ useEffect(() => {
                                           key={t.table_no}
                                           className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden"
                                         >
-                                          <span className="bg-[#0E1014] text-[#C59D5F] font-bold px-2 py-1 text-sm">
+                                          <span className="theme-bg theme-accent font-bold px-2 py-1 text-sm">
                                             #{t.table_no}
                                           </span>
                                           <span className="text-gray-600 text-xs font-bold px-2 py-1 bg-gray-50">
@@ -1104,7 +1104,7 @@ useEffect(() => {
                       {/* NEW DINE-IN TABLES RENDERING */}
                       {loadingTables ? (
                         <div className="flex justify-center items-center py-10">
-                          <div className="w-10 h-10 border-4 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-10 h-10 border-4 theme-border border-t-transparent rounded-full animate-spin"></div>
                         </div>
                       ) : dineInTables.length > 0 ? (
                         <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar mt-4">
@@ -1175,7 +1175,7 @@ useEffect(() => {
                                           ? "bg-red-100 border-red-300 text-red-800"
                                           : isReservedByCustomer
       ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
-                                            ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                            ? "theme-accent-bg theme-border text-white transform scale-105 shadow-lg"
                                             : isSuggested
                                               ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
                                               : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
@@ -1276,7 +1276,7 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                                           ? "bg-red-100 border-red-300 text-red-800"
                                           : isReservedByCustomer
       ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
-                                            ? "bg-[#C59D5F] border-[#C59D5F] text-white transform scale-105 shadow-lg"
+                                            ? "theme-accent-bg theme-border text-white transform scale-105 shadow-lg"
                                             : isSuggested
                                               ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
                                               : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
@@ -1333,7 +1333,7 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                             table_no: [e.target.value],
                           }))
                         }
-                        className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none text-gray-700 cursor-pointer"
+                        className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none text-gray-700 cursor-pointer"
                       >
                         <option value="">-- Select a Table --</option>
                         {availableTables.length > 0 ? (
@@ -1398,7 +1398,7 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                   <button
                     type="button"
                     onClick={saveDetails}
-                    className="w-full bg-[#C59D5F] text-white font-bold py-3 rounded-lg uppercase tracking-widest hover:bg-[#0E1014] transition-all duration-300 shadow-md mt-4"
+                    className="w-full theme-accent-bg text-white font-bold py-3 rounded-lg uppercase tracking-widest hover:theme-bg transition-all duration-300 shadow-md mt-4"
                   >
                     Confirm Selection
                   </button>

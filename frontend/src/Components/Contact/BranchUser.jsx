@@ -46,65 +46,73 @@ export default function BranchUser() {
   }, []);
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+    <div 
+      className="min-h-screen flex items-center justify-center transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }}
+    >
       <div className="text-center">
-        <div className="w-20 h-20 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-        <p className="text-amber-500 text-lg font-light tracking-widest uppercase">Loading Branches</p>
+        <div className="w-20 h-20 border-4 theme-border border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+        <p className="theme-accent text-lg font-bold tracking-widest uppercase">Loading Branches</p>
         <p className="text-gray-500 text-sm mt-2">Please wait while we fetch the best locations</p>
       </div>
     </div>
   );
 
   return (
-    
-    <section className="relative w-full min-h-screen bg-base-200  overflow-hidden py-20 px-6 md:px-12 lg:px-24">
+    <section 
+      className="relative w-full min-h-screen overflow-hidden py-20 px-6 md:px-12 lg:px-24 transition-colors duration-300"
+      style={{ backgroundColor: 'var(--theme-body)' }}
+    >
       
-      {/* Background Decor - Inspired by ViewAbout */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-600 rounded-full opacity-5 blur-[120px] pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-72 h-72 bg-amber-800 rounded-full opacity-10 blur-[100px] pointer-events-none"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-amber-500/5 rounded-full blur-[150px] pointer-events-none"></div>
+      {/* Background Decor - Replaced amber with dynamic theme-accent-bg */}
+      <div className="absolute top-0 right-0 w-96 h-96 theme-accent-bg rounded-full opacity-5 blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-72 h-72 theme-accent-bg rounded-full opacity-10 blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] theme-accent-bg rounded-full opacity-5 blur-[150px] pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto relative z-10">
         
-        {/* HEADER - Elegant like ViewAbout */}
+        {/* HEADER */}
         <div className="text-center lg:text-left mb-16 relative">
-          <div className="inline-flex items-center gap-2 text-amber-500 text-sm font-bold tracking-[0.2em] uppercase mb-4">
-            <span className="w-8 h-[2px] bg-amber-500"></span>
+          <div className="inline-flex items-center gap-2 theme-accent text-sm font-bold tracking-[0.2em] uppercase mb-4">
+            <span className="w-8 h-[2px] theme-accent-bg"></span>
             Our Locations
           </div>
           
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-white leading-tight mb-6">
+          <h1 
+            className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold leading-tight mb-6"
+            style={{ color: 'var(--theme-navbar)' }}
+          >
             Find Your Nearest
-            <span className="block text-amber-500">Branch</span>
+            <span className="block theme-accent">Branch</span>
           </h1>
           
           <div className="relative max-w-2xl mx-auto lg:mx-0">
-            <FaQuoteLeft className="absolute -top-6 -left-8 text-6xl text-amber-500/10 hidden lg:block" />
-            <p className="text-gray-400 text-lg leading-relaxed relative z-10">
+            <FaQuoteLeft className="absolute -top-6 -left-8 text-6xl theme-accent opacity-10 hidden lg:block" />
+            <p className="text-gray-600 text-lg leading-relaxed relative z-10">
               Experience culinary excellence at any of our conveniently located branches. 
               Each location offers the same commitment to quality and service.
             </p>
           </div>
           
-          <div className="w-24 h-1 bg-amber-500 mt-8 mx-auto lg:mx-0 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)]"></div>
+          <div className="w-24 h-1 theme-accent-bg mt-8 mx-auto lg:mx-0 rounded-full opacity-80"></div>
         </div>
 
         {/* ERROR MESSAGE */}
         {error && (
-          <div className="max-w-2xl mx-auto mb-8 bg-red-500/10 border border-red-500/20 rounded-xl p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-4 text-red-400">
+          <div className="max-w-2xl mx-auto mb-8 bg-red-50 border border-red-200 rounded-xl p-6">
+            <div className="flex items-center gap-4 text-red-600">
               <FaInfoCircle className="text-2xl flex-shrink-0" />
-              <p className="font-medium">{error}</p>
+              <p className="font-bold">{error}</p>
             </div>
           </div>
         )}
 
         {/* EMPTY STATE */}
         {!loading && !error && branches.length === 0 && (
-          <div className="text-center py-20 bg-gray-800/30 backdrop-blur-sm rounded-2xl border border-gray-700/50">
-            <FaStore className="text-7xl text-amber-500/30 mx-auto mb-6" />
-            <p className="text-gray-400 text-xl font-light">No branches found</p>
-            <p className="text-gray-600 mt-2">Please check back later</p>
+          <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 shadow-sm">
+            <FaStore className="text-7xl text-gray-200 mx-auto mb-6" />
+            <p className="text-gray-800 text-xl font-bold">No branches found</p>
+            <p className="text-gray-500 mt-2">Please check back later</p>
           </div>
         )}
 
@@ -127,48 +135,47 @@ export default function BranchUser() {
                 onMouseLeave={() => setHoveredBranch(null)}
                 onClick={() => setSelectedBranch(id)}
                 className={`
-                  group relative bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden
-                  border transition-all duration-500 cursor-pointer
+                  group relative bg-white rounded-2xl overflow-hidden
+                  border transition-all duration-500 cursor-pointer shadow-sm
                   ${isSelected 
-                    ? 'border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.3)]' 
+                    ? 'theme-border shadow-md' 
                     : isHovered
-                      ? 'border-amber-500/50 shadow-xl scale-[1.02]'
-                      : 'border-gray-700/50 hover:border-amber-500/30'
+                      ? 'theme-border shadow-xl scale-[1.02]'
+                      : 'border-gray-200 hover-theme-border'
                   }
                 `}
               >
                 {/* Background Decor for Card */}
                 <div className={`
-                  absolute inset-0 bg-gradient-to-br from-amber-500/0 to-amber-600/0 
-                  transition-all duration-500 pointer-events-none
-                  ${isHovered ? 'from-amber-500/5 to-amber-600/10' : ''}
+                  absolute inset-0 transition-all duration-500 pointer-events-none
+                  ${isHovered ? 'theme-accent-bg opacity-5' : 'opacity-0'}
                 `}></div>
                 
                 {/* Animated Border Gradient */}
                 <div className={`
-                  absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none
-                  bg-gradient-to-r from-transparent via-amber-500/20 to-transparent
+                  absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none
+                  bg-gradient-to-r from-transparent via-[var(--theme-accent)] to-transparent
                 `}></div>
 
                 {/* Card Header with Decorative Elements */}
-                <div className="relative p-8 border-b border-gray-700/50">
+                <div className="relative p-8 border-b border-gray-100">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-2xl font-serif font-bold text-white group-hover:text-amber-500 transition-colors duration-300 mb-2">
+                      <h3 className="text-2xl font-serif font-bold text-gray-900 group-hover:text-[var(--theme-accent)] transition-colors duration-300 mb-2">
                         {displayName}
                       </h3>
-                      <p className="text-sm text-gray-400 flex items-center gap-2">
-                        <FaMapMarkerAlt className="text-amber-500" />
+                      <p className="text-sm text-gray-500 flex items-center gap-2">
+                        <FaMapMarkerAlt className="theme-accent" />
                         {locationName}
                       </p>
                     </div>
                     
                     <div className={`
-                      w-14 h-14 rounded-xl bg-gradient-to-br flex items-center justify-center
+                      w-14 h-14 rounded-xl flex items-center justify-center
                       transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3
                       ${isHovered 
-                        ? 'from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30' 
-                        : 'from-gray-700 to-gray-800 text-amber-500'
+                        ? 'theme-accent-bg text-white shadow-md' 
+                        : 'bg-gray-100 theme-accent'
                       }
                     `}>
                       <FaStore className="text-2xl" />
@@ -177,29 +184,29 @@ export default function BranchUser() {
 
                   {/* Decorative Line */}
                   <div className={`
-                    absolute bottom-0 left-0 w-0 h-0.5 bg-amber-500 transition-all duration-500
+                    absolute bottom-0 left-0 w-0 h-0.5 theme-accent-bg transition-all duration-500
                     group-hover:w-full
                   `}></div>
                 </div>
 
                 {/* Card Body - Contact Information */}
-                <div className="p-8 space-y-6">
+                <div className="p-8 space-y-6 relative z-10">
                   {/* Phone */}
                   <div className="flex items-center gap-4 group/item">
                     <div className={`
-                      w-10 h-10 rounded-lg bg-gray-700/50 flex items-center justify-center
-                      transition-all duration-300 group-hover/item:bg-amber-500/20
+                      w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100
+                      transition-all duration-300 group-hover/item:theme-accent-bg group-hover/item:border-transparent
                     `}>
                       <FaPhoneAlt className={`
                         transition-colors duration-300
-                        ${isHovered ? 'text-amber-500' : 'text-gray-400'}
+                        ${isHovered ? 'theme-accent group-hover/item:text-white' : 'text-gray-400'}
                       `} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Phone</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 font-bold">Phone</p>
                       <a 
                         href={`tel:${phone}`} 
-                        className="text-white font-medium hover:text-amber-500 transition-colors block"
+                        className="text-gray-800 font-bold hover-theme-accent transition-colors block"
                       >
                         {phone}
                       </a>
@@ -209,76 +216,49 @@ export default function BranchUser() {
                   {/* Email */}
                   <div className="flex items-center gap-4 group/item">
                     <div className={`
-                      w-10 h-10 rounded-lg bg-gray-700/50 flex items-center justify-center
-                      transition-all duration-300 group-hover/item:bg-amber-500/20
+                      w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100
+                      transition-all duration-300 group-hover/item:theme-accent-bg group-hover/item:border-transparent
                     `}>
                       <FaEnvelope className={`
                         transition-colors duration-300
-                        ${isHovered ? 'text-amber-500' : 'text-gray-400'}
+                        ${isHovered ? 'theme-accent group-hover/item:text-white' : 'text-gray-400'}
                       `} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Email</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 font-bold">Email</p>
                       <a 
                         href={`mailto:${email}`} 
-                        className="text-white font-medium break-all hover:text-amber-500 transition-colors block"
+                        className="text-gray-800 font-bold break-all hover-theme-accent transition-colors block"
                       >
                         {email}
                       </a>
                     </div>
                   </div>
 
-                  {/* Additional Info - Hours (Example) */}
+                  {/* Additional Info - Hours */}
                   <div className="flex items-center gap-4 group/item">
                     <div className={`
-                      w-10 h-10 rounded-lg bg-gray-700/50 flex items-center justify-center
-                      transition-all duration-300 group-hover/item:bg-amber-500/20
+                      w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100
+                      transition-all duration-300 group-hover/item:theme-accent-bg group-hover/item:border-transparent
                     `}>
                       <FaClock className={`
                         transition-colors duration-300
-                        ${isHovered ? 'text-amber-500' : 'text-gray-400'}
+                        ${isHovered ? 'theme-accent group-hover/item:text-white' : 'text-gray-400'}
                       `} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Opening Hours</p>
-                      <p className="text-white font-medium">10:00 AM - 10:00 PM</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 font-bold">Opening Hours</p>
+                      <p className="text-gray-800 font-bold">10:00 AM - 10:00 PM</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Card Footer with Action */}
-                <div className="p-6 bg-gray-900/50 border-t border-gray-700/50">
-                  {/* <button className="w-full group/btn relative overflow-hidden">
-                    <div className={`
-                      absolute inset-0 bg-gradient-to-r from-amber-500 to-amber-600 
-                      transform transition-transform duration-500
-                      ${isHovered ? 'translate-x-0' : '-translate-x-full'}
-                    `}></div>
-                    
-                    <div className={`
-                      relative flex items-center justify-center gap-2 py-3 px-6
-                      border border-amber-500 rounded-lg overflow-hidden
-                      transition-all duration-300
-                      ${isHovered 
-                        ? 'text-white border-transparent' 
-                        : 'text-amber-500 hover:text-white'
-                      }
-                    `}>
-                      <span className="font-semibold uppercase tracking-wider text-sm">View Details</span>
-                      <FaChevronRight className={`
-                        text-xs transition-transform duration-300
-                        group-hover/btn:translate-x-1
-                      `} />
-                    </div>
-                  </button> */}
-                </div>
-
                 {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-20 h-20">
-                  <div className="absolute top-0 right-0 w-10 h-10 border-t-2 border-r-2 border-amber-500/30 rounded-tr-2xl"></div>
+                <div className="absolute top-0 right-0 w-20 h-20 pointer-events-none">
+                  <div className="absolute top-0 right-0 w-10 h-10 border-t-2 border-r-2 theme-border opacity-20 rounded-tr-2xl"></div>
                 </div>
-                <div className="absolute bottom-0 left-0 w-20 h-20">
-                  <div className="absolute bottom-0 left-0 w-10 h-10 border-b-2 border-l-2 border-amber-500/30 rounded-bl-2xl"></div>
+                <div className="absolute bottom-0 left-0 w-20 h-20 pointer-events-none">
+                  <div className="absolute bottom-0 left-0 w-10 h-10 border-b-2 border-l-2 theme-border opacity-20 rounded-bl-2xl"></div>
                 </div>
               </div>
             );
@@ -288,17 +268,17 @@ export default function BranchUser() {
         {/* Bottom CTA Section */}
         {branches.length > 0 && (
           <div className="mt-20 text-center">
-            <div className="inline-flex items-center gap-4 text-gray-400">
-              <FaUtensils className="text-amber-500" />
+            <div className="inline-flex items-center gap-4 text-gray-500 font-medium">
+              <FaUtensils className="theme-accent" />
               <p className="text-sm">All branches are open daily from 10:00 AM to 10:00 PM</p>
-              <FaUtensils className="text-amber-500" />
+              <FaUtensils className="theme-accent" />
             </div>
             
             {/* Decorative Divider */}
             <div className="flex items-center justify-center gap-3 mt-8">
-              <span className="w-12 h-px bg-amber-500/30"></span>
-              <FaStar className="text-amber-500 text-xs" />
-              <span className="w-12 h-px bg-amber-500/30"></span>
+              <span className="w-12 h-px theme-accent-bg opacity-30"></span>
+              <FaStar className="theme-accent text-xs" />
+              <span className="w-12 h-px theme-accent-bg opacity-30"></span>
             </div>
           </div>
         )}

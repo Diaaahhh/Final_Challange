@@ -25,9 +25,9 @@ export default function CartSidebar() {
       >
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="bg-[#0E1014] text-white p-5 flex justify-between items-center shrink-0">
+          <div className="theme-bg text-white p-5 flex justify-between items-center shrink-0 transition-colors duration-300">
             <div className="flex items-center gap-3">
-              <FaShoppingCart className="text-[#C59D5F] text-xl" />
+              <FaShoppingCart className="theme-accent text-xl" />
               <h2 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-widest m-0">Your Cart</h2>
             </div>
             <button onClick={closeCart} className="text-gray-400 hover:text-white transition-colors p-1">
@@ -37,7 +37,7 @@ export default function CartSidebar() {
           
           {/* Branch Info Ribbon */}
           {cartItems.length > 0 && (
-             <div className="bg-[#C59D5F] text-black px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 shrink-0">
+             <div className="theme-accent-bg text-white px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 shrink-0 transition-colors duration-300">
                  <FaStore /> Order from: {currentBranch}
              </div>
           )}
@@ -48,7 +48,7 @@ export default function CartSidebar() {
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <FaShoppingCart className="text-6xl mb-4 opacity-20" />
                 <p className="text-lg">Your cart is empty.</p>
-                <button onClick={closeCart} className="mt-4 text-[#C59D5F] underline hover:text-black">Continue Browsing</button>
+                <button onClick={closeCart} className="mt-4 theme-accent underline hover:text-gray-800 transition-colors">Continue Browsing</button>
               </div>
             ) : (
               cartItems.map(item => {
@@ -75,9 +75,9 @@ export default function CartSidebar() {
                     
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <h4 className="font-bold text-[#0E1014] leading-tight mb-1">{item.m_menu_name}</h4>
+                        <h4 className="font-bold text-gray-900 leading-tight mb-1">{item.m_menu_name}</h4>
                         <div className="flex items-center gap-2">
-                           <p className="text-[#C59D5F] font-bold">Tk {effectivePrice.toLocaleString()}</p>
+                           <p className="theme-accent font-bold">Tk {effectivePrice.toLocaleString()}</p>
                            {/* SHOW DISCOUNT BADGE ON INDIVIDUAL CART ITEM */}
                            {discPerc > 0 && <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded font-bold">-{discPerc}%</span>}
                         </div>
@@ -85,11 +85,11 @@ export default function CartSidebar() {
 
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center border border-gray-200 rounded-md bg-gray-50 overflow-hidden">
-                          <button onClick={() => handleAddToCart(item, -1, item.branchId, item.branchName)} className="p-1 text-black hover:text-[#C59D5F] transition-colors"><FaMinus size={10} /></button>
+                          <button onClick={() => handleAddToCart(item, -1, item.branchId, item.branchName)} className="p-1 text-gray-800 hover-theme-accent transition-colors"><FaMinus size={10} /></button>
                           <span className="px-3 text-sm font-bold text-gray-800">{item.quantity}</span>
-                          <button onClick={() => handleAddToCart(item, 1, item.branchId, item.branchName)} className="p-1 text-black hover:text-[#C59D5F] transition-colors"><FaPlus size={10} /></button>
+                          <button onClick={() => handleAddToCart(item, 1, item.branchId, item.branchName)} className="p-1 text-gray-800 hover-theme-accent transition-colors"><FaPlus size={10} /></button>
                         </div>
-                        <button onClick={() => removeFromCart(item.m_menu_sl)} className="text-red-400 hover:text-red-600"><FaTrashAlt size={14} /></button>
+                        <button onClick={() => removeFromCart(item.m_menu_sl)} className="text-red-400 hover:text-red-600 transition-colors"><FaTrashAlt size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -115,15 +115,15 @@ export default function CartSidebar() {
                       </div>
                   )}
                   
-                  <div className="flex justify-between items-center pt-2 border-t text-lg font-bold text-[#0E1014]">
+                  <div className="flex justify-between items-center pt-2 border-t text-lg font-bold text-gray-900">
                       <span>Final Total:</span>
-                      <span className="text-[#C59D5F]">Tk {cartTotal.toLocaleString()}</span>
+                      <span className="theme-accent">Tk {cartTotal.toLocaleString()}</span>
                   </div>
               </div>
               
               <button 
                 onClick={handleCheckout}
-                className="w-full bg-[#C59D5F] text-white font-bold py-3 rounded-lg uppercase tracking-widest hover:bg-[#0E1014] transition-all duration-300"
+                className="w-full theme-accent-bg text-white font-bold py-3 rounded-lg uppercase tracking-widest hover:opacity-90 transition-all duration-300"
               >
                 Proceed to Checkout
               </button>

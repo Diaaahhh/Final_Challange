@@ -143,7 +143,7 @@ function App() {
         <Route path="/checkout" element={<Checkout />} />
         
         <Route path="/address" element={<div className="min-h-screen flex items-center justify-center pt-20"><h1 className="text-3xl font-bold"><Address /></h1></div>} />
-        <Route path="/branch_user" element={<div className="pt-24 pb-12 bg-base-200 min-h-screen"><BranchUser /></div>} />
+        <Route path="/branch_user" element={<div className="bg-base-200 min-h-screen"><BranchUser /></div>} />
         <Route path="/review" element={<div className="pt-24 pb-12 bg-base-200 min-h-screen"><WriteReview /></div>} />
         <Route path="/map" element={<div className="min-h-screen flex items-center justify-center pt-20"><h1 className="text-3xl font-bold"><Map /></h1></div>} />
 

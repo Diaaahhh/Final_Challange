@@ -19,26 +19,27 @@ import toast from "react-hot-toast";
 import api from "../../api";
 import useTableSuggestion from "../Hooks/useTableSuggestion";
 import ReCAPTCHA from "react-google-recaptcha";
-// Add this style block to prevent browser autofill from overriding your styles
+
+// Updated style block for clean white autofill backgrounds to match dynamic themes
 const autofillFixStyles = `
   /* Remove browser autofill background */
   input:-webkit-autofill,
   input:-webkit-autofill:hover, 
   input:-webkit-autofill:focus,
   input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px #F3F4F7 inset !important;
+    -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
     -webkit-text-fill-color: #374151 !important;
-    box-shadow: 0 0 0 30px #F3F4F7 inset !important;
-    background-color: #F3F4F7 !important;
+    box-shadow: 0 0 0 30px #ffffff inset !important;
+    background-color: #ffffff !important;
     background-clip: content-box !important;
     transition: background-color 5000s ease-in-out 0s;
   }
 
   /* For Firefox */
   input:autofill {
-    background-color: #F3F4F7 !important;
+    background-color: #ffffff !important;
     color: #374151 !important;
-    box-shadow: 0 0 0 30px #F3F4F7 inset !important;
+    box-shadow: 0 0 0 30px #ffffff inset !important;
   }
 `;
 
@@ -57,10 +58,11 @@ export default function Reservation() {
     table_number: [],
     advance_payment: "",
   });
-// --- OTP & SECURITY STATES ---
+
+  // --- OTP & SECURITY STATES ---
   const [isOtpEnabled, setIsOtpEnabled] = useState(false);
   const [isCaptchaEnabled, setIsCaptchaEnabled] = useState(false);
-const [captchaToken, setCaptchaToken] = useState(null);
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
@@ -127,6 +129,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
       console.error("Error fetching tables:", error);
     }
   };
+
   // 1. Fetch Settings on Load
   useEffect(() => {
     api.get("/reservation/reservation-settings")
@@ -235,6 +238,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
       setLoadingCustomer(false);
     }
   };
+
   // 3. Handle Calendar Clicks
   useEffect(() => {
     const calendar = calendarRef.current;
@@ -296,51 +300,48 @@ const [captchaToken, setCaptchaToken] = useState(null);
   };
 
   const getTableCapacity = (tableNo) => {
-  const table = tables.find(
-    (t) => String(t.table_no) === String(tableNo)
-  );
-
-  return Number(table?.person_no || table?.capacity || 4);
-};
-
-  const handleTableSelect = (tableNo) => {
-  setFormData((prev) => {
-    const currentTables = Array.isArray(prev.table_number)
-      ? prev.table_number
-      : [];
-
-    // remove if already selected
-    if (currentTables.includes(tableNo)) {
-      return {
-        ...prev,
-        table_number: currentTables.filter((t) => t !== tableNo),
-      };
-    }
-
-    // calculate current seat capacity
-    const currentSeatTotal = currentTables.reduce(
-      (sum, t) => sum + getTableCapacity(t),
-      0
+    const table = tables.find(
+      (t) => String(t.table_no) === String(tableNo)
     );
 
-    const newTableSeats = getTableCapacity(tableNo);
-    const newSeatTotal = currentSeatTotal + newTableSeats;
+    return Number(table?.person_no || table?.capacity || 4);
+  };
 
-    // seat limit check
-    if (newSeatTotal > maxTableSelection) {
-      // const remaining = maxTableSelection - currentSeatTotal;
+  const handleTableSelect = (tableNo) => {
+    setFormData((prev) => {
+      const currentTables = Array.isArray(prev.table_number)
+        ? prev.table_number
+        : [];
 
-      toast.error(`You can select maximum ${maxTableSelection} seat(s).`);
+      // remove if already selected
+      if (currentTables.includes(tableNo)) {
+        return {
+          ...prev,
+          table_number: currentTables.filter((t) => t !== tableNo),
+        };
+      }
 
-      return prev;
-    }
+      // calculate current seat capacity
+      const currentSeatTotal = currentTables.reduce(
+        (sum, t) => sum + getTableCapacity(t),
+        0
+      );
 
-    return {
-      ...prev,
-      table_number: [...currentTables, tableNo],
-    };
-  });
-};
+      const newTableSeats = getTableCapacity(tableNo);
+      const newSeatTotal = currentSeatTotal + newTableSeats;
+
+      // seat limit check
+      if (newSeatTotal > maxTableSelection) {
+        toast.error(`You can select maximum ${maxTableSelection} seat(s).`);
+        return prev;
+      }
+
+      return {
+        ...prev,
+        table_number: [...currentTables, tableNo],
+      };
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -359,8 +360,6 @@ const [captchaToken, setCaptchaToken] = useState(null);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-
-  
 
     // --- NEW: Validate Current Time against Restaurant Open/Close Hours ---
     if (
@@ -414,9 +413,9 @@ const [captchaToken, setCaptchaToken] = useState(null);
 
     try {
       await api.post("/reservation/create", {
-  ...formData,
-  captchaToken: captchaToken
-});
+        ...formData,
+        captchaToken: captchaToken
+      });
       setSuccess(true);
       setCaptchaToken(null);
       setFormData({
@@ -461,6 +460,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
       </div>
     ));
   };
+
   const getCurrentStep = () => {
     if (!formData.branch_id) return 1;
     if (!isPhoneSubmitted) return 2;
@@ -474,25 +474,31 @@ const [captchaToken, setCaptchaToken] = useState(null);
   const currentStep = getCurrentStep();
 
   const isTableStepCompleted =
-  formData.branch_id &&
-  isPhoneSubmitted &&
-  isPhoneVerified &&
-  formData.date &&
-  formData.time &&
-  formData.guest_number &&
-  formData.table_number.length > 0;
+    formData.branch_id &&
+    isPhoneSubmitted &&
+    isPhoneVerified &&
+    formData.date &&
+    formData.time &&
+    formData.guest_number &&
+    formData.table_number.length > 0;
 
   return (
     <>
       <style>{autofillFixStyles}</style>
 
-      <div className="min-h-screen bg-[rgb(229,231,235)] py-12 px-4 font-['Inter']">
-        <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg relative">
-          <div className="bg-[#0E1014] text-white p-8 text-center rounded-t-xl">
+      {/* Main Wrapper with Dynamic Theme Background */}
+      <div 
+        className="min-h-screen py-12 px-4 font-['Inter'] pt-24 transition-colors duration-300"
+        style={{ backgroundColor: 'var(--theme-body)' }}
+      >
+        <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg relative border border-gray-100">
+          
+          {/* Dynamic Theme Header */}
+          <div className="theme-bg text-white p-8 text-center rounded-t-xl transition-colors duration-300">
             <h2 className="text-3xl font-['Barlow_Condensed'] font-bold uppercase tracking-wider mb-2">
               Book a Table
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-300 text-sm">
               Reserve your spot at your favorite branch.
             </p>
           </div>
@@ -508,6 +514,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 {error}
               </div>
             )}
+            
             {/* Reservation Progress Steps */}
             <div className="mb-8">
               <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
@@ -534,32 +541,32 @@ const [captchaToken, setCaptchaToken] = useState(null);
                       {/* Line */}
                       {index !== 0 && (
                         <div
-                          className={`absolute left-0 top-3 w-full h-[2px] -z-10 
-            ${isCompleted ? "bg-[#C59D5F]" : "bg-gray-200"}`}
+                          className={`absolute left-0 top-3 w-full h-[2px] -z-10 transition-colors duration-300
+                            ${isCompleted ? "theme-accent-bg" : "bg-gray-200"}`}
                         ></div>
                       )}
 
                       {/* Circle */}
                       <div
                         className={`w-6 h-6 flex items-center justify-center rounded-full text-xs transition-all duration-300
-            ${
-              isCompleted
-                ? "bg-[#C59D5F] text-white"
-                : isActive
-                ? "bg-black text-white"
-                : "bg-gray-200 text-gray-500"
-            }`}
+                            ${
+                              isCompleted
+                                ? "theme-accent-bg text-white"
+                                : isActive
+                                ? "theme-bg text-white"
+                                : "bg-gray-200 text-gray-500"
+                            }`}
                       >
                         {isCompleted ? "✓" : stepNumber}
                       </div>
 
                       {/* Label */}
                       <span
-                        className={`mt-2 ${
+                        className={`mt-2 transition-colors duration-300 ${
                           isActive
-                            ? "text-black"
+                            ? "text-gray-900"
                             : isCompleted
-                            ? "text-[#C59D5F]"
+                            ? "theme-accent"
                             : "text-gray-400"
                         }`}
                       >
@@ -570,19 +577,21 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 })}
               </div>
             </div>
+            
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
                 {/* Branch */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaMapMarkerAlt className="text-[#C59D5F]" /> Branch{" "}
+                    <FaMapMarkerAlt className="theme-accent" /> Branch{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="branch_id"
                     value={formData.branch_id}
                     onChange={handleChange}
-                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all font-['Arial'] text-black"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all font-['Arial'] text-black"
                     required
                   >
                     <option value="">-- Select Branch --</option>
@@ -599,104 +608,102 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 </div>
 
                 {/* Phone Field (Merged) */}
-            <div>
-              <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                <FaPhone className="text-[#C59D5F]" /> Phone
-                <span className="text-red-500">*</span>
-              </label>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+                    <FaPhone className="theme-accent" /> Phone
+                    <span className="text-red-500">*</span>
+                  </label>
 
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  maxLength="11"
-                  // Merged disabled logic: Disabled if no branch is selected OR if OTP is verified
-                  disabled={!formData.branch_id || (isOtpEnabled ? isPhoneVerified : false)}
-                  // Merged placeholder logic
-                  placeholder={
-                    formData.branch_id
-                      ? "Phone Number (e.g. 017XXXXXXXX)"
-                      : "Select branch first"
-                  }
-                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black disabled:opacity-50"
-                  required
-                />
-                
-                {/* Send OTP Button */}
-                {isOtpEnabled && !isPhoneVerified && (
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    // Prevent sending if no branch is selected or timer is running
-                    disabled={countdown > 0 || !formData.branch_id}
-                    className={`px-6 rounded font-bold transition-all whitespace-nowrap text-sm shadow-sm ${
-                      countdown > 0 || !formData.branch_id
-                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                        : "bg-[#C59D5F] text-white hover:bg-[#0E1014]"
-                    }`}
-                  >
-                    {countdown > 0 ? `Resend in ${formatTime(countdown)}` : (otpSent ? "Resend OTP" : "Send OTP")}
-                  </button>
-                )}
-              </div>
-
-              {/* Existing Logic: Phone Validation Message */}
-              {phoneMessage && (
-                <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
-                  {phoneMessage}
-                </div>
-              )}
-
-              {/* Existing Logic: Loading Customer State */}
-              {loadingCustomer && (
-                <div className="mt-3 flex items-center gap-2 text-sm font-medium text-[#C59D5F] bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg w-fit">
-                  <span className="w-4 h-4 border-2 border-[#C59D5F] border-t-transparent rounded-full animate-spin"></span>
-                  Checking customer...
-                </div>
-              )}
-
-              {/* Conditional OTP Input Box */}
-              {isOtpEnabled && otpSent && !isPhoneVerified && (
-                <div className="mt-4 p-5 border-2 border-[#C59D5F] rounded-lg bg-yellow-50 animate-fadeIn">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
-                      Enter 4-Digit OTP
-                    </label>
-                    {countdown === 0 && (
-                      <span className="text-red-500 text-xs font-bold uppercase">OTP Expired</span>
-                    )}
-                  </div>
                   <div className="flex gap-2">
                     <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="w-full bg-white border border-gray-300 rounded px-5 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none tracking-[0.5em] text-center text-xl font-bold text-gray-800"
-                      placeholder="----"
-                      maxLength="4"
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      maxLength="11"
+                      disabled={!formData.branch_id || (isOtpEnabled ? isPhoneVerified : false)}
+                      placeholder={
+                        formData.branch_id
+                          ? "Phone Number (e.g. 017XXXXXXXX)"
+                          : "Select branch first"
+                      }
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all text-black disabled:opacity-50"
+                      required
                     />
-                    <button
-                      type="button"
-                      onClick={handleVerifyOtp}
-                      disabled={verifyingOtp || otp.length < 4 || countdown === 0}
-                      className={`px-8 rounded font-bold transition-all text-sm shadow-md ${
-                        verifyingOtp || otp.length < 4 || countdown === 0
-                          ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                          : "bg-[#0E1014] text-white hover:bg-[#C59D5F]"
-                      }`}
-                    >
-                      {verifyingOtp ? "Checking..." : "Verify"}
-                    </button>
+                    
+                    {/* Send OTP Button */}
+                    {isOtpEnabled && !isPhoneVerified && (
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={countdown > 0 || !formData.branch_id}
+                        className={`px-6 rounded font-bold transition-all whitespace-nowrap text-sm shadow-sm ${
+                          countdown > 0 || !formData.branch_id
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "theme-accent-bg text-white hover:opacity-90"
+                        }`}
+                      >
+                        {countdown > 0 ? `Resend in ${formatTime(countdown)}` : (otpSent ? "Resend OTP" : "Send OTP")}
+                      </button>
+                    )}
                   </div>
+
+                  {/* Phone Validation Message */}
+                  {phoneMessage && (
+                    <div className="mt-2 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                      {phoneMessage}
+                    </div>
+                  )}
+
+                  {/* Loading Customer State */}
+                  {loadingCustomer && (
+                    <div className="mt-3 flex items-center gap-2 text-sm font-medium theme-accent bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg w-fit">
+                      <span className="w-4 h-4 border-2 theme-border border-t-transparent rounded-full animate-spin"></span>
+                      Checking customer...
+                    </div>
+                  )}
+
+                  {/* Conditional OTP Input Box */}
+                  {isOtpEnabled && otpSent && !isPhoneVerified && (
+                    <div className="mt-4 p-5 border-2 theme-border rounded-lg bg-gray-50 animate-fadeIn">
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
+                          Enter 4-Digit OTP
+                        </label>
+                        {countdown === 0 && (
+                          <span className="text-red-500 text-xs font-bold uppercase">OTP Expired</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded px-5 py-3 focus:ring-2 theme-ring outline-none tracking-[0.5em] text-center text-xl font-bold text-gray-800"
+                          placeholder="----"
+                          maxLength="4"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={verifyingOtp || otp.length < 4 || countdown === 0}
+                          className={`px-8 rounded font-bold transition-all text-sm shadow-md ${
+                            verifyingOtp || otp.length < 4 || countdown === 0
+                              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              : "theme-bg text-white hover-theme-accent-bg"
+                          }`}
+                        >
+                          {verifyingOtp ? "Checking..." : "Verify"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
                 {/* Name */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaUser className="text-[#C59D5F]" /> Name{" "}
+                    <FaUser className="theme-accent" /> Name{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -707,7 +714,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                     disabled={!isPhoneSubmitted}
                     readOnly
                     placeholder="Your Full Name"
-                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all text-black disabled:opacity-50"
                     required
                   />
                 </div>
@@ -715,7 +722,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 {/* Address */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaHome className="text-[#C59D5F]" /> Address{" "}
+                    <FaHome className="theme-accent" /> Address{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -725,7 +732,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                     value={formData.address}
                     onChange={handleChange}
                     placeholder="Your Full Address"
-                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all text-black disabled:opacity-50"
                     required
                   />
                 </div>
@@ -733,7 +740,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 {/* Guest Number */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaUsers className="text-[#C59D5F]" /> Number of Guests{" "}
+                    <FaUsers className="theme-accent" /> Number of Guests{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -745,7 +752,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                     disabled={!formData.time || !isPhoneVerified}
                     min="1"
                     placeholder="E.g., 4"
-                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-black"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all text-black disabled:opacity-50"
                     required
                   />
                 </div>
@@ -753,14 +760,14 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 {/* Date */}
                 <div className="relative">
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaCalendarAlt className="text-[#C59D5F]" /> Date{" "}
+                    <FaCalendarAlt className="theme-accent" /> Date{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowCalendar(!showCalendar)}
                     disabled={!formData.branch_id || !isPhoneSubmitted || !isPhoneVerified}
-                    className="w-full text-left bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700 "
+                    className="w-full text-left bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all text-gray-700 disabled:opacity-50"
                   >
                     {formData.date ? formData.date : "Select Date"}
                   </button>
@@ -803,7 +810,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 {/* Time */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaClock className="text-[#C59D5F] text-black" /> Time{" "}
+                    <FaClock className="theme-accent" /> Time{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -812,7 +819,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                     value={formData.time}
                     onChange={handleChange}
                     disabled={!formData.date}
-                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-700"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all text-gray-700 disabled:opacity-50"
                     required
                   />
                 </div>
@@ -820,52 +827,29 @@ const [captchaToken, setCaptchaToken] = useState(null);
                 {/* Event Name */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaGlassCheers className="text-[#C59D5F]" /> Occasion
+                    <FaGlassCheers className="theme-accent" /> Occasion
                   </label>
                   <select
                     name="event_name"
                     value={formData.event_name}
                     disabled={!isPhoneSubmitted || !isPhoneVerified}
                     onChange={handleChange}
-                    className="w-full text-black bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all font-['Arial']"
+                    className="w-full text-black bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all font-['Arial'] disabled:opacity-50"
                   >
-                    <option className="text-black bg-white" value="Anniversary">
-                      Anniversary
-                    </option>
-                    <option className="text-black bg-white" value="Birthday">
-                      Birthday
-                    </option>
-                    <option
-                      className="text-black bg-white"
-                      value="Charity Event"
-                    >
-                      Charity Event
-                    </option>
-                    <option
-                      className="text-black bg-white"
-                      value="Family Gathering"
-                    >
-                      Family Gathering
-                    </option>
-                    <option
-                      className="text-black bg-white"
-                      value="Business Meeting"
-                    >
-                      Official Meeting
-                    </option>
-                    <option className="text-black bg-white" value="Reunion">
-                      Reunion
-                    </option>
-                    <option className="text-black bg-white" value="Others..">
-                      Others...
-                    </option>
+                    <option className="text-black bg-white" value="Anniversary">Anniversary</option>
+                    <option className="text-black bg-white" value="Birthday">Birthday</option>
+                    <option className="text-black bg-white" value="Charity Event">Charity Event</option>
+                    <option className="text-black bg-white" value="Family Gathering">Family Gathering</option>
+                    <option className="text-black bg-white" value="Business Meeting">Official Meeting</option>
+                    <option className="text-black bg-white" value="Reunion">Reunion</option>
+                    <option className="text-black bg-white" value="Others..">Others...</option>
                   </select>
                 </div>
 
                 {/* Advance Payment */}
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                    <FaMoneyBillWave className="text-[#C59D5F]" /> Amount Paid
+                    <FaMoneyBillWave className="theme-accent" /> Amount Paid
                     in Advanced
                   </label>
                   <input
@@ -876,7 +860,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                     onChange={handleChange}
                     onWheel={(e) => e.target.blur()}
                     placeholder="e.g. 500 (Optional)"
-                    className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all text-gray-800"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all text-gray-800 disabled:opacity-50"
                     min="0"
                   />
                 </div>
@@ -902,7 +886,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                       <>
                         <div className="flex justify-between items-end mb-3">
                           <label className="block text-gray-700 text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
-                            <FaUtensils className="text-[#C59D5F]" /> Select
+                            <FaUtensils className="theme-accent" /> Select
                             Table(s)
                           </label>
                         </div>
@@ -926,7 +910,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                                       key={t.table_no}
                                       className="flex items-center bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden"
                                     >
-                                      <span className="bg-[#0E1014] text-[#C59D5F] font-bold px-2 py-1 text-sm">
+                                      <span className="theme-bg theme-accent font-bold px-2 py-1 text-sm">
                                         #{t.table_no}
                                       </span>
                                       <span className="text-gray-600 text-xs font-bold px-2 py-1 bg-gray-50">
@@ -1002,17 +986,17 @@ const [captchaToken, setCaptchaToken] = useState(null);
                                   handleTableSelect(String(t.table_no));
                               }}
                               className={`
-                group flex flex-col items-center justify-center p-3 mt-4 mb-5 rounded-xl border-2 transition-all duration-300 relative
-                ${
-                  isOccupied
-                    ? "border-red-300 bg-red-50 cursor-not-allowed opacity-70"
-                    : isSelected
-                    ? "border-[#C59D5F] bg-amber-50 shadow-md transform scale-105 cursor-pointer"
-                    : isSuggested
-                    ? "border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse"
-                    : "border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
-                }
-            `}
+                                group flex flex-col items-center justify-center p-3 mt-4 mb-5 rounded-xl border-2 transition-all duration-300 relative
+                                ${
+                                  isOccupied
+                                    ? "border-red-300 bg-red-50 cursor-not-allowed opacity-70"
+                                    : isSelected
+                                    ? "theme-border theme-accent-bg bg-opacity-10 shadow-md transform scale-105 cursor-pointer"
+                                    : isSuggested
+                                    ? "border-green-500 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.4)] transform scale-105 cursor-pointer animate-pulse"
+                                    : "border-gray-200 hover:border-gray-400 hover:bg-gray-50 cursor-pointer"
+                                }
+                              `}
                             >
                               {isSuggested && !isOccupied && !isSelected && (
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
@@ -1032,21 +1016,21 @@ const [captchaToken, setCaptchaToken] = useState(null);
 
                               <div
                                 className={`
-                w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
-                ${
-                  isOccupied
-                    ? "bg-red-200 text-red-800"
-                    : isSelected
-                    ? "bg-[#C59D5F] text-white"
-                    : "bg-gray-200 text-gray-600"
-                }
-            `}
+                                  w-full h-16 rounded-md flex flex-col items-center justify-center shadow-inner relative overflow-hidden
+                                  ${
+                                    isOccupied
+                                      ? "bg-red-200 text-red-800"
+                                      : isSelected
+                                      ? "theme-accent-bg text-white"
+                                      : "bg-gray-200 text-gray-600"
+                                  }
+                                `}
                               >
                                 <div className="absolute inset-0 opacity-10 bg-black"></div>
                                 <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
                                   Table no.{t.table_no}
                                 </span>
-                                <span className="text-[10px] uppercase font-bold text-black relative z-10">
+                                <span className={`text-[10px] uppercase font-bold relative z-10 ${isSelected ? "text-white" : "text-black"}`}>
                                   {totalChairs} Seats
                                 </span>
                               </div>
@@ -1056,7 +1040,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
                               </div>
 
                               {t.bookingMessage && t.isAvailable && (
-                                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-[#C59D5F] font-bold text-center w-full">
+                                <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] theme-accent font-bold text-center w-full">
                                   {t.bookingMessage}
                                 </span>
                               )}
@@ -1076,7 +1060,7 @@ const [captchaToken, setCaptchaToken] = useState(null);
               {/* Notes */}
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
-                  <FaPen className="text-[#C59D5F]" /> Special Note
+                  <FaPen className="theme-accent" /> Special Note
                 </label>
                 <textarea
                   name="notes"
@@ -1084,37 +1068,36 @@ const [captchaToken, setCaptchaToken] = useState(null);
                   onChange={handleChange}
                   disabled={!isPhoneSubmitted || !isPhoneVerified}
                   placeholder="Any special requests?"
-                  className="w-full bg-[#F3F4F7] border-none rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#C59D5F] outline-none transition-all h-24 text-gray-800"
+                  className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 focus:ring-2 theme-ring outline-none transition-all h-24 text-gray-800 disabled:opacity-50"
                 ></textarea>
               </div>
-{/* Conditional Google reCAPTCHA */}
+              
+              {/* Conditional Google reCAPTCHA */}
               {isCaptchaEnabled && (
-  <div className="flex justify-center my-6">
-    <div
-      className={`transition-all duration-300 ${
-        isTableStepCompleted
-          ? "opacity-100 pointer-events-auto"
-          : "opacity-40 pointer-events-none"
-      }`}
-    >
-      <ReCAPTCHA
-        sitekey="6LdKm6csAAAAAGNjH1Wu2XcIg2_Ll6c3ScyCOUtz"
-        onChange={(token) => setCaptchaToken(token)}
-        theme="light"
-      />
-    </div>
-
-    
-  </div>
-)}
+                <div className="flex justify-center my-6">
+                  <div
+                    className={`transition-all duration-300 ${
+                      isTableStepCompleted
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-40 pointer-events-none"
+                    }`}
+                  >
+                    <ReCAPTCHA
+                      sitekey="6LdKm6csAAAAAGNjH1Wu2XcIg2_Ll6c3ScyCOUtz"
+                      onChange={(token) => setCaptchaToken(token)}
+                      theme="light"
+                    />
+                  </div>
+                </div>
+              )}
+              
               <button
                 type="submit"
-                disabled={loading || !isPhoneSubmitted ||
-  (isCaptchaEnabled && !captchaToken)}
-                className={`w-full bg-[#C59D5F] text-white font-bold py-4 rounded-lg uppercase tracking-widest hover:bg-[#0E1014] transition-all duration-300 ${
-                  loading || !isPhoneSubmitted
+                disabled={loading || !isPhoneSubmitted || (isCaptchaEnabled && !captchaToken)}
+                className={`w-full theme-accent-bg text-white font-bold py-4 rounded-lg uppercase tracking-widest hover:opacity-90 transition-all duration-300 shadow-md ${
+                  loading || !isPhoneSubmitted || (isCaptchaEnabled && !captchaToken)
                     ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-[#C59D5F] hover:text-white"
+                    : ""
                 }`}
               >
                 {loading ? "Processing..." : "Confirm Reservation"}
