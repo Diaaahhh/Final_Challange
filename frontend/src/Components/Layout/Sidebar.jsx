@@ -28,7 +28,7 @@ export default function Sidebar() {
   };
 
   const menuItems = [
-    { path: "/admin/dashboard", icon: FaTachometerAlt, label: "Dashboard" },
+    // { path: "/admin/dashboard", icon: FaTachometerAlt, label: "Dashboard" },
     { path: "/admin/menu-list", icon: FaListUl, label: "Menu List" },
     {
       path: "/admin/reservation_view",
@@ -36,10 +36,11 @@ export default function Sidebar() {
       label: "Reservations",
     },
     { path: "/admin/write_about", icon: FaPenNib, label: "Write About" },
-    { path: "/admin/view_review", icon: FaComments, label: "Reviews" },
     { path: "/admin/upload_hero", icon: FaImage, label: "Upload Hero" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
     { path: "/admin/branch_list", icon: FaStore, label: "All Branches" },
+        { path: "/admin/view_review", icon: FaComments, label: "Reviews" },
+
   ];
 
   return (

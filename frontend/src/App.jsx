@@ -43,8 +43,8 @@ export const themes = {
   2: { navbar: "#1E3A8A", body: "#f2e9e1", footer: "#1E3A8A", accent: "#FBBF24" }, // Blue & Yellow
   3: { navbar: "#064E3B", body: "#ECFDF5", footer: "#064E3B", accent: "#34D399" }, // Green & Mint
   4: { navbar: "#7F1100", body: "#f2e9e1", footer: "#02332D", accent: "#BF9861" }, // Green & Mint
-  5: { navbar: "#064E3B", body: "#ECFDF5", footer: "#064E3B", accent: "#34D399" }, // Green & Mint
-  6: { navbar: "#064E3B", body: "#ECFDF5", footer: "#064E3B", accent: "#34D399" }, // Green & Mint
+  5: { navbar: "#ae341e", body: "#EFD9C7", footer: "#a36546", accent: "#F1BD78" }, // Green & Mint
+  6: { navbar: "#6a4162", body: "#fefafa", footer: "#f6d2d6", accent: "#d46a92" }, // Green & Mint
 };
 
 // --- ADMIN PROTECTION GUARD ---

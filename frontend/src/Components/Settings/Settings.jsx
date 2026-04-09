@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaBuilding, FaSave, FaTruck, FaClock, FaHourglassHalf, FaMobileAlt, FaShieldAlt } from 'react-icons/fa';
 import api from '../../api';
+import toast from 'react-hot-toast'; 
 
 export default function Settings() {
   const [companyCode, setCompanyCode] = useState('');
@@ -18,31 +19,111 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // --- Validation & Locking States ---
+  const [isFormUnlocked, setIsFormUnlocked] = useState(false);
+  const [isValidatingCode, setIsValidatingCode] = useState(false);
+  
+  // To prevent the auto-save from running on the initial page load
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  // To track the previous code so we only save when the text ACTUALLY changes
+  const prevCodeRef = useRef('');
+
   // 1. Fetch existing settings on load
   useEffect(() => {
     api.get('/settings')
-      .then(res => {
+      .then(async (res) => {
         if (res.data) {
-           if (res.data.company_code) setCompanyCode(res.data.company_code);
            if (res.data.delivery_charge !== undefined) setDeliveryCharge(res.data.delivery_charge);
-           
            if (res.data.rest_open) setRestOpen(res.data.rest_open.substring(0, 5));
            if (res.data.rest_close) setRestClose(res.data.rest_close.substring(0, 5));
            if (res.data.table_prelock_duration !== undefined) setTablePrelockDuration(res.data.table_prelock_duration);
-
-           // Load Security Settings (Convert 1/0 from DB to true/false for UI)
            if (res.data.otp !== undefined) setOtpEnabled(res.data.otp === 1);
            if (res.data.captcha !== undefined) setCaptchaEnabled(res.data.captcha === 1);
+
+           if (res.data.company_code) {
+             const loadedCode = String(res.data.company_code);
+             setCompanyCode(loadedCode);
+             prevCodeRef.current = loadedCode; 
+
+             // Auto-verify the loaded code to unlock the form initially
+             setIsValidatingCode(true);
+             try {
+                const branchRes = await api.get('/branches');
+                if (branchRes.data && branchRes.data.status === true) {
+                    setIsFormUnlocked(true);
+                }
+             } catch(e) {
+                setIsFormUnlocked(false);
+             } finally {
+                setIsValidatingCode(false);
+             }
+           }
         }
         setLoading(false);
+        setInitialLoadDone(true); // Mark that initial load is finished
       })
       .catch(err => {
         console.error("Error fetching settings", err);
         setLoading(false);
+        setInitialLoadDone(true);
       });
   }, []);
 
-  // 2. Handle Submit
+  // 2. Debounce -> Save to DB -> Verify via branches.js
+  useEffect(() => {
+    if (!initialLoadDone) return; // Don't run while the page is still loading
+
+    const safeCode = String(companyCode);
+    
+    // Only run this logic if the company code text ACTUALLY changed
+    if (safeCode === prevCodeRef.current) return;
+    prevCodeRef.current = safeCode; // Update the ref
+
+    if (!safeCode.trim()) {
+      setIsFormUnlocked(false);
+      setIsValidatingCode(false);
+      return;
+    }
+    
+    setIsFormUnlocked(false); // Lock the form instantly
+    setIsValidatingCode(true); // Show "Verifying..."
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        // STEP A: Store inside database FIRST
+        await api.post('/settings/update', { 
+            company_code: safeCode,
+            delivery_charge: deliveryCharge,
+            rest_open: restOpen,
+            rest_close: restClose,
+            table_prelock_duration: tablePrelockDuration,
+            otp: otpEnabled ? 1 : 0,
+            captcha: captchaEnabled ? 1 : 0
+        });
+
+        // STEP B: The verification process starts automatically
+        // This calls branches.js, which reads the newly saved code from the DB!
+        const res = await api.get(`/branches`);
+        
+        if (res.data && res.data.status === true) {
+          setIsFormUnlocked(true); // Unlock if successful
+          toast.success("Settings saved & Company Verified!");
+        } else {
+          setIsFormUnlocked(false);
+          toast.error("No company found with this code.");
+        }
+      } catch (error) {
+        setIsFormUnlocked(false);
+        toast.error("No company found or network error.");
+      } finally {
+        setIsValidatingCode(false);
+      }
+    }, 1000); // Waits 1000ms (1 second) after the user stops typing
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [companyCode, deliveryCharge, restOpen, restClose, tablePrelockDuration, otpEnabled, captchaEnabled, initialLoadDone]);
+
+  // 3. Handle Submit (Manual Save Button)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -54,14 +135,13 @@ export default function Settings() {
           rest_open: restOpen,
           rest_close: restClose,
           table_prelock_duration: tablePrelockDuration,
-          // Convert true/false back to 1/0 for DB
           otp: otpEnabled ? 1 : 0,
           captcha: captchaEnabled ? 1 : 0
       });
-      alert("Settings saved successfully!");
+      toast.success("Settings updated successfully!");    
     } catch (err) {
       console.error("Error saving settings", err);
-      alert("Failed to save settings.");
+      toast.error("Failed to update settings");    
     } finally {
       setSaving(false);
     }
@@ -107,18 +187,28 @@ export default function Settings() {
             
             {/* COMPANY CODE */}
             <div className="group">
-              <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-2 group-focus-within:text-[#007BFF] transition-colors">
-                Company Code
-              </label>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider group-focus-within:text-[#007BFF] transition-colors">
+                  Company Code
+                </label>
+                {/* Status Indicators */}
+                {isValidatingCode && <span className="text-[#007BFF] text-[10px] uppercase font-bold animate-pulse">Saving & Verifying...</span>}
+                {!isValidatingCode && isFormUnlocked && companyCode && <span className="text-green-500 text-[10px] uppercase font-bold">✓ Valid Code</span>}
+                {!isValidatingCode && !isFormUnlocked && companyCode && <span className="text-red-500 text-[10px] uppercase font-bold">✕ Invalid</span>}
+              </div>
+              
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FaBuilding className="text-[#555] group-focus-within:text-[#007BFF] transition-colors" />
+                  <FaBuilding className={`transition-colors ${isFormUnlocked ? 'text-green-500' : 'text-[#555] group-focus-within:text-[#007BFF]'}`} />
                 </div>
                 <input 
                   type="text" 
                   value={companyCode}
                   onChange={(e) => setCompanyCode(e.target.value)}
-                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base"
+                  className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
+                    ${isFormUnlocked ? 'border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30' : 
+                     (companyCode && !isValidatingCode ? 'border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30' : 
+                     'border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30')}`}
                   required
                 />
               </div>
@@ -139,15 +229,13 @@ export default function Settings() {
                 <input 
                   type="number" 
                   value={deliveryCharge}
+                  disabled={!isFormUnlocked}
                   onChange={(e) => setDeliveryCharge(e.target.value)}
                   min="0"
-                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base"
+                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base disabled:opacity-40 disabled:cursor-not-allowed"
                   required
                 />
               </div>
-              <p className="mt-2 text-[10px] text-[#555] uppercase tracking-wide font-bold">
-                * Applied automatically to all Home Delivery orders
-              </p>
             </div>
 
             {/* --- RESERVATION SETTINGS --- */}
@@ -167,8 +255,9 @@ export default function Settings() {
                       <input 
                         type="time" 
                         value={restOpen}
+                        disabled={!isFormUnlocked}
                         onChange={(e) => setRestOpen(e.target.value)}
-                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all font-mono tracking-wide font-bold shadow-sm"
+                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all font-mono tracking-wide font-bold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                         required
                       />
                     </div>
@@ -186,8 +275,9 @@ export default function Settings() {
                       <input 
                         type="time" 
                         value={restClose}
+                        disabled={!isFormUnlocked}
                         onChange={(e) => setRestClose(e.target.value)}
-                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all font-mono tracking-wide font-bold shadow-sm"
+                        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-3 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all font-mono tracking-wide font-bold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                         required
                       />
                     </div>
@@ -197,7 +287,7 @@ export default function Settings() {
                 {/* PRE-RESERVATION BUFFER */}
                 <div className="group">
                   <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-2 group-focus-within:text-[#C59D5F] transition-colors">
-                    Pre-Reservation Buffer (Minutes)
+                    Hold Table Before Arrival (Minutes)
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -206,26 +296,23 @@ export default function Settings() {
                     <input 
                       type="number" 
                       value={tablePrelockDuration}
+                      disabled={!isFormUnlocked}
                       onChange={(e) => setTablePrelockDuration(e.target.value)}
                       min="0"
-                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base"
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#C59D5F] focus:ring-1 focus:ring-[#C59D5F]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base disabled:opacity-40 disabled:cursor-not-allowed"
                       required
                     />
                   </div>
-                  <p className="mt-2 text-[10px] text-[#555] uppercase tracking-wide font-bold">
-                    * The table will be locked to walk-ins this many minutes prior to a booking.
-                  </p>
                 </div>
             </div>
 
-            {/* --- NEW SECTION: SECURITY SETTINGS --- */}
+            {/* --- SECURITY SETTINGS --- */}
             <div className="pt-6 pb-2 border-t border-[#222]">
                 <h3 className="text-[#007BFF] font-bold uppercase tracking-wider text-sm mb-4">Security & Verification</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  
                   {/* OTP Switch */}
-                  <div className={`flex items-center justify-between bg-[#1A1A1A] border ${otpEnabled ? 'border-[#007BFF]/50' : 'border-[#2A2A2A]'} rounded-xl p-4 shadow-sm transition-all duration-300`}>
+                  <div className={`flex items-center justify-between bg-[#1A1A1A] border ${otpEnabled ? 'border-[#007BFF]/50' : 'border-[#2A2A2A]'} rounded-xl p-4 shadow-sm transition-all duration-300 ${!isFormUnlocked ? 'opacity-40' : ''}`}>
                     <div className="flex items-center gap-3">
                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${otpEnabled ? 'bg-[#007BFF]/20 text-[#007BFF]' : 'bg-[#333] text-[#555]'} transition-colors`}>
                          <FaMobileAlt />
@@ -238,44 +325,22 @@ export default function Settings() {
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input 
                         type="checkbox" 
+                        disabled={!isFormUnlocked}
                         className="sr-only peer" 
                         checked={otpEnabled} 
                         onChange={() => setOtpEnabled(!otpEnabled)} 
                       />
-                      <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007BFF]"></div>
+                      <div className={`w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${otpEnabled ? 'peer-checked:bg-[#007BFF]' : ''}`}></div>
                     </label>
                   </div>
-
-                  {/* Captcha Switch */}
-                  {/* <div className={`flex items-center justify-between bg-[#1A1A1A] border ${captchaEnabled ? 'border-[#007BFF]/50' : 'border-[#2A2A2A]'} rounded-xl p-4 shadow-sm transition-all duration-300`}>
-                    <div className="flex items-center gap-3">
-                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${captchaEnabled ? 'bg-[#007BFF]/20 text-[#007BFF]' : 'bg-[#333] text-[#555]'} transition-colors`}>
-                         <FaShieldAlt />
-                       </div>
-                       <div>
-                         <span className="text-sm font-bold text-white uppercase tracking-wider block">Google Captcha</span>
-                         <span className="text-[10px] text-[#555] font-bold uppercase tracking-wide">Bot Protection</span>
-                       </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={captchaEnabled} 
-                        onChange={() => setCaptchaEnabled(!captchaEnabled)} 
-                      />
-                      <div className="w-11 h-6 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#007BFF]"></div>
-                    </label>
-                  </div> */}
-
                 </div>
             </div>
 
             {/* SUBMIT BUTTON */}
             <button 
               type="submit" 
-              disabled={saving}
-              className="w-full btn border-none rounded-xl font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-lg py-4 flex items-center justify-center gap-2 bg-[#007BFF] hover:bg-[#0066e6] text-black transition-all duration-300 shadow-[0_0_25px_rgba(0,123,255,0.3)] hover:shadow-[0_0_40px_rgba(0,123,255,0.5)] transform active:scale-95 disabled:opacity-50 mt-4"
+              disabled={saving || !isFormUnlocked || isValidatingCode}
+              className="w-full btn border-none rounded-xl font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-lg py-4 flex items-center justify-center gap-2 bg-[#007BFF] hover:bg-[#0066e6] text-black transition-all duration-300 shadow-[0_0_25px_rgba(0,123,255,0.3)] hover:shadow-[0_0_40px_rgba(0,123,255,0.5)] transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
             >
               {saving ? (
                 <>

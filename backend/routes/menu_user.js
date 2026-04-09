@@ -74,7 +74,7 @@ router.get('/categories/:branchId', async (req, res) => {
 router.get('/list', async (req, res) => {
     try {
         const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/all-menu-list/${companyCode}`;
+        const apiUrl = `https://pos.chulkani.com/company/api/menus/${companyCode}`;
         
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' }
