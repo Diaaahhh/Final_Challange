@@ -36,7 +36,7 @@ export default function Sidebar() {
       label: "Reservations",
     },
     { path: "/admin/write_about", icon: FaPenNib, label: "Write About" },
-    { path: "/admin/upload_hero", icon: FaImage, label: "Upload Hero" },
+    { path: "/admin/upload_hero", icon: FaImage, label: "Upload Banner" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
     { path: "/admin/branch_list", icon: FaStore, label: "All Branches" },
         { path: "/admin/view_review", icon: FaComments, label: "Reviews" },

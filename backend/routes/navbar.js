@@ -25,6 +25,7 @@ router.get("/logo", async (req, res) => {
     const response = await axios.get(
       `https://pos.chulkani.com/company/user-details/${companyCode}`
     );
+console.log('Full API Response:', JSON.stringify(response.data, null, 2));
 
     const data = response.data.data;
 
@@ -34,7 +35,7 @@ router.get("/logo", async (req, res) => {
       return res.status(404).send("No logo found");
     }
 
-    const logoUrl = `https://pos.chulkani.com/uploads/logo/${logoItem.image}`;
+    const logoUrl = `https://pos.chulkani.com/assets/uploads/user_logo/${logoItem.image}`;
 
     // FETCH IMAGE FROM POS SERVER
     const imageResponse = await axios.get(logoUrl, {

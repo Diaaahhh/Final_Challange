@@ -48,68 +48,97 @@ router.get('/list', async (req, res) => {
             headers: {
                 'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}`,
                 'Accept': 'application/json'
+            },
+            // --- THE FIX: Prevent Axios from throwing an error on 404/400 status codes ---
+            validateStatus: function (status) {
+                return status < 500; // Only throw an error if the server is completely broken (500+)
             }
         });
 
         // 1. DETECT IF LARAVEL SENT THE HTML LOGIN PAGE
         if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
             console.warn("Laravel blocked the API request and returned a Login page.");
-            throw new Error("Laravel Authentication Block"); // This forces the catch block to run
+            throw new Error("Laravel Authentication Block"); 
         }
 
+        // --- PARSING THE JSON RESPONSE ---
         let externalItems = [];
-        if (response.data && response.data.data) {
+        
+        // 1. Check if the POS explicitly returned "status: false" (e.g., No menus found)
+        if (response.data && response.data.status === false) {
+            externalItems = []; // Safe empty state
+        } 
+        // 2. Check if the POS returned a success object with a data array
+        else if (response.data && Array.isArray(response.data.data)) {
             externalItems = response.data.data;
-        } else if (Array.isArray(response.data)) {
+        } 
+        // 3. Check if the POS just returned a flat array
+        else if (Array.isArray(response.data)) {
             externalItems = response.data;
-        } else {
+        } 
+        // 4. Check if data is explicitly null
+        else if (response.data && response.data.data === null) {
+            externalItems = []; // Safe empty state
+        }
+        // 5. If it's completely unrecognized, THEN throw error
+        else {
             throw new Error("Unexpected JSON structure");
         }
 
-        if (externalItems.length === 0) {
-            throw new Error("Empty API response");
-        }
-
         // Prepare local DB synchronization
-        const sql = `
-            INSERT INTO menu (
-                m_menu_id, m_menu_sl, m_menu_name, category_id, 
-                m_company_id, m_branch_id, m_ingredient, m_cost, 
-                m_price, m_status
-            ) VALUES ?
-            ON DUPLICATE KEY UPDATE 
-                m_menu_sl = VALUES(m_menu_sl),
-                m_menu_name = VALUES(m_menu_name),
-                category_id = VALUES(category_id),
-                m_company_id = VALUES(m_company_id),
-                m_branch_id = VALUES(m_branch_id),
-                m_ingredient = VALUES(m_ingredient),
-                m_cost = VALUES(m_cost),
-                m_price = VALUES(m_price),
-                m_status = VALUES(m_status)
-        `;
-
-        const values = externalItems.map(item => [
-            item.id,
-            item.m_menu_sl,
-            item.m_menu_name,
-            item.category_id,
-            item.m_company_id,
-            item.m_branch_id,
-            item.m_ingredient ? JSON.stringify(item.m_ingredient) : null,
-            item.m_cost,
-            item.m_price,
-            item.m_status
-        ]);
-
-        db.query(sql, [values], (err, result) => {
-            if (err) {
-                console.error("Local DB Sync Error:", err);
+        // --- Empty the table before inserting ---
+        db.query("DELETE FROM menu", (deleteErr) => {
+            if (deleteErr) {
+                console.error("Error emptying the menu table:", deleteErr);
             }
 
-            db.query("SELECT * FROM menu", (dbErr, dbResult) => {
-                if (dbErr) return res.status(500).json({ error: "Failed to load local menu data" });
-                res.json(dbResult);
+            // --- If there are 0 items from POS, stop here and return empty! ---
+            if (externalItems.length === 0) {
+                console.warn("POS system returned an empty menu. Local menu table has been cleared.");
+                return res.json([]); // Send an empty array to the frontend
+            }
+
+            // Otherwise, build the SQL insertion query
+            const sql = `
+                INSERT INTO menu (
+                    m_menu_id, m_menu_sl, m_menu_name, category_id, 
+                    m_company_id, m_branch_id, m_ingredient, m_cost, 
+                    m_price, m_status
+                ) VALUES ?
+                ON DUPLICATE KEY UPDATE 
+                    m_menu_sl = VALUES(m_menu_sl),
+                    m_menu_name = VALUES(m_menu_name),
+                    category_id = VALUES(category_id),
+                    m_company_id = VALUES(m_company_id),
+                    m_branch_id = VALUES(m_branch_id),
+                    m_ingredient = VALUES(m_ingredient),
+                    m_cost = VALUES(m_cost),
+                    m_price = VALUES(m_price),
+                    m_status = VALUES(m_status)
+            `;
+
+            const values = externalItems.map(item => [
+                item.id,
+                item.m_menu_sl,
+                item.m_menu_name,
+                item.category_id,
+                item.m_company_id,
+                item.m_branch_id,
+                item.m_ingredient ? JSON.stringify(item.m_ingredient) : null,
+                item.m_cost,
+                item.m_price,
+                item.m_status
+            ]);
+
+            db.query(sql, [values], (err, result) => {
+                if (err) {
+                    console.error("Local DB Sync Error:", err);
+                }
+
+                db.query("SELECT * FROM menu", (dbErr, dbResult) => {
+                    if (dbErr) return res.status(500).json({ error: "Failed to load local menu data" });
+                    res.json(dbResult);
+                });
             });
         });
 
