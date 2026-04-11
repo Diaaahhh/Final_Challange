@@ -23,7 +23,7 @@ export default function Sidebar() {
   // Helper to check active link for styling
   const isActive = (path) => {
     return location.pathname === path
-      ? "bg-[#007BFF] text-white font-bold shadow-[0_0_20px_rgba(0,123,255,0.35)]"
+      ? "bg-[#007BFF] text-white shadow-[0_0_20px_rgba(0,123,255,0.35)]"
       : "text-[#E0E0E0] hover:bg-[#1A1A1A] hover:text-[#007BFF]";
   };
 
@@ -39,12 +39,11 @@ export default function Sidebar() {
     { path: "/admin/upload_hero", icon: FaImage, label: "Upload Banner" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
     { path: "/admin/branch_list", icon: FaStore, label: "All Branches" },
-        { path: "/admin/view_review", icon: FaComments, label: "Reviews" },
-
+    { path: "/admin/view_review", icon: FaComments, label: "Reviews" },
   ];
 
   return (
-    <div className="flex h-screen font-['Inter'] relative z-40">
+    <div className="flex h-screen font-['Arial_Black',_sans-serif] relative z-40">
       {/* SIDEBAR CONTAINER */}
       <div
         className={`${
@@ -53,8 +52,8 @@ export default function Sidebar() {
       >
         {/* Header */}
         <div className="h-20 flex items-center justify-center border-b border-[#1E1E1E] bg-[#111111]">
-          <h2
-            className={`font-['Barlow_Condensed'] font-bold text-2xl uppercase tracking-widest text-white ${
+          <div
+            className={`text-2xl uppercase tracking-widest text-white ${
               !isOpen && "lg:hidden"
             }`}
           >
@@ -63,7 +62,7 @@ export default function Sidebar() {
                 to="/"
                 className="group flex flex-col items-center leading-none"
               >
-                <h2 className="text-4xl font-['Barlow_Condensed'] font-extrabold uppercase italic tracking-wider">
+                <h2 className="text-4xl uppercase italic tracking-wider">
                   <span className="text-white group-hover:text-[#007BFF] transition-colors">
                     Khabar
                   </span>
@@ -71,12 +70,12 @@ export default function Sidebar() {
                     Table
                   </span>
                 </h2>
-                <p className="text-xs font-['Inter'] tracking-[0.4em] text-[#A0A0A0] uppercase mt-1 group-hover:tracking-[0.5em] transition-all duration-300">
+                <p className="text-xs tracking-[0.4em] text-[#A0A0A0] uppercase mt-1 group-hover:tracking-[0.5em] transition-all duration-300">
                   .com
                 </p>
               </Link>
             </div>
-          </h2>
+          </div>
         </div>
 
         {/* NAVIGATION */}
@@ -92,7 +91,7 @@ export default function Sidebar() {
             >
               <item.icon className="text-xl min-w-[24px]" />
               <span
-                className={`whitespace-nowrap text-sm tracking-wide font-medium ${
+                className={`whitespace-nowrap text-sm tracking-wide ${
                   !isOpen && "lg:hidden"
                 }`}
               >
@@ -109,7 +108,7 @@ export default function Sidebar() {
             >
               <FaFolderPlus className="text-xl min-w-[24px]" />
               <span
-                className={`whitespace-nowrap text-sm tracking-wide font-medium ${
+                className={`whitespace-nowrap text-sm tracking-wide ${
                   !isOpen && "lg:hidden"
                 }`}
               >

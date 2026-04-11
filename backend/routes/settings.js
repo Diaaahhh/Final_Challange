@@ -16,7 +16,8 @@ router.get('/', (req, res) => {
     // Select all the columns from the settings table
     const sql = `
         SELECT 
-            company_code, 
+            company_code,
+            branch_id, 
             delivery_charge, 
             rest_open, 
             rest_close, 
@@ -33,6 +34,7 @@ router.get('/', (req, res) => {
         // Provide sensible defaults if the row doesn't exist yet
         return res.json(result[0] || { 
             company_code: '', 
+            branch_id: '',
             delivery_charge: 100,
             rest_open: '10:00:00',
             rest_close: '22:00:00',
@@ -47,6 +49,7 @@ router.get('/', (req, res) => {
 router.post('/update', (req, res) => {
     const { 
         company_code, 
+        branch_id,
         delivery_charge, 
         rest_open, 
         rest_close, 
@@ -65,11 +68,12 @@ router.post('/update', (req, res) => {
     const safeOtp = otp === 1 ? 1 : 0;
     const safeCaptcha = captcha === 1 ? 1 : 0;
 
-    // This logic updates all 7 fields
+    // This logic updates all fields
     const sql = `
         INSERT INTO settings (
             id, 
             company_code, 
+            branch_id,
             delivery_charge, 
             rest_open, 
             rest_close, 
@@ -77,9 +81,10 @@ router.post('/update', (req, res) => {
             otp,
             captcha
         ) 
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?) 
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?) 
         ON DUPLICATE KEY UPDATE 
             company_code = VALUES(company_code),
+            branch_id= VALUES(branch_id),
             delivery_charge = VALUES(delivery_charge),
             rest_open = VALUES(rest_open),
             rest_close = VALUES(rest_close),
@@ -90,6 +95,7 @@ router.post('/update', (req, res) => {
     
     const values = [
         company_code, 
+        branch_id,
         safeDeliveryCharge, 
         rest_open, 
         rest_close, 
