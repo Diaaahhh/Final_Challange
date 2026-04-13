@@ -91,7 +91,7 @@ export default function PortfolioUser() {
       style={{ backgroundColor: 'var(--theme-body)' }}
     >
       <span className="loading loading-spinner theme-accent loading-lg mb-4"></span>
-      <p className="text-gray-800 text-lg font-bold tracking-widest uppercase font-['Barlow_Condensed']">
+      <p className="text-gray-800 text-lg font-bold tracking-widest  font-['Barlow_Condensed']">
         Loading Showcase...
       </p>
     </div>
@@ -125,7 +125,7 @@ export default function PortfolioUser() {
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
-                  className={`px-5 py-4 transition-all duration-300 relative group font-['Barlow_Condensed'] font-bold uppercase tracking-widest text-sm hover:text-gray-900 ${
+                  className={`px-5 py-4 transition-all duration-300 relative group font-['Barlow_Condensed'] font-bold  tracking-widest text-sm hover:text-gray-900 ${
                     isActive ? 'theme-accent' : 'text-gray-500'
                   }`}
                 >
@@ -167,11 +167,11 @@ export default function PortfolioUser() {
                 </div>
                 
                 <div className="p-5">
-                  <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold uppercase tracking-wider theme-accent mb-3">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold  tracking-wider theme-accent mb-3">
                     <FaStar size={10} />
                     {item.category}
                   </div>
-                  <h3 className="text-lg font-bold text-gray-800 hover-theme-accent transition-colors font-['Barlow_Condensed'] uppercase tracking-wider line-clamp-1">
+                  <h3 className="text-lg font-bold text-gray-800 hover-theme-accent transition-colors font-['Barlow_Condensed']  tracking-wider line-clamp-1">
                     {item.title}
                   </h3>
                 </div>
@@ -236,7 +236,7 @@ export default function PortfolioUser() {
 
             {/* Content Section */}
             <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold uppercase tracking-wider theme-accent mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold  tracking-wider theme-accent mb-4">
                 <FaStar size={12} />
                 {selectedItem.category}
               </div>

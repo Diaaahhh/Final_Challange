@@ -69,7 +69,7 @@ const DraggableItem = ({ item, updatePosition, updateSize, removeItem, rotateIte
               {isTable ? (
                 <>
                   <FaUtensils className="text-[#007BFF] mb-1 opacity-80" size={12} />
-                  <span className="font-bold uppercase text-[#A0A0A0] tracking-wider text-[8px] md:text-[10px]">
+                  <span className="font-bold  text-[#A0A0A0] tracking-wider text-[8px] md:text-[10px]">
                     {item.capacity} Seater
                   </span>
                   <span className="font-['Barlow_Condensed'] font-bold text-white leading-none text-lg">
@@ -77,7 +77,7 @@ const DraggableItem = ({ item, updatePosition, updateSize, removeItem, rotateIte
                   </span>
                 </>
               ) : (
-                <span className="font-['Barlow_Condensed'] font-bold uppercase text-[#C59D5F] tracking-widest px-2 text-center leading-tight text-xs overflow-hidden">
+                <span className="font-['Barlow_Condensed'] font-bold  text-[#C59D5F] tracking-widest px-2 text-center leading-tight text-xs overflow-hidden">
                   {item.label}
                 </span>
               )}
@@ -221,7 +221,7 @@ export default function TableLayout() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] text-[#007BFF] font-bold text-xl tracking-widest font-['Barlow_Condensed'] uppercase animate-pulse">
+    <div className="min-h-screen flex items-center justify-center bg-[#0D0D0D] text-[#007BFF] font-bold text-xl tracking-widest font-['Barlow_Condensed']  animate-pulse">
       Loading Layout...
     </div>
   );
@@ -233,19 +233,19 @@ export default function TableLayout() {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-8 border-b border-[#1E1E1E] pb-6 gap-4">
           <div>
-            <h1 className="text-4xl font-['Barlow_Condensed'] font-bold uppercase text-white">
+            <h1 className="text-4xl font-['Barlow_Condensed'] font-bold  text-white">
               Floor Plan <span className="text-[#007BFF]">Designer</span>
             </h1>
             <p className="text-[#A0A0A0] text-sm mt-1">Drag to move. Grab corner to resize.</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={openAddTableModal} className="bg-[#111111] border-2 border-[#2A2A2A] text-white hover:border-[#007BFF] hover:text-[#007BFF] px-4 py-3 rounded-xl font-bold uppercase flex items-center gap-2 shadow-sm transition-all">
+            <button onClick={openAddTableModal} className="bg-[#111111] border-2 border-[#2A2A2A] text-white hover:border-[#007BFF] hover:text-[#007BFF] px-4 py-3 rounded-xl font-bold  flex items-center gap-2 shadow-sm transition-all">
               <FaPlus /> Table
             </button>
-            <button onClick={openAddOtherModal} className="bg-[#111111] border-2 border-[#2A2A2A] text-[#A0A0A0] hover:border-[#C59D5F] hover:text-[#C59D5F] px-4 py-3 rounded-xl font-bold uppercase flex items-center gap-2 shadow-sm transition-all">
+            <button onClick={openAddOtherModal} className="bg-[#111111] border-2 border-[#2A2A2A] text-[#A0A0A0] hover:border-[#C59D5F] hover:text-[#C59D5F] px-4 py-3 rounded-xl font-bold  flex items-center gap-2 shadow-sm transition-all">
               <FaCube /> Others
             </button>
-            <button onClick={saveLayout} className="bg-[#007BFF] hover:bg-[#0066e6] text-black px-6 py-3 rounded-xl font-bold uppercase flex items-center gap-2 shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_30px_rgba(0,123,255,0.5)] transition-all">
+            <button onClick={saveLayout} className="bg-[#007BFF] hover:bg-[#0066e6] text-black px-6 py-3 rounded-xl font-bold  flex items-center gap-2 shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_30px_rgba(0,123,255,0.5)] transition-all">
               <FaSave /> Save
             </button>
           </div>
@@ -259,7 +259,7 @@ export default function TableLayout() {
           {items.length === 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-[#333] pointer-events-none">
               <FaUtensils className="text-6xl opacity-20 mb-4" />
-              <p className="text-lg font-['Barlow_Condensed'] uppercase font-bold text-[#444]">Canvas is Empty</p>
+              <p className="text-lg font-['Barlow_Condensed']  font-bold text-[#444]">Canvas is Empty</p>
             </div>
           )}
 
@@ -281,26 +281,26 @@ export default function TableLayout() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#111111] rounded-2xl w-full max-w-md p-6 border border-[#2A2A2A] shadow-[0_0_60px_rgba(0,0,0,0.8)]">
             <div className="flex justify-between mb-6">
-              <h2 className="text-2xl font-bold uppercase text-white font-['Barlow_Condensed'] tracking-wider">New Table</h2>
+              <h2 className="text-2xl font-bold  text-white font-['Barlow_Condensed'] tracking-wider">New Table</h2>
               <button onClick={() => setIsTableModalOpen(false)} className="text-[#555] hover:text-[#007BFF] transition-colors text-lg"><FaTimes/></button>
             </div>
             <form onSubmit={confirmAddTable} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase mb-2 text-[#A0A0A0] tracking-wider">Number</label>
+                <label className="block text-xs font-bold  mb-2 text-[#A0A0A0] tracking-wider">Number</label>
                 <input type="text" required value={newTableData.table_number} onChange={e=>setNewTableData({...newTableData, table_number: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-3 text-white focus:border-[#007BFF] outline-none transition-colors font-mono"/>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase mb-2 text-[#A0A0A0] tracking-wider">Capacity</label>
+                <label className="block text-xs font-bold  mb-2 text-[#A0A0A0] tracking-wider">Capacity</label>
                 <input type="number" required value={newTableData.capacity} onChange={e=>setNewTableData({...newTableData, capacity: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-3 text-white focus:border-[#007BFF] outline-none transition-colors font-mono"/>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase mb-2 text-[#A0A0A0] tracking-wider">Shape</label>
+                <label className="block text-xs font-bold  mb-2 text-[#A0A0A0] tracking-wider">Shape</label>
                <div className="flex gap-4">
-                 <button type="button" onClick={()=>setNewTableData({...newTableData, shape:'square'})} className={`flex-1 p-3 border rounded-lg font-bold uppercase text-sm transition-all ${newTableData.shape==='square' ? 'bg-[#007BFF]/20 border-[#007BFF] text-[#007BFF]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Square</button>
-                 <button type="button" onClick={()=>setNewTableData({...newTableData, shape:'rectangle'})} className={`flex-1 p-3 border rounded-lg font-bold uppercase text-sm transition-all ${newTableData.shape==='rectangle' ? 'bg-[#007BFF]/20 border-[#007BFF] text-[#007BFF]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Rect</button>
+                 <button type="button" onClick={()=>setNewTableData({...newTableData, shape:'square'})} className={`flex-1 p-3 border rounded-lg font-bold  text-sm transition-all ${newTableData.shape==='square' ? 'bg-[#007BFF]/20 border-[#007BFF] text-[#007BFF]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Square</button>
+                 <button type="button" onClick={()=>setNewTableData({...newTableData, shape:'rectangle'})} className={`flex-1 p-3 border rounded-lg font-bold  text-sm transition-all ${newTableData.shape==='rectangle' ? 'bg-[#007BFF]/20 border-[#007BFF] text-[#007BFF]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Rect</button>
                </div>
               </div>
-              <button type="submit" className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-black p-3 rounded-lg font-bold uppercase font-['Barlow_Condensed'] tracking-wider transition-all shadow-[0_0_15px_rgba(0,123,255,0.2)]">Create</button>
+              <button type="submit" className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-black p-3 rounded-lg font-bold  font-['Barlow_Condensed'] tracking-wider transition-all shadow-[0_0_15px_rgba(0,123,255,0.2)]">Create</button>
             </form>
           </div>
         </div>
@@ -311,22 +311,22 @@ export default function TableLayout() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-[#111111] rounded-2xl w-full max-w-md p-6 border border-[#2A2A2A] shadow-[0_0_60px_rgba(0,0,0,0.8)]">
             <div className="flex justify-between mb-6">
-              <h2 className="text-2xl font-bold uppercase text-white font-['Barlow_Condensed'] tracking-wider">Add Element</h2>
+              <h2 className="text-2xl font-bold  text-white font-['Barlow_Condensed'] tracking-wider">Add Element</h2>
               <button onClick={() => setIsOtherModalOpen(false)} className="text-[#555] hover:text-[#C59D5F] transition-colors text-lg"><FaTimes/></button>
             </div>
             <form onSubmit={confirmAddOther} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase mb-2 text-[#A0A0A0] tracking-wider">Label</label>
+                <label className="block text-xs font-bold  mb-2 text-[#A0A0A0] tracking-wider">Label</label>
                 <input type="text" required value={newOtherData.label} onChange={e=>setNewOtherData({...newOtherData, label: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-3 text-white focus:border-[#C59D5F] outline-none transition-colors"/>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase mb-2 text-[#A0A0A0] tracking-wider">Shape</label>
+                <label className="block text-xs font-bold  mb-2 text-[#A0A0A0] tracking-wider">Shape</label>
                <div className="flex gap-4">
-                 <button type="button" onClick={()=>setNewOtherData({...newOtherData, shape:'square'})} className={`flex-1 p-3 border rounded-lg font-bold uppercase text-sm transition-all ${newOtherData.shape==='square' ? 'bg-[#C59D5F]/20 border-[#C59D5F] text-[#C59D5F]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Square</button>
-                 <button type="button" onClick={()=>setNewOtherData({...newOtherData, shape:'rectangle'})} className={`flex-1 p-3 border rounded-lg font-bold uppercase text-sm transition-all ${newOtherData.shape==='rectangle' ? 'bg-[#C59D5F]/20 border-[#C59D5F] text-[#C59D5F]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Rect</button>
+                 <button type="button" onClick={()=>setNewOtherData({...newOtherData, shape:'square'})} className={`flex-1 p-3 border rounded-lg font-bold  text-sm transition-all ${newOtherData.shape==='square' ? 'bg-[#C59D5F]/20 border-[#C59D5F] text-[#C59D5F]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Square</button>
+                 <button type="button" onClick={()=>setNewOtherData({...newOtherData, shape:'rectangle'})} className={`flex-1 p-3 border rounded-lg font-bold  text-sm transition-all ${newOtherData.shape==='rectangle' ? 'bg-[#C59D5F]/20 border-[#C59D5F] text-[#C59D5F]' : 'bg-[#1A1A1A] border-[#2A2A2A] text-[#A0A0A0] hover:border-[#444]'}`}>Rect</button>
                </div>
               </div>
-              <button type="submit" className="w-full bg-[#C59D5F] hover:bg-[#b08d55] text-white p-3 rounded-lg font-bold uppercase font-['Barlow_Condensed'] tracking-wider transition-all">Add</button>
+              <button type="submit" className="w-full bg-[#C59D5F] hover:bg-[#b08d55] text-white p-3 rounded-lg font-bold  font-['Barlow_Condensed'] tracking-wider transition-all">Add</button>
             </form>
           </div>
         </div>

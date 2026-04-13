@@ -495,7 +495,7 @@ export default function Reservation() {
           
           {/* Dynamic Theme Header */}
           <div className="theme-bg text-white p-8 text-center rounded-t-xl transition-colors duration-300">
-            <h2 className="text-3xl font-['Barlow_Condensed'] font-bold uppercase tracking-wider mb-2">
+            <h2 className="text-3xl font-['Barlow_Condensed'] font-bold  tracking-wider mb-2">
               Book a Table
             </h2>
             <p className="text-gray-300 text-sm">
@@ -517,7 +517,7 @@ export default function Reservation() {
             
             {/* Reservation Progress Steps */}
             <div className="mb-8">
-              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center justify-between text-xs font-bold  tracking-wider">
                 {[
                   "Branch",
                   "Phone",
@@ -667,11 +667,11 @@ export default function Reservation() {
                   {isOtpEnabled && otpSent && !isPhoneVerified && (
                     <div className="mt-4 p-5 border-2 theme-border rounded-lg bg-gray-50 animate-fadeIn">
                       <div className="flex justify-between items-center mb-2">
-                        <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
+                        <label className="block text-gray-800 text-sm font-bold  tracking-wider">
                           Enter 4-Digit OTP
                         </label>
                         {countdown === 0 && (
-                          <span className="text-red-500 text-xs font-bold uppercase">OTP Expired</span>
+                          <span className="text-red-500 text-xs font-bold ">OTP Expired</span>
                         )}
                       </div>
                       <div className="flex gap-2">
@@ -885,7 +885,7 @@ export default function Reservation() {
                     return (
                       <>
                         <div className="flex justify-between items-end mb-3">
-                          <label className="block text-gray-700 text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
+                          <label className="block text-gray-700 text-sm font-bold flex items-center gap-2  tracking-wide">
                             <FaUtensils className="theme-accent" /> Select
                             Table(s)
                           </label>
@@ -901,7 +901,7 @@ export default function Reservation() {
 
                             <div className="flex flex-col sm:flex-row justify-between gap-4">
                               <div className="flex-1">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
+                                <p className="text-[10px] text-gray-400 font-bold  tracking-wider mb-2">
                                   Selected Tables
                                 </p>
                                 <div className="flex flex-wrap gap-2">
@@ -923,7 +923,7 @@ export default function Reservation() {
 
                               <div className="flex flex-row sm:flex-col gap-6 sm:gap-1 justify-center sm:text-right border-t sm:border-t-0 sm:border-l border-gray-200 pt-3 sm:pt-0 sm:pl-5 min-w-[100px]">
                                 <div className="flex flex-col sm:items-end">
-                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                  <p className="text-[10px] text-gray-400 font-bold  tracking-wider">
                                     Total Guests
                                   </p>
                                   <p className="text-lg font-bold text-gray-800 leading-none mt-1">
@@ -931,7 +931,7 @@ export default function Reservation() {
                                   </p>
                                 </div>
                                 <div className="flex flex-col sm:items-end mt-1">
-                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                  <p className="text-[10px] text-gray-400 font-bold  tracking-wider">
                                     Total Capacity
                                   </p>
                                   <p
@@ -1030,7 +1030,7 @@ export default function Reservation() {
                                 <span className="font-['Barlow_Condensed'] font-bold text-lg relative z-10">
                                   Table no.{t.table_no}
                                 </span>
-                                <span className={`text-[10px] uppercase font-bold relative z-10 ${isSelected ? "text-white" : "text-black"}`}>
+                                <span className={`text-[10px]  font-bold relative z-10 ${isSelected ? "text-white" : "text-black"}`}>
                                   {totalChairs} Seats
                                 </span>
                               </div>
@@ -1094,7 +1094,7 @@ export default function Reservation() {
               <button
                 type="submit"
                 disabled={loading || !isPhoneSubmitted || (isCaptchaEnabled && !captchaToken)}
-                className={`w-full theme-accent-bg text-white font-bold py-4 rounded-lg uppercase tracking-widest hover:opacity-90 transition-all duration-300 shadow-md ${
+                className={`w-full theme-accent-bg text-white font-bold py-4 rounded-lg  tracking-widest hover:opacity-90 transition-all duration-300 shadow-md ${
                   loading || !isPhoneSubmitted || (isCaptchaEnabled && !captchaToken)
                     ? "opacity-50 cursor-not-allowed"
                     : ""

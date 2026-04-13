@@ -59,7 +59,7 @@ export default function UploadHero() {
         <div className="bg-[#0A0A0A] p-8 text-center border-b border-[#1E1E1E] relative overflow-hidden">
           {/* Neon blue glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-20 bg-[#007BFF] opacity-5 blur-3xl rounded-full pointer-events-none"></div>
-          <h2 className="text-3xl font-bold text-white font-['Barlow_Condensed'] uppercase tracking-wider relative z-10">
+          <h2 className="text-3xl font-bold text-white font-['Barlow_Condensed']  tracking-wider relative z-10">
             Upload <span className="text-[#007BFF]">Home</span> Content
           </h2>
           <p className="text-[#A0A0A0] text-sm mt-2 font-medium tracking-wide relative z-10">
@@ -72,7 +72,7 @@ export default function UploadHero() {
           
           {/* 1. Name Input */}
           <div className="space-y-2">
-            <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-widest flex items-center gap-2">
+            <label className="text-xs text-[#A0A0A0]  font-bold tracking-widest flex items-center gap-2">
               <FaHeading className="text-[#007BFF]" /> Title / Name
             </label>
             <input 
@@ -86,7 +86,7 @@ export default function UploadHero() {
 
           {/* 2. Image Upload */}
           <div className="space-y-2">
-            <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-widest flex items-center gap-2">
+            <label className="text-xs text-[#A0A0A0]  font-bold tracking-widest flex items-center gap-2">
               <FaCloudUploadAlt className="text-[#007BFF]" /> Image
             </label>
             
@@ -129,7 +129,7 @@ export default function UploadHero() {
           {/* Submit Button */}
           <button 
             type="submit" 
-            className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-4 rounded-xl uppercase tracking-widest text-sm font-['Barlow_Condensed'] transition-all duration-300 shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_35px_rgba(0,123,255,0.5)] transform active:scale-95"
+            className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-4 rounded-xl  tracking-widest text-sm font-['Barlow_Condensed'] transition-all duration-300 shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_35px_rgba(0,123,255,0.5)] transform active:scale-95"
           >
             Upload Banner
           </button>

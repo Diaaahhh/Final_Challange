@@ -56,7 +56,7 @@ export default function WriteAbout() {
            <div className="absolute top-0 right-0 w-40 h-40 bg-[#007BFF] rounded-full opacity-5 blur-3xl"></div>
            <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#C59D5F] rounded-full opacity-5 blur-3xl"></div>
            
-           <h2 className="text-3xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider mb-2 z-10">
+           <h2 className="text-3xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider mb-2 z-10">
              About <span className="text-[#007BFF]">Us</span>
            </h2>
            <p className="text-[#A0A0A0] text-sm mb-8 z-10 font-medium tracking-wide">Update the story of your restaurant.</p>
@@ -67,7 +67,7 @@ export default function WriteAbout() {
              ) : (
                <div className="text-[#444] flex flex-col items-center">
                    <FaImage className="text-4xl mb-2 text-[#333]"/>
-                   <span className="text-xs uppercase font-bold tracking-wider text-[#555]">Image Preview</span>
+                   <span className="text-xs  font-bold tracking-wider text-[#555]">Image Preview</span>
                </div>
              )}
            </div>
@@ -75,12 +75,12 @@ export default function WriteAbout() {
 
         {/* Right Side: Form */}
         <div className="md:w-3/5 p-8">
-            <h3 className="text-2xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-2 border-b border-[#1E1E1E] pb-4">
+            <h3 className="text-2xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider mb-6 flex items-center gap-2 border-b border-[#1E1E1E] pb-4">
                 <FaPen className="text-[#007BFF]"/> Edit Content
             </h3>
 
             {success && (
-                <div className="mb-6 bg-[#007BFF]/10 border border-[#007BFF]/30 text-[#007BFF] px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2 uppercase tracking-wide">
+                <div className="mb-6 bg-[#007BFF]/10 border border-[#007BFF]/30 text-[#007BFF] px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2  tracking-wide">
                     <FaCheckCircle/> Saved successfully!
                 </div>
             )}
@@ -89,7 +89,7 @@ export default function WriteAbout() {
                 
                 {/* Heading Input */}
                 <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase block mb-2 tracking-wider">Heading</label>
+                    <label className="text-xs font-bold text-[#A0A0A0]  block mb-2 tracking-wider">Heading</label>
                     <input 
                         type="text"
                         className="w-full bg-[#1A1A1A] border border-[#2A2A2A] p-3 rounded-lg outline-none text-white text-sm font-medium focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444]" 
@@ -102,7 +102,7 @@ export default function WriteAbout() {
 
                 {/* Text Area */}
                 <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase block mb-2 tracking-wider">Write Something</label>
+                    <label className="text-xs font-bold text-[#A0A0A0]  block mb-2 tracking-wider">Write Something</label>
                     <textarea 
                         className="w-full bg-[#1A1A1A] border border-[#2A2A2A] p-3 rounded-lg outline-none text-white text-sm focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] h-32 leading-relaxed" 
                         placeholder="Tell your story here..."
@@ -114,13 +114,13 @@ export default function WriteAbout() {
 
                 {/* File Upload */}
                 <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase block mb-2 tracking-wider">Upload Image</label>
+                    <label className="text-xs font-bold text-[#A0A0A0]  block mb-2 tracking-wider">Upload Image</label>
                     <div className="relative bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-2 hover:border-[#007BFF] transition-colors group">
                         <input 
                             type="file" 
                             accept="image/*"
                             onChange={handleFileChange}
-                            className="block w-full text-sm text-[#A0A0A0] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-bold file:uppercase file:bg-[#007BFF] file:text-white hover:file:bg-[#C59D5F] file:transition-colors cursor-pointer"
+                            className="block w-full text-sm text-[#A0A0A0] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-bold file: file:bg-[#007BFF] file:text-white hover:file:bg-[#C59D5F] file:transition-colors cursor-pointer"
                         />
                         <FaCloudUploadAlt className="absolute right-3 top-1/2 -translate-y-1/2 text-[#444] text-xl pointer-events-none group-hover:text-[#007BFF] transition-colors"/>
                     </div>
@@ -129,7 +129,7 @@ export default function WriteAbout() {
                 <button 
                     type="submit" 
                     disabled={loading}
-                    className="w-full mt-2 bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-3 rounded-xl transition-all flex justify-center items-center gap-2 uppercase tracking-widest font-['Barlow_Condensed'] shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_30px_rgba(0,123,255,0.5)] disabled:opacity-50 text-base"
+                    className="w-full mt-2 bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-3 rounded-xl transition-all flex justify-center items-center gap-2  tracking-widest font-['Barlow_Condensed'] shadow-[0_0_20px_rgba(0,123,255,0.3)] hover:shadow-[0_0_30px_rgba(0,123,255,0.5)] disabled:opacity-50 text-base"
                 >
                     {loading ? "Saving..." : "Update Content"}
                 </button>

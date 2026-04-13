@@ -164,7 +164,7 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
           {!isActive && (
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-red-500"></div>
-              <span className="text-[10px] uppercase font-bold text-gray-400">
+              <span className="text-[10px]  font-bold text-gray-400">
                 Out of Stock
               </span>
             </div>
@@ -175,7 +175,7 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
               {localQty === 0 ? (
                 <button
                   onClick={onAddToCart}
-                  className="flex-1 h-8 rounded-lg font-bold text-xs uppercase tracking-wider transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm theme-accent-bg text-white cursor-pointer"
+                  className="flex-1 h-8 rounded-lg font-bold text-xs  tracking-wider transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm theme-accent-bg text-white cursor-pointer"
                 >
                   Add <FaCartPlus size={12} />
                 </button>
@@ -220,7 +220,9 @@ export default function MenuUser() {
     id: "All",
     menu_name: "All Items",
   });
+  
   const [loading, setLoading] = useState(true);
+  const [isBranchForced, setIsBranchForced] = useState(false); // NEW: Tracks if DB is forcing a branch
 
   const CACHE_KEY = "user_selected_branch";
   const CACHE_DURATION = 60 * 60 * 1000;
@@ -247,25 +249,65 @@ export default function MenuUser() {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const [branchRes, itemRes] = await Promise.all([
+        // NEW: Fetching settings simultaneously with branches and menu items
+        const [branchRes, itemRes, settingsRes] = await Promise.all([
           api.get("/menu_user/branches"),
           api.get("/menu_user/list"),
+          api.get("/settings") 
         ]);
 
         let branchList = [];
-        if (Array.isArray(branchRes.data)) {
+        let isSingleBranch = false;
+
+        // 1. DETECT IF IT'S A SINGLE BRANCH (Object instead of Array)
+        if (branchRes.data?.type === "branch" || branchRes.data?.message === "Branch found") {
+          isSingleBranch = true;
+          branchList = [branchRes.data.data]; 
+        } 
+        // 2. DETECT IF IT'S MULTIPLE BRANCHES
+        else if (Array.isArray(branchRes.data)) {
           branchList = branchRes.data;
         } else if (Array.isArray(branchRes.data?.data)) {
           branchList = branchRes.data.data;
         }
 
-        setBranches(
-          branchList.map((b) => ({
-            ...b,
-            branch_id: b.branch_id ?? b.id,
-          }))
-        );
+        const formattedBranches = branchList.map((b) => ({
+          ...b,
+          branch_id: b.branch_id ?? b.id,
+        }));
+        
+        setBranches(formattedBranches);
         setAllMenuItems(Array.isArray(itemRes.data) ? itemRes.data : []);
+
+        // --- NEW LOGIC: DB OVERRIDE CHECK ---
+        const dbBranchId = settingsRes.data?.branch_id;
+
+        if (dbBranchId) {
+          // If branch_id exists in the database settings, override EVERYTHING
+          setSelectedBranch(String(dbBranchId));
+          setShowBranchModal(false);
+          setIsBranchForced(true); // Used to hide the "Choose another branch" button
+        } else {
+          // If branch_id is empty/null, fall back to original logic
+          setIsBranchForced(false);
+          const cachedBranch = getCachedBranch();
+          
+          if (isSingleBranch && formattedBranches.length > 0) {
+            const singleBranchId = String(formattedBranches[0].branch_id);
+            setSelectedBranch(singleBranchId);
+            setShowBranchModal(false);
+            localStorage.setItem(
+              CACHE_KEY,
+              JSON.stringify({ branchId: singleBranchId, timestamp: Date.now() })
+            );
+          } else if (cachedBranch) {
+            setSelectedBranch(String(cachedBranch));
+            setShowBranchModal(false);
+          } else {
+            setShowBranchModal(true);
+          }
+        }
+        
       } catch (err) {
         console.error("Error loading initial data:", err);
       } finally {
@@ -275,12 +317,20 @@ export default function MenuUser() {
     fetchInitialData();
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     if (!selectedBranch) return;
     const fetchCategoriesForBranch = async () => {
       try {
         const catRes = await api.get(`/menu_user/categories/${selectedBranch}`);
-        setAllCategories(Array.isArray(catRes.data) ? catRes.data : []);
+        const rawCategories = Array.isArray(catRes.data) ? catRes.data : [];
+        
+        // Normalize the category object so it ALWAYS has an 'id' property
+        const formattedCategories = rawCategories.map((cat) => ({
+          ...cat,
+          id: cat.id ?? cat.category_id ?? cat.m_category_id, 
+        }));
+
+        setAllCategories(formattedCategories);
       } catch (err) {
         console.error("Error fetching categories for branch:", err);
         setAllCategories([]);
@@ -290,13 +340,13 @@ export default function MenuUser() {
   }, [selectedBranch]);
 
   const filteredItems = allMenuItems.filter((item) => {
-    const branchArray = String(item.m_branch_id).split("-");
+    const branchArray = String(item.m_branch_id || "").split("-");
     const matchesBranch =
       String(item.m_branch_id) === String(selectedBranch) ||
       branchArray.includes(String(selectedBranch));
     const matchesCategory =
       activeCategory.id === "All" ||
-      String(item.category_id) === String(activeCategory.id);
+      String(item.m_main_category) === String(activeCategory.id);
     return matchesBranch && matchesCategory;
   });
 
@@ -336,7 +386,7 @@ export default function MenuUser() {
               >
                 <FaArrowLeft size={20} />
               </button>
-              <h2 className="text-2xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
+              <h2 className="text-2xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider">
                 Select A <span className="theme-accent">Branch</span>
               </h2>
               <p className="text-gray-400 text-xs mt-2">
@@ -404,17 +454,21 @@ export default function MenuUser() {
           <div className="flex items-center gap-2">
             <FaStore className="theme-accent" />
             <span className="text-gray-500 text-sm">Viewing Menu For:</span>
-            <span className="font-bold text-gray-800 uppercase">
+            <span className="font-bold text-gray-800 ">
               {currentBranchName}
             </span>
           </div>
-          <button
-            onClick={() => setShowBranchModal(true)}
-            className="text-sm font-bold border-b-2 transition-all duration-300 uppercase tracking-wider pb-1"
-            style={{ color: 'var(--theme-navbar)', borderColor: 'var(--theme-navbar)' }}
-          >
-            Choose another branch
-          </button>
+          
+          {/* ONLY show 'Choose another branch' if DB hasn't locked the branch AND multiple branches exist */}
+          {!isBranchForced && branches.length > 1 && (
+            <button
+              onClick={() => setShowBranchModal(true)}
+              className="text-sm font-bold border-b-2 transition-all duration-300  tracking-wider pb-1"
+              style={{ color: 'var(--theme-navbar)', borderColor: 'var(--theme-navbar)' }}
+            >
+              Choose another branch
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
@@ -438,7 +492,7 @@ export default function MenuUser() {
                       : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"
                   }`}
                 >
-                  <span className="text-sm uppercase tracking-wider">
+                  <span className="text-sm  tracking-wider">
                     All Items
                   </span>
                 </button>
@@ -453,7 +507,7 @@ export default function MenuUser() {
                         : "text-gray-600 hover:bg-gray-50 hover:pl-8 border-l-4 border-l-transparent"
                     }`}
                   >
-                    <span className="text-sm uppercase tracking-wider">
+                    <span className="text-sm  tracking-wider">
                       {cat.menu_name}
                     </span>
                   </button>
@@ -467,7 +521,7 @@ export default function MenuUser() {
             <div className="animate-fade-in-up">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 flex justify-between items-center">
                 <div>
-                  <h1 className="text-3xl font-extrabold text-gray-900 uppercase tracking-tight">
+                  <h1 className="text-3xl font-extrabold text-gray-900  tracking-tight">
                     {activeCategory.menu_name}
                   </h1>
                   <span className="theme-accent font-serif italic text-sm">

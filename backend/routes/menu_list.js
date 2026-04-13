@@ -39,122 +39,189 @@ const getCompanyCode = () => {
 
 // --- ROUTE: GET MENU LIST ---
 router.get('/list', async (req, res) => {
+    
+    // Safely handle queries whether they have params or not
+    const queryDb = (sql, params) => {
+        return new Promise((resolve, reject) => {
+            const callback = (err, results) => {
+                if (err) reject(err);
+                else resolve(results);
+            };
+            
+            if (params !== undefined) {
+                db.query(sql, params, callback);
+            } else {
+                db.query(sql, callback);
+            }
+        });
+    };
+
+    // THE FIX: Helper function to apply the frontend return logic based on 'settings'
+    // It now uses a Regular Expression to accurately find multiple branches formatted as strings (e.g., "14-15" or "14, 15")
+    const getFilteredMenuData = async () => {
+        const settingsResult = await queryDb("SELECT company_code, branch_id FROM settings LIMIT 1");
+        
+        if (settingsResult && settingsResult.length > 0) {
+            const { company_code, branch_id } = settingsResult[0];
+
+            // 1. Parse the branch_id from settings. 
+            // Splits by commas, hyphens, or spaces to create an array of exact IDs.
+            const branchArray = branch_id 
+                ? String(branch_id).split(/[ ,-]+/).map(b => b.trim()).filter(b => b && b !== 'null')
+                : [];
+
+            if (branchArray.length === 0) {
+                console.log(`   -> Sending menu filtered by m_company_id: ${company_code}`);
+                return await queryDb("SELECT * FROM menu WHERE m_company_id = ?", [company_code]);
+            } else {
+                console.log(`   -> Sending menu filtered by m_company_id: ${company_code} AND matching branches: [${branchArray.join(', ')}]`);
+                
+                // 2. Build a MySQL REGEXP pattern.
+                // Example Output: (^|[ ,-])(14|15)([ ,-]|$)
+                // This ensures exact matches for "14" or "15" even if hidden inside "14-15" or "14, 15", preventing "14" from matching "114".
+                const regexPattern = `(^|[ ,-])(${branchArray.join('|')})([ ,-]|$)`;
+
+                return await queryDb(
+                    "SELECT * FROM menu WHERE m_company_id = ? AND m_branch_id REGEXP ?", 
+                    [company_code, regexPattern]
+                );
+            }
+        }
+        
+        // Fallback if the settings table is completely empty
+        console.warn("   -> Settings table is empty. Returning all menu records.");
+        return await queryDb("SELECT * FROM menu");
+    };
+
     try {
+        console.log("1. [MENU SYNC] /list route triggered!");
+        
         const companyCode = await getCompanyCode();
         const apiUrl = `https://pos.chulkani.com/company/api/menus/${companyCode}`;
         
-        // Pass Authorization just in case Laravel is expecting it
+        console.log(`2. [MENU SYNC] Fetching external menus from: ${apiUrl}`);
         const response = await axios.get(apiUrl, {
             headers: {
                 'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}`,
                 'Accept': 'application/json'
             },
-            // --- THE FIX: Prevent Axios from throwing an error on 404/400 status codes ---
             validateStatus: function (status) {
-                return status < 500; // Only throw an error if the server is completely broken (500+)
+                return status < 500;
             }
         });
 
-        // 1. DETECT IF LARAVEL SENT THE HTML LOGIN PAGE
         if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            console.warn("Laravel blocked the API request and returned a Login page.");
             throw new Error("Laravel Authentication Block"); 
         }
 
-        // --- PARSING THE JSON RESPONSE ---
+        // --- PARSING JSON ---
         let externalItems = [];
-        
-        // 1. Check if the POS explicitly returned "status: false" (e.g., No menus found)
-        if (response.data && response.data.status === false) {
-            externalItems = []; // Safe empty state
-        } 
-        // 2. Check if the POS returned a success object with a data array
-        else if (response.data && Array.isArray(response.data.data)) {
+        if (response.data && response.data.status === true && Array.isArray(response.data.data)) {
             externalItems = response.data.data;
-        } 
-        // 3. Check if the POS just returned a flat array
-        else if (Array.isArray(response.data)) {
+        } else if (response.data && response.data.status === false) {
+            externalItems = [];
+        } else if (Array.isArray(response.data)) {
             externalItems = response.data;
-        } 
-        // 4. Check if data is explicitly null
-        else if (response.data && response.data.data === null) {
-            externalItems = []; // Safe empty state
-        }
-        // 5. If it's completely unrecognized, THEN throw error
-        else {
+        } else if (response.data && response.data.data === null) {
+            externalItems = [];
+        } else {
             throw new Error("Unexpected JSON structure");
         }
 
-        // Prepare local DB synchronization
-        // --- Empty the table before inserting ---
-        db.query("DELETE FROM menu", (deleteErr) => {
-            if (deleteErr) {
-                console.error("Error emptying the menu table:", deleteErr);
-            }
+        console.log(`3. [MENU SYNC] Found ${externalItems.length} items from POS API.`);
 
-            // --- If there are 0 items from POS, stop here and return empty! ---
-            if (externalItems.length === 0) {
-                console.warn("POS system returned an empty menu. Local menu table has been cleared.");
-                return res.json([]); // Send an empty array to the frontend
-            }
+        if (externalItems.length === 0) {
+            console.warn("4. [MENU SYNC] POS returned empty data. Fetching existing local DB...");
+            const finalData = await getFilteredMenuData();
+            return res.json(finalData);
+        }
 
-            // Otherwise, build the SQL insertion query
-            const sql = `
-                INSERT INTO menu (
-                    m_menu_id, m_menu_sl, m_menu_name, category_id, 
-                    m_company_id, m_branch_id, m_ingredient, m_cost, 
-                    m_price, m_status
-                ) VALUES ?
-                ON DUPLICATE KEY UPDATE 
-                    m_menu_sl = VALUES(m_menu_sl),
-                    m_menu_name = VALUES(m_menu_name),
-                    category_id = VALUES(category_id),
-                    m_company_id = VALUES(m_company_id),
-                    m_branch_id = VALUES(m_branch_id),
-                    m_ingredient = VALUES(m_ingredient),
-                    m_cost = VALUES(m_cost),
-                    m_price = VALUES(m_price),
-                    m_status = VALUES(m_status)
-            `;
-
-            const values = externalItems.map(item => [
-                item.id,
-                item.m_menu_sl,
-                item.m_menu_name,
-                item.category_id,
-                item.m_company_id,
-                item.m_branch_id,
-                item.m_ingredient ? JSON.stringify(item.m_ingredient) : null,
-                item.m_cost,
-                item.m_price,
-                item.m_status
-            ]);
-
-            db.query(sql, [values], (err, result) => {
-                if (err) {
-                    console.error("Local DB Sync Error:", err);
-                }
-
-                db.query("SELECT * FROM menu", (dbErr, dbResult) => {
-                    if (dbErr) return res.status(500).json({ error: "Failed to load local menu data" });
-                    res.json(dbResult);
-                });
-            });
+        // Fetch current local DB items to map
+        console.log("4. [MENU SYNC] Fetching local database to compare...");
+        const localItems = await queryDb("SELECT m_menu_id, m_branch_id FROM menu");
+        console.log(`   -> Found ${localItems.length} items currently in local DB.`);
+        
+        const localMap = new Map();
+        localItems.forEach(item => {
+            localMap.set(item.m_menu_id, String(item.m_branch_id || 'null'));
         });
 
+        const insertValues = [];
+        const updateQueries = [];
+
+        // Apply logic to API Data
+        externalItems.forEach(item => {
+            const apiId = item.id;
+            const apiBranchId = String(item.m_branch_id || 'null');
+            
+            const ingredientStr = typeof item.m_ingredient === 'string' 
+                ? item.m_ingredient 
+                : JSON.stringify(item.m_ingredient || []);
+
+            if (!localMap.has(apiId)) {
+                // INSERT logic
+                insertValues.push([
+                    apiId, item.m_menu_sl, item.m_menu_name, item.m_main_category, 
+                    item.m_company_id, item.m_branch_id, ingredientStr, 
+                    item.m_cost, item.m_price, item.m_status
+                ]);
+            } else {
+                // UPDATE logic
+                const dbBranchId = localMap.get(apiId);
+                if (apiBranchId !== dbBranchId) {
+                    updateQueries.push({
+                        sql: `UPDATE menu SET 
+                            m_menu_sl = ?, m_menu_name = ?, category_id = ?, 
+                            m_company_id = ?, m_branch_id = ?, m_ingredient = ?, 
+                            m_cost = ?, m_price = ?, m_status = ? 
+                            WHERE m_menu_id = ?`,
+                        params: [
+                            item.m_menu_sl, item.m_menu_name, item.m_main_category, 
+                            item.m_company_id, item.m_branch_id, ingredientStr, 
+                            item.m_cost, item.m_price, item.m_status, apiId
+                        ]
+                    });
+                }
+            }
+        });
+
+        console.log(`5. [MENU SYNC] Ready to INSERT ${insertValues.length} new items.`);
+        console.log(`5. [MENU SYNC] Ready to UPDATE ${updateQueries.length} existing items.`);
+
+        // Execute pending Inserts
+        if (insertValues.length > 0) {
+            const insertSql = `INSERT INTO menu (
+                m_menu_id, m_menu_sl, m_menu_name, category_id, 
+                m_company_id, m_branch_id, m_ingredient, m_cost, 
+                m_price, m_status
+            ) VALUES ?`;
+            await queryDb(insertSql, [insertValues]);
+            console.log("6. [MENU SYNC] Inserts completed successfully!");
+        }
+
+        // Execute pending Updates
+        if (updateQueries.length > 0) {
+            for (const query of updateQueries) {
+                await queryDb(query.sql, query.params);
+            }
+            console.log("6. [MENU SYNC] Updates completed successfully!");
+        }
+
+        // Return final DB (Filtered by complex string matching)
+        console.log("7. [MENU SYNC] Sending final local data to frontend.");
+        const finalData = await getFilteredMenuData();
+        res.json(finalData);
+
     } catch (error) {
-        console.warn("External API failed or blocked. Loading from Local MySQL Database...");
-        // 2. FALLBACK TO LOCAL MYSQL
+        console.error("\n❌ [MENU SYNC] FATAL ERROR:", error.message);
+        console.error("Falling back to local Database...\n");
+        
         try {
-            const fallbackData = await new Promise((resolve, reject) => {
-                db.query("SELECT * FROM menu", (err, result) => {
-                    if (err) reject(err);
-                    else resolve(result);
-                });
-            });
+            // Return fallback DB (Filtered by complex string matching)
+            const fallbackData = await getFilteredMenuData();
             res.json(fallbackData);
         } catch (dbError) {
-            res.status(500).json({ error: "Failed to fetch menu data" });
+            res.status(500).json({ error: "Failed to fetch menu data completely." });
         }
     }
 });

@@ -114,7 +114,7 @@ export default function WriteReview() {
             <div className="flex items-center justify-between">
               <button
                 type="submit"
-                className="bg-gray-900 text-amber-500 px-6 py-2 rounded-md font-bold uppercase tracking-wider text-xs hover:bg-amber-500 hover:text-white transition-all duration-300"
+                className="bg-gray-900 text-amber-500 px-6 py-2 rounded-md font-bold  tracking-wider text-xs hover:bg-amber-500 hover:text-white transition-all duration-300"
               >
                 Submit Review
               </button>

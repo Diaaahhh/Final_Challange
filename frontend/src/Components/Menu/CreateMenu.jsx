@@ -111,7 +111,7 @@ export default function CreateMenu() {
                 
                 {/* Header */}
                 <div className="text-center mb-6">
-                    <h2 className="text-xl font-bold text-base-content uppercase tracking-wide">
+                    <h2 className="text-xl font-bold text-base-content  tracking-wide">
                         Add New Menu Item
                     </h2>
                     <p className="text-xs text-gray-500 mt-1">Create a new dish for your restaurant</p>
@@ -134,7 +134,7 @@ export default function CreateMenu() {
                     {/* 1. Item Name */}
                     <div className="form-control w-full">
                         <label className="label pt-0 pb-1">
-                            <span className="label-text font-bold text-gray-500 uppercase text-xs">Item Name</span>
+                            <span className="label-text font-bold text-gray-500  text-xs">Item Name</span>
                         </label>
                         <div className="relative">
                             <input 
@@ -156,7 +156,7 @@ export default function CreateMenu() {
                         {/* Select Category */}
                         <div className="form-control w-full">
                             <label className="label pt-0 pb-1">
-                                <span className="label-text font-bold text-gray-500 uppercase text-xs">Category</span>
+                                <span className="label-text font-bold text-gray-500  text-xs">Category</span>
                             </label>
                             <div className="relative">
                                 <select 
@@ -181,7 +181,7 @@ export default function CreateMenu() {
                         {/* Add New Category */}
                         <div className="form-control w-full">
                             <label className="label pt-0 pb-1">
-                                <span className="label-text font-bold text-primary uppercase text-xs">Or Add New</span>
+                                <span className="label-text font-bold text-primary  text-xs">Or Add New</span>
                             </label>
                             <div className="input-group flex">
                                 <input 
@@ -206,7 +206,7 @@ export default function CreateMenu() {
                     {/* 3. Price (BDT) */}
                     <div className="form-control w-full">
                         <label className="label pt-0 pb-1">
-                            <span className="label-text font-bold text-gray-500 uppercase text-xs">Price</span>
+                            <span className="label-text font-bold text-gray-500  text-xs">Price</span>
                         </label>
                         <div className="relative">
                             <input 
@@ -225,7 +225,7 @@ export default function CreateMenu() {
                     {/* 4. Description */}
                     <div className="form-control w-full">
                         <label className="label pt-0 pb-1">
-                            <span className="label-text font-bold text-gray-500 uppercase text-xs">Description</span>
+                            <span className="label-text font-bold text-gray-500  text-xs">Description</span>
                         </label>
                         <div className="relative">
                             <textarea 
@@ -244,7 +244,7 @@ export default function CreateMenu() {
                         <button 
                             type="submit" 
                             disabled={loading}
-                            className="btn btn-primary btn-sm w-full text-black uppercase tracking-wider font-bold h-10 min-h-[2.5rem]"
+                            className="btn btn-primary btn-sm w-full text-black  tracking-wider font-bold h-10 min-h-[2.5rem]"
                         >
                             {loading ? (
                                 <>

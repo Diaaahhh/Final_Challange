@@ -28,7 +28,7 @@ export default function CartSidebar() {
           <div className="theme-bg text-white p-5 flex justify-between items-center shrink-0 transition-colors duration-300">
             <div className="flex items-center gap-3">
               <FaShoppingCart className="theme-accent text-xl" />
-              <h2 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-widest m-0">Your Cart</h2>
+              <h2 className="font-['Barlow_Condensed'] text-2xl font-bold  tracking-widest m-0">Your Cart</h2>
             </div>
             <button onClick={closeCart} className="text-gray-400 hover:text-white transition-colors p-1">
               <FaTimes size={20} />
@@ -37,7 +37,7 @@ export default function CartSidebar() {
           
           {/* Branch Info Ribbon */}
           {cartItems.length > 0 && (
-             <div className="theme-accent-bg text-white px-4 py-2 text-xs font-bold uppercase tracking-widest flex items-center gap-2 shrink-0 transition-colors duration-300">
+             <div className="theme-accent-bg text-white px-4 py-2 text-xs font-bold  tracking-widest flex items-center gap-2 shrink-0 transition-colors duration-300">
                  <FaStore /> Order from: {currentBranch}
              </div>
           )}
@@ -123,7 +123,7 @@ export default function CartSidebar() {
               
               <button 
                 onClick={handleCheckout}
-                className="w-full theme-accent-bg text-white font-bold py-3 rounded-lg uppercase tracking-widest hover:opacity-90 transition-all duration-300"
+                className="w-full theme-accent-bg text-white font-bold py-3 rounded-lg  tracking-widest hover:opacity-90 transition-all duration-300"
               >
                 Proceed to Checkout
               </button>

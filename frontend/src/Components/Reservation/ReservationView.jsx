@@ -226,11 +226,11 @@ export default function ReservationView() {
 
   const getStatusBadge = (status) => {
     switch (Number(status)) {
-      case 0: return <span className="bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Pending</span>;
-      case 1: return <span className="bg-green-500/20 text-green-500 border border-green-500/50 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Confirmed</span>;
-      case 2: return <span className="bg-blue-500/20 text-blue-500 border border-blue-500/50 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Hold</span>;
-      case 3: return <span className="bg-red-500/20 text-red-500 border border-red-500/50 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Expired/Reject</span>;
-      default: return <span className="bg-gray-500/20 text-gray-500 px-2 py-1 rounded text-xs font-bold uppercase">Unknown</span>;
+      case 0: return <span className="bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 px-2 py-1 rounded text-[10px] font-bold  tracking-wider">Pending</span>;
+      case 1: return <span className="bg-green-500/20 text-green-500 border border-green-500/50 px-2 py-1 rounded text-[10px] font-bold  tracking-wider">Confirmed</span>;
+      case 2: return <span className="bg-blue-500/20 text-blue-500 border border-blue-500/50 px-2 py-1 rounded text-[10px] font-bold  tracking-wider">Hold</span>;
+      case 3: return <span className="bg-red-500/20 text-red-500 border border-red-500/50 px-2 py-1 rounded text-[10px] font-bold  tracking-wider">Expired/Reject</span>;
+      default: return <span className="bg-gray-500/20 text-gray-500 px-2 py-1 rounded text-xs font-bold ">Unknown</span>;
     }
   };
 
@@ -239,7 +239,7 @@ export default function ReservationView() {
       {/* Header and Filter Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-white">
+          <h1 className="text-3xl font-['Barlow_Condensed'] font-bold  tracking-wider text-white">
             Reservations
           </h1>
           <p className="text-[#A0A0A0] text-sm mt-1">
@@ -275,7 +275,7 @@ export default function ReservationView() {
             <span className="text-[#C59D5F] font-bold text-lg">
               {filteredReservations.length}
             </span>{" "}
-            <span className="text-[#A0A0A0] text-sm uppercase tracking-wide">
+            <span className="text-[#A0A0A0] text-sm  tracking-wide">
               Total Bookings
             </span>
           </div>
@@ -298,7 +298,7 @@ export default function ReservationView() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#222222] border-b border-[#333] text-[#A0A0A0] text-xs uppercase tracking-wider font-bold">
+                <tr className="bg-[#222222] border-b border-[#333] text-[#A0A0A0] text-xs  tracking-wider font-bold">
                   <th className="p-4">Customer ID</th>
                   <th className="p-4">Branch</th>
                   <th className="p-4">Schedule</th>
@@ -334,7 +334,7 @@ export default function ReservationView() {
                         {res.re_customer_id ? `#CUST-${res.re_customer_id}` : <span className="text-gray-500 italic">Guest</span>}
                       </td>
                       <td className="p-4">
-                        <span className="bg-[#2A2A2A] text-[#C59D5F] px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                        <span className="bg-[#2A2A2A] text-[#C59D5F] px-2 py-1 rounded text-xs font-bold  tracking-wider">
                           {getBranchName(res.re_branch_id)}
                         </span>
                       </td>
@@ -404,7 +404,7 @@ export default function ReservationView() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-in fade-in">
           <div className="bg-[#1A1A1A] w-full max-w-md rounded-2xl shadow-2xl border border-[#333] overflow-hidden">
             <div className="bg-[#0E1014] p-5 border-b border-[#333] flex justify-between items-center">
-              <h2 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider flex items-center gap-2">
                 <FaBookOpen className="text-[#C59D5F]" /> Booking Details
               </h2>
               <button
@@ -418,19 +418,19 @@ export default function ReservationView() {
             <div className="p-6 space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-[#222] p-3 rounded-lg border border-[#333]">
-                  <p className="text-xs text-[#A0A0A0] uppercase mb-1">
+                  <p className="text-xs text-[#A0A0A0]  mb-1">
                     Customer ID
                   </p>
                   <p className="font-bold text-white">{selectedRes.re_customer_id || "Guest"}</p>
                 </div>
                 <div className="bg-[#222] p-3 rounded-lg border border-[#333]">
-                  <p className="text-xs text-[#A0A0A0] uppercase mb-1">
+                  <p className="text-xs text-[#A0A0A0]  mb-1">
                     Status
                   </p>
                   <p className="font-bold text-white mt-1">{getStatusBadge(selectedRes.re_status)}</p>
                 </div>
                 <div className="bg-[#222] p-3 rounded-lg border border-[#333]">
-                  <p className="text-xs text-[#A0A0A0] uppercase mb-1">
+                  <p className="text-xs text-[#A0A0A0]  mb-1">
                     Branch
                   </p>
                   <p className="font-bold text-[#C59D5F]">
@@ -438,7 +438,7 @@ export default function ReservationView() {
                   </p>
                 </div>
                 <div className="bg-[#222] p-3 rounded-lg border border-[#333]">
-                  <p className="text-xs text-[#A0A0A0] uppercase mb-1">
+                  <p className="text-xs text-[#A0A0A0]  mb-1">
                     Date & Time
                   </p>
                   <p className="font-bold text-white">
@@ -446,7 +446,7 @@ export default function ReservationView() {
                   </p>
                 </div>
                 <div className="bg-[#222] p-3 rounded-lg border border-[#333]">
-                  <p className="text-xs text-[#A0A0A0] uppercase mb-1">
+                  <p className="text-xs text-[#A0A0A0]  mb-1">
                     Table Number(s)
                   </p>
                   <p className="font-bold text-white">
@@ -454,7 +454,7 @@ export default function ReservationView() {
                   </p>
                 </div>
                 <div className="bg-[#222] p-3 rounded-lg border border-[#333]">
-                  <p className="text-xs text-[#A0A0A0] uppercase mb-1">
+                  <p className="text-xs text-[#A0A0A0]  mb-1">
                     Duration
                   </p>
                   <p className="font-bold text-white">
@@ -465,7 +465,7 @@ export default function ReservationView() {
 
               <div className="bg-[#222] p-3 rounded-lg border border-[#333] flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-[#A0A0A0] uppercase mb-1">
+                  <p className="text-xs text-[#A0A0A0]  mb-1">
                     Advance Payment
                   </p>
                   <p className="text-xl font-bold text-green-500">
@@ -479,7 +479,7 @@ export default function ReservationView() {
             <div className="p-4 border-t border-[#333] bg-[#111]">
               <button
                 onClick={() => setOpenModal(false)}
-                className="w-full bg-[#333] hover:bg-[#444] text-white font-bold py-3 rounded-xl transition-colors uppercase tracking-widest text-sm"
+                className="w-full bg-[#333] hover:bg-[#444] text-white font-bold py-3 rounded-xl transition-colors  tracking-widest text-sm"
               >
                 Close
               </button>
@@ -493,7 +493,7 @@ export default function ReservationView() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-in fade-in">
           <div className="bg-[#1A1A1A] w-full max-w-lg rounded-2xl shadow-2xl border border-[#333] overflow-hidden flex flex-col max-h-[90vh]">
             <div className="bg-[#0E1014] p-5 border-b border-[#333] flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider flex items-center gap-2">
                 <FaEdit className="text-[#007BFF]" /> Edit Booking
               </h2>
               <button
@@ -514,7 +514,7 @@ export default function ReservationView() {
               <form onSubmit={handleEditSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider block mb-1">
                       Status
                     </label>
                     <div className="relative">
@@ -534,7 +534,7 @@ export default function ReservationView() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider block mb-1">
                       Adv. Payment (৳)
                     </label>
                     <div className="relative">
@@ -553,7 +553,7 @@ export default function ReservationView() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider block mb-1">
                       Branch
                     </label>
                     <div className="relative">
@@ -575,7 +575,7 @@ export default function ReservationView() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider block mb-1">
                       Table No.
                     </label>
                     <div className="relative">
@@ -594,7 +594,7 @@ export default function ReservationView() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative" ref={calendarContainerRef}>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider block mb-1">
                       Date
                     </label>
                     <button
@@ -641,7 +641,7 @@ export default function ReservationView() {
                     )}
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider block mb-1">
                       Time
                     </label>
                     <div className="relative">
@@ -659,7 +659,7 @@ export default function ReservationView() {
                 </div>
 
                 <div>
-                    <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider block mb-1">
                       Duration (Minutes)
                     </label>
                     <div className="relative">
@@ -680,7 +680,7 @@ export default function ReservationView() {
                   <button
                     type="submit"
                     disabled={editLoading}
-                    className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2 uppercase tracking-widest font-['Barlow_Condensed'] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-white font-bold py-3.5 rounded-xl transition-all flex justify-center items-center gap-2  tracking-widest font-['Barlow_Condensed'] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {editLoading ? (
                       <>

@@ -33,7 +33,7 @@ export default function Branches() {
   }, []);
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center font-['Barlow_Condensed'] uppercase tracking-widest text-xl">
+    <div className="min-h-screen bg-[#0D0D0D] text-white flex items-center justify-center font-['Barlow_Condensed']  tracking-widest text-xl">
         <span className="loading loading-spinner text-[#007BFF] mr-3"></span>
         <span className="text-[#E0E0E0]">Loading Branches...</span>
     </div>
@@ -45,7 +45,7 @@ export default function Branches() {
         
         {/* HEADER */}
         <div className="mb-12 text-left">
-          <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold uppercase text-white">
+          <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold  text-white">
               Branch <span className="text-[#007BFF]">List</span>
           </h1>
           <div className="w-24 h-1 bg-[#007BFF] mt-4 rounded-full shadow-[0_0_10px_rgba(0,123,255,0.5)]"></div>
@@ -83,7 +83,7 @@ export default function Branches() {
                         {/* Card Header */}
                         <div className="bg-[#0A0A0A] p-6 border-b border-[#1E1E1E] flex items-start justify-between">
                             <div>
-                                <h3 className="text-xl font-['Barlow_Condensed'] font-bold uppercase text-white group-hover:text-[#007BFF] transition-colors tracking-wide">
+                                <h3 className="text-xl font-['Barlow_Condensed'] font-bold  text-white group-hover:text-[#007BFF] transition-colors tracking-wide">
                                     {displayName}
                                 </h3>
                             </div>

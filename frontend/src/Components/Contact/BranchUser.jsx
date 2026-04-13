@@ -52,7 +52,7 @@ export default function BranchUser() {
     >
       <div className="text-center">
         <div className="w-20 h-20 border-4 theme-border border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-        <p className="theme-accent text-lg font-bold tracking-widest uppercase">Loading Branches</p>
+        <p className="theme-accent text-lg font-bold tracking-widest ">Loading Branches</p>
         <p className="text-gray-500 text-sm mt-2">Please wait while we fetch the best locations</p>
       </div>
     </div>
@@ -73,7 +73,7 @@ export default function BranchUser() {
         
         {/* HEADER */}
         <div className="text-center lg:text-left mb-16 relative">
-          <div className="inline-flex items-center gap-2 theme-accent text-sm font-bold tracking-[0.2em] uppercase mb-4">
+          <div className="inline-flex items-center gap-2 theme-accent text-sm font-bold tracking-[0.2em]  mb-4">
             <span className="w-8 h-[2px] theme-accent-bg"></span>
             Our Locations
           </div>
@@ -203,7 +203,7 @@ export default function BranchUser() {
                       `} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 font-bold">Phone</p>
+                      <p className="text-xs text-gray-400  tracking-wider mb-1 font-bold">Phone</p>
                       <a 
                         href={`tel:${phone}`} 
                         className="text-gray-800 font-bold hover-theme-accent transition-colors block"
@@ -225,7 +225,7 @@ export default function BranchUser() {
                       `} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 font-bold">Email</p>
+                      <p className="text-xs text-gray-400  tracking-wider mb-1 font-bold">Email</p>
                       <a 
                         href={`mailto:${email}`} 
                         className="text-gray-800 font-bold break-all hover-theme-accent transition-colors block"
@@ -247,7 +247,7 @@ export default function BranchUser() {
                       `} />
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1 font-bold">Opening Hours</p>
+                      <p className="text-xs text-gray-400  tracking-wider mb-1 font-bold">Opening Hours</p>
                       <p className="text-gray-800 font-bold">10:00 AM - 10:00 PM</p>
                     </div>
                   </div>

@@ -68,7 +68,7 @@ const Footer = () => {
           {/* LINKS */}
           <div className="text-center lg:text-left">
             {/* Dynamic theme-accent color */}
-            <h3 className="text-2xl font-bold font-barlow theme-accent mb-6 uppercase tracking-wide">Useful Links</h3>
+            <h3 className="text-2xl font-bold font-barlow theme-accent mb-6  tracking-wide">Useful Links</h3>
             <ul className="space-y-3">
               {[
                 { name: 'IGL Web Ltd.', link: 'https://iglweb.com/web/' },
@@ -99,7 +99,7 @@ const Footer = () => {
                   {/* Standard clock icon */}
                   <i className="fa-regular fa-clock"></i> 
                 </div>
-                <p className="theme-accent font-semibold mb-1 uppercase tracking-wider">We’re currently open!</p>
+                <p className="theme-accent font-semibold mb-1  tracking-wider">We’re currently open!</p>
                 <p className="text-gray-300 text-sm">Opening Hours: 10:00AM To 9:00PM</p>
               </div>
             </div>
@@ -107,7 +107,7 @@ const Footer = () => {
 
           {/* MENUS */}
           <div className="text-center lg:text-right">
-            <h3 className="text-2xl font-bold font-barlow theme-accent mb-6 uppercase tracking-wide">Links</h3>
+            <h3 className="text-2xl font-bold font-barlow theme-accent mb-6  tracking-wide">Links</h3>
             <ul className="space-y-3">
               {[
                 {

@@ -163,8 +163,8 @@ const Profile = () => {
       <div className="max-w-2xl mx-auto">
         
         <div className="mb-8 text-center">
-          <h2 className="text-[#C59D5F] font-['Barlow_Condensed'] tracking-widest uppercase text-sm font-bold mb-2">Settings</h2>
-          <h1 className="text-4xl font-['Barlow_Condensed'] font-bold uppercase text-white">Update Profile</h1>
+          <h2 className="text-[#C59D5F] font-['Barlow_Condensed'] tracking-widest  text-sm font-bold mb-2">Settings</h2>
+          <h1 className="text-4xl font-['Barlow_Condensed'] font-bold  text-white">Update Profile</h1>
         </div>
 
         <div className="bg-[#1A1C21] rounded-xl shadow-2xl overflow-hidden border border-white/5 relative p-8">
@@ -199,7 +199,7 @@ const Profile = () => {
 
             {/* FULL NAME */}
             <div className="form-control">
-              <label className="label text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Full Name</label>
+              <label className="label text-gray-400 text-sm font-bold  tracking-wider mb-1">Full Name</label>
               <div className="relative">
                 <FaUser className="absolute top-4 left-3 text-[#C59D5F]" />
                 <input 
@@ -211,7 +211,7 @@ const Profile = () => {
 
             {/* EMAIL */}
             <div className="form-control">
-              <label className="label text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Email</label>
+              <label className="label text-gray-400 text-sm font-bold  tracking-wider mb-1">Email</label>
               <div className="relative opacity-60">
                 <FaEnvelope className="absolute top-4 left-3 text-[#C59D5F]" />
                 <input 
@@ -223,7 +223,7 @@ const Profile = () => {
 
             {/* PHONE */}
             <div className="form-control">
-              <label className="label text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Phone</label>
+              <label className="label text-gray-400 text-sm font-bold  tracking-wider mb-1">Phone</label>
               <div className="relative">
                 <FaPhone className="absolute top-4 left-3 text-[#C59D5F]" />
                 <input 
@@ -236,7 +236,7 @@ const Profile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* DISTRICT */}
                 <div className="form-control">
-                    <label className="label text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">District</label>
+                    <label className="label text-gray-400 text-sm font-bold  tracking-wider mb-1">District</label>
                     <div className="relative">
                         <FaCity className="absolute top-4 left-3 text-[#C59D5F]" />
                         <select 
@@ -253,7 +253,7 @@ const Profile = () => {
 
                 {/* THANA */}
                 <div className="form-control">
-                    <label className="label text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Thana</label>
+                    <label className="label text-gray-400 text-sm font-bold  tracking-wider mb-1">Thana</label>
                     <div className="relative">
                         <FaMap className="absolute top-4 left-3 text-[#C59D5F]" />
                         <select 
@@ -271,7 +271,7 @@ const Profile = () => {
 
             {/* APARTMENT */}
             <div className="form-control">
-              <label className="label text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Apartment / Suite</label>
+              <label className="label text-gray-400 text-sm font-bold  tracking-wider mb-1">Apartment / Suite</label>
               <div className="relative">
                 <FaBuilding className="absolute top-4 left-3 text-[#C59D5F]" />
                 <input 
@@ -283,7 +283,7 @@ const Profile = () => {
 
             {/* ADDRESS */}
             <div className="form-control">
-              <label className="label text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">Street Address</label>
+              <label className="label text-gray-400 text-sm font-bold  tracking-wider mb-1">Street Address</label>
               <div className="relative">
                 <FaMapMarkerAlt className="absolute top-4 left-3 text-[#C59D5F]" />
                 <textarea 
@@ -297,7 +297,7 @@ const Profile = () => {
             <div className="mt-8">
               <button 
                 type="submit" disabled={!isDirty || isSaving}
-                className={`w-full btn border-none rounded-lg font-['Barlow_Condensed'] font-bold uppercase tracking-wider text-lg py-3 flex items-center justify-center gap-2 transition-all duration-300
+                className={`w-full btn border-none rounded-lg font-['Barlow_Condensed'] font-bold  tracking-wider text-lg py-3 flex items-center justify-center gap-2 transition-all duration-300
                   ${isDirty && !isSaving ? "bg-[#C59D5F] hover:bg-white hover:text-[#0E1014] text-white" : "bg-gray-800 text-gray-500 cursor-not-allowed"}`}
               >
                 {isSaving ? "Saving..." : <><FaSave /> Save Changes</>}

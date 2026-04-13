@@ -97,7 +97,7 @@ export default function ViewAbout({ isHome = false }) {
               <div className="pt-4">
                 <Link 
                   to="/about"
-                  className="px-8 py-3 bg-transparent border theme-border theme-accent hover-theme-accent-bg hover-theme-bg-text transition-all duration-300 font-semibold uppercase tracking-wider text-sm rounded-sm inline-block"
+                  className="px-8 py-3 bg-transparent border theme-border theme-accent hover-theme-accent-bg hover-theme-bg-text transition-all duration-300 font-semibold  tracking-wider text-sm rounded-sm inline-block"
                 >
                   Read More
                 </Link>

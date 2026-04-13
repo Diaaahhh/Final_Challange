@@ -129,7 +129,7 @@ export default function MenuList() {
         {/* PAGE HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-[#1E1E1E] pb-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold uppercase text-white">
+            <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold  text-white">
               Food<span className="text-[#007BFF]">Menu</span>
             </h1>
           </div>
@@ -162,7 +162,7 @@ export default function MenuList() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-[#0A0A0A] text-[#A0A0A0] text-xs uppercase tracking-wider font-['Barlow_Condensed'] border-b border-[#1E1E1E]">
+                <tr className="bg-[#0A0A0A] text-[#A0A0A0] text-xs  tracking-wider font-['Barlow_Condensed'] border-b border-[#1E1E1E]">
                   <th className="p-4 w-12 text-center ">SL</th>
                   <th className="p-4">Code</th>
                   <th className="p-4">Item Name</th>
@@ -248,7 +248,7 @@ export default function MenuList() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-[#111111] w-full max-w-lg rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-[#2A2A2A] relative overflow-hidden">
             <div className="bg-[#0A0A0A] p-6 border-b border-[#1E1E1E] flex justify-between items-center">
-              <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">Item Details</h3>
+              <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider">Item Details</h3>
               <button onClick={() => setOpenModal(false)} className="text-[#555] hover:text-[#007BFF] transition-colors text-lg">✕</button>
             </div>
             <div className="p-6 space-y-4">
@@ -258,21 +258,21 @@ export default function MenuList() {
                  </div>
               )}
               <div>
-                <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-wider">Name</label>
+                <label className="text-xs text-[#A0A0A0]  font-bold tracking-wider">Name</label>
                 <p className="text-2xl font-['Barlow_Condensed'] text-white mt-1">{currentItem.m_menu_name}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-[#0A0A0A] p-3 rounded-lg border border-[#1E1E1E]">
-                  <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-wider">Price</label>
+                  <label className="text-xs text-[#A0A0A0]  font-bold tracking-wider">Price</label>
                   <p className="text-xl text-[#C59D5F] font-mono font-bold mt-1">BDT {Number(currentItem.m_price).toFixed(2)}</p>
                 </div>
                 <div className="bg-[#0A0A0A] p-3 rounded-lg border border-[#1E1E1E]">
-                  <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-wider">Category</label>
+                  <label className="text-xs text-[#A0A0A0]  font-bold tracking-wider">Category</label>
                   <p className="text-white font-mono mt-1">{categories[currentItem.category_id] || "Global"}</p>
                 </div>
               </div>
               <div className="bg-[#0A0A0A] p-4 rounded-lg border border-[#1E1E1E]">
-                <label className="text-xs text-[#A0A0A0] uppercase font-bold block mb-2 tracking-wider">Ingredients</label>
+                <label className="text-xs text-[#A0A0A0]  font-bold block mb-2 tracking-wider">Ingredients</label>
                 <p className="text-[#C0C0C0] text-sm leading-relaxed">{formatIngredients(currentItem.m_ingredient)}</p>
               </div>
             </div>
@@ -285,7 +285,7 @@ export default function MenuList() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div className="bg-[#111111] w-full max-w-sm rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-[#2A2A2A] relative overflow-hidden">
                 <div className="bg-[#0A0A0A] p-5 border-b border-[#1E1E1E] flex justify-between items-center">
-                    <h3 className="text-lg font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-lg font-['Barlow_Condensed'] font-bold text-white  tracking-wider flex items-center gap-2">
                         <FaTag className="text-[#C59D5F]"/> Set Discount
                     </h3>
                     <button onClick={() => setEditModalOpen(false)} className="text-[#555] hover:text-[#007BFF] transition-colors text-lg">✕</button>
@@ -293,17 +293,17 @@ export default function MenuList() {
 
                 <form onSubmit={handleUpdateDiscount} className="p-6 space-y-5">
                     <div>
-                        <label className="text-[10px] text-[#A0A0A0] uppercase font-bold tracking-widest">Item Name</label>
+                        <label className="text-[10px] text-[#A0A0A0]  font-bold tracking-widest">Item Name</label>
                         <p className="text-xl font-['Barlow_Condensed'] text-white mt-1">{editItem.m_menu_name}</p>
                     </div>
                     
                     <div className="flex justify-between items-center bg-[#0A0A0A] p-3 rounded-lg border border-[#1E1E1E]">
                         <div>
-                            <label className="text-[10px] text-[#A0A0A0] uppercase font-bold tracking-widest">Base Price</label>
+                            <label className="text-[10px] text-[#A0A0A0]  font-bold tracking-widest">Base Price</label>
                             <p className="text-lg text-[#C59D5F] font-mono font-bold mt-1">BDT {Number(editItem.m_price).toFixed(2)}</p>
                         </div>
                         <div className="text-right">
-                            <label className="text-[10px] text-[#A0A0A0] uppercase font-bold tracking-widest">Branch</label>
+                            <label className="text-[10px] text-[#A0A0A0]  font-bold tracking-widest">Branch</label>
                             <p className="text-sm text-[#007BFF] font-bold mt-1">{getBranchName(selectedBranch)}</p>
                         </div>
                     </div>
@@ -335,7 +335,7 @@ export default function MenuList() {
                     <button
                         type="submit"
                         disabled={isUpdating}
-                        className="w-full bg-[#007BFF] hover:bg-[#0056b3] text-white font-bold tracking-widest text-sm py-3 rounded-lg transition-all disabled:opacity-50 mt-4 uppercase"
+                        className="w-full bg-[#007BFF] hover:bg-[#0056b3] text-white font-bold tracking-widest text-sm py-3 rounded-lg transition-all disabled:opacity-50 mt-4 "
                     >
                         {isUpdating ? "Saving..." : "Save Discount"}
                     </button>
@@ -367,17 +367,26 @@ const ImageUploadCell = ({ item, backendUrl }) => {
       }
   };
 
-  const handleUpload = async () => {
+ const handleUpload = async () => {
       if (!selectedFile) return;
       setUploadStatus("uploading");
+      
       const formData = new FormData();
       formData.append("image", selectedFile);
-      formData.append("m_menu_sl", item.m_menu_sl);
+      
+      // FIX 1: Match the backend payload requirement (use "id" instead of "m_menu_sl")
+      formData.append("id", item.id); 
+
       try {
-          await axios.post(`${backendUrl}/api/menu/upload`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+          // FIX 2: Match the backend route path (added "-image" to the URL)
+          await axios.post(`${backendUrl}/api/menu/upload-image`, formData, { 
+              headers: { "Content-Type": "multipart/form-data" } 
+          });
+          
           setUploadStatus("success");
           setTimeout(() => setUploadStatus("idle"), 3000);
       } catch (err) {
+          console.error("Upload failed:", err.response?.data || err.message);
           setUploadStatus("error");
       }
   };

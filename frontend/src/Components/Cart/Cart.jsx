@@ -16,7 +16,7 @@ export default function Cart() {
       style={{ backgroundColor: 'var(--theme-body)' }}
     >
       <div className="container mx-auto p-4 md:p-8">
-        <h2 className="text-3xl font-bold mb-6 text-gray-800 font-['Barlow_Condensed'] uppercase border-b border-gray-200 pb-2">Your Cart</h2>
+        <h2 className="text-3xl font-bold mb-6 text-gray-800 font-['Barlow_Condensed']  border-b border-gray-200 pb-2">Your Cart</h2>
         
         {cartItems.length === 0 ? (
           <div className="text-center py-20 text-gray-500 text-xl flex flex-col items-center">
@@ -29,7 +29,7 @@ export default function Cart() {
             <div className="w-full xl:w-2/3 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50 text-gray-600 uppercase text-sm font-bold">
+                  <thead className="bg-gray-50 text-gray-600  text-sm font-bold">
                     <tr>
                       <th className="p-4">Product</th>
                       <th className="p-4">Price</th>
@@ -87,7 +87,7 @@ export default function Cart() {
 
             {/* RIGHT SIDE: Totals */}
             <div className="w-full xl:w-1/3 bg-white p-6 rounded-xl border border-gray-100 shadow-sm sticky top-24">
-              <h3 className="text-xl font-bold mb-4 uppercase text-gray-800 border-b border-gray-100 pb-2">Cart Totals</h3>
+              <h3 className="text-xl font-bold mb-4  text-gray-800 border-b border-gray-100 pb-2">Cart Totals</h3>
               <div className="flex justify-between py-3 text-gray-600">
                 <span>Subtotal</span>
                 <span className="font-bold">Tk {cartTotal.toLocaleString()}</span>
@@ -103,7 +103,7 @@ export default function Cart() {
               
               <a
                 href="/checkout"
-                className="block w-full theme-accent-bg text-white text-center py-4 rounded-lg font-bold uppercase tracking-wider hover:opacity-90 transition-all shadow-md mt-4"
+                className="block w-full theme-accent-bg text-white text-center py-4 rounded-lg font-bold  tracking-wider hover:opacity-90 transition-all shadow-md mt-4"
               >
                 Proceed to Checkout
               </a>

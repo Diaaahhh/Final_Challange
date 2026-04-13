@@ -142,7 +142,7 @@ export default function CreatePortfolio() {
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#0D0D0D] border border-[#2A2A2A] mb-4 text-[#C59D5F] shadow-[0_0_10px_rgba(197,157,95,0.2)]">
                         <FaFolderPlus size={30} />
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-['Barlow_Condensed'] font-bold text-[#E0E0E0] uppercase tracking-widest">
+                    <h1 className="text-3xl md:text-4xl font-['Barlow_Condensed'] font-bold text-[#E0E0E0]  tracking-widest">
                         Create New <span className="text-[#C59D5F]">Gallery </span>
                     </h1>
                     <p className="text-[#A0A0A0] text-sm mt-2 max-w-xl mx-auto">Add showcase items, past events, or new culinary creations to your website's gallery.</p>
@@ -169,7 +169,7 @@ export default function CreatePortfolio() {
                     <div className="grid md:grid-cols-2 gap-6">
                         {/* Category Dropdown */}
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider ml-1">Category</label>
+                            <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider ml-1">Category</label>
                             <select 
                                 name="category" 
                                 value={formData.category} 
@@ -186,7 +186,7 @@ export default function CreatePortfolio() {
 
                         {/* Title */}
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider ml-1">Title</label>
+                            <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider ml-1">Title</label>
                             <input 
                                 type="text" 
                                 name="title" 
@@ -201,7 +201,7 @@ export default function CreatePortfolio() {
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-[#A0A0A0] uppercase tracking-wider ml-1">Description (Optional)</label>
+                        <label className="text-xs font-bold text-[#A0A0A0]  tracking-wider ml-1">Description (Optional)</label>
                         <textarea 
                             name="description" 
                             value={formData.description} 
@@ -227,7 +227,7 @@ export default function CreatePortfolio() {
                                 type="file" 
                                 accept="image/*" 
                                 onChange={handleBannerChange} 
-                                className="w-full text-sm text-[#A0A0A0] file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-[#2A2A2A] file:text-[#007BFF] hover:file:bg-[#333333] cursor-pointer outline-none"
+                                className="w-full text-sm text-[#A0A0A0] file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold file: file:tracking-wider file:bg-[#2A2A2A] file:text-[#007BFF] hover:file:bg-[#333333] cursor-pointer outline-none"
                                 required
                             />
                             
@@ -253,7 +253,7 @@ export default function CreatePortfolio() {
                                 accept="image/*" 
                                 multiple 
                                 onChange={handleImagesChange} 
-                                className="w-full text-sm text-[#A0A0A0] file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-[#2A2A2A] file:text-[#007BFF] hover:file:bg-[#333333] cursor-pointer outline-none"
+                                className="w-full text-sm text-[#A0A0A0] file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold file: file:tracking-wider file:bg-[#2A2A2A] file:text-[#007BFF] hover:file:bg-[#333333] cursor-pointer outline-none"
                             />
 
                             {/* Images File Validation Warning */}
@@ -277,7 +277,7 @@ export default function CreatePortfolio() {
                         <button 
                             type="submit" 
                             disabled={loading || fileWarnings.banner} 
-                            className="inline-flex items-center gap-3 px-8 py-3 bg-[#007BFF] text-white font-bold uppercase tracking-widest rounded transition-all hover:bg-[#0066e6] shadow-[0_0_10px_rgba(0,123,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed group font-['Barlow_Condensed'] text-lg border border-[#007BFF]"
+                            className="inline-flex items-center gap-3 px-8 py-3 bg-[#007BFF] text-white font-bold  tracking-widest rounded transition-all hover:bg-[#0066e6] shadow-[0_0_10px_rgba(0,123,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed group font-['Barlow_Condensed'] text-lg border border-[#007BFF]"
                         >
                             {loading ? (
                                 <>

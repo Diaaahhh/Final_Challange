@@ -53,7 +53,7 @@ export default function Sidebar() {
         {/* Header */}
         <div className="h-20 flex items-center justify-center border-b border-[#1E1E1E] bg-[#111111]">
           <div
-            className={`text-2xl uppercase tracking-widest text-white ${
+            className={`text-2xl  tracking-widest text-white ${
               !isOpen && "lg:hidden"
             }`}
           >
@@ -62,7 +62,7 @@ export default function Sidebar() {
                 to="/"
                 className="group flex flex-col items-center leading-none"
               >
-                <h2 className="text-4xl uppercase italic tracking-wider">
+                <h2 className="text-4xl  italic tracking-wider">
                   <span className="text-white group-hover:text-[#007BFF] transition-colors">
                     Khabar
                   </span>
@@ -70,7 +70,7 @@ export default function Sidebar() {
                     Table
                   </span>
                 </h2>
-                <p className="text-xs tracking-[0.4em] text-[#A0A0A0] uppercase mt-1 group-hover:tracking-[0.5em] transition-all duration-300">
+                <p className="text-xs tracking-[0.4em] text-[#A0A0A0]  mt-1 group-hover:tracking-[0.5em] transition-all duration-300">
                   .com
                 </p>
               </Link>

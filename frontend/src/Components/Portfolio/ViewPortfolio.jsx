@@ -158,7 +158,7 @@ export default function ViewPortfolio() {
         <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden shadow-lg overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#2A2A2A] text-white text-sm uppercase tracking-wider">
+              <tr className="bg-[#2A2A2A] text-white text-sm  tracking-wider">
                 <th className="p-4 font-semibold border-b border-[#333333]">Banner</th>
                 <th className="p-4 font-semibold border-b border-[#333333]">Details</th>
                 <th className="p-4 font-semibold border-b border-[#333333]">Description</th>

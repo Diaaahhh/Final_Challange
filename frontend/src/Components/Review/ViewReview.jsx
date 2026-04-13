@@ -56,7 +56,7 @@ export default function ViewReview() {
         {/* PAGE HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-[#1E1E1E] pb-6">
           <div>
-            <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold uppercase text-white">
+            <h1 className="text-4xl md:text-5xl font-['Barlow_Condensed'] font-bold  text-white">
               Customer<span className="text-[#007BFF]">Reviews</span>
             </h1>
             <p className="text-[#A0A0A0] text-sm mt-2 font-medium tracking-wide">
@@ -76,7 +76,7 @@ export default function ViewReview() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-[#0A0A0A] text-[#A0A0A0] text-xs uppercase tracking-wider font-['Barlow_Condensed'] border-b border-[#1E1E1E]">
+                <tr className="bg-[#0A0A0A] text-[#A0A0A0] text-xs  tracking-wider font-['Barlow_Condensed'] border-b border-[#1E1E1E]">
                   <th className="p-4">Date</th>
                   <th className="p-4">Customer Name</th>
                   <th className="p-4">Rating</th>
@@ -110,7 +110,7 @@ export default function ViewReview() {
                       
                       {/* Name */}
                       <td className="p-4 align-middle">
-                        <div className="font-bold text-white font-['Barlow_Condensed'] text-lg tracking-wide uppercase">
+                        <div className="font-bold text-white font-['Barlow_Condensed'] text-lg tracking-wide ">
                           {review.name || "Anonymous"}
                         </div>
                       </td>
@@ -153,7 +153,7 @@ export default function ViewReview() {
             
             {/* Modal Header */}
             <div className="bg-[#0A0A0A] p-6 border-b border-[#1E1E1E] flex justify-between items-center">
-              <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
+              <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider">
                 Review Details
               </h3>
               <button onClick={() => setSelectedReview(null)} className="text-[#555] hover:text-[#007BFF] transition-colors text-lg">
@@ -165,13 +165,13 @@ export default function ViewReview() {
             <div className="p-6 space-y-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-wider">Reviewer Name</label>
+                  <label className="text-xs text-[#A0A0A0]  font-bold tracking-wider">Reviewer Name</label>
                   <p className="text-3xl font-['Barlow_Condensed'] text-white font-bold mt-1">
                     {selectedReview.name || "Anonymous"}
                   </p>
                 </div>
                 <div className="text-right">
-                  <label className="text-xs text-[#A0A0A0] uppercase font-bold tracking-wider">Date</label>
+                  <label className="text-xs text-[#A0A0A0]  font-bold tracking-wider">Date</label>
                   <p className="text-sm text-[#C59D5F] font-mono font-bold mt-1">
                     {formatDateDDMMYY(selectedReview.created_at)}
                   </p>
@@ -179,7 +179,7 @@ export default function ViewReview() {
               </div>
 
               <div className="bg-[#0A0A0A] p-4 rounded-lg border border-[#1E1E1E]">
-                 <label className="text-xs text-[#A0A0A0] uppercase font-bold block mb-3 tracking-wider">Rating</label>
+                 <label className="text-xs text-[#A0A0A0]  font-bold block mb-3 tracking-wider">Rating</label>
                  <div className="flex items-center gap-3">
                     {renderStars(selectedReview.rating)}
                     <span className="text-sm font-bold text-white ml-2">({selectedReview.rating}/5)</span>
@@ -187,7 +187,7 @@ export default function ViewReview() {
               </div>
 
               <div className="bg-[#0A0A0A] p-4 rounded-lg border border-[#1E1E1E]">
-                <label className="text-xs text-[#A0A0A0] uppercase font-bold block mb-3 tracking-wider">
+                <label className="text-xs text-[#A0A0A0]  font-bold block mb-3 tracking-wider">
                    Customer Feedback
                 </label>
                 <div className="max-h-[200px] overflow-y-auto pr-2">
@@ -201,7 +201,7 @@ export default function ViewReview() {
               {/* Modal Footer */}
               <button 
                 onClick={() => setSelectedReview(null)}
-                className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-black font-bold py-3 rounded-xl transition-all uppercase tracking-widest text-sm font-['Barlow_Condensed'] shadow-[0_0_20px_rgba(0,123,255,0.3)]"
+                className="w-full bg-[#007BFF] hover:bg-[#0066e6] text-black font-bold py-3 rounded-xl transition-all  tracking-widest text-sm font-['Barlow_Condensed'] shadow-[0_0_20px_rgba(0,123,255,0.3)]"
               >
                 Close View
               </button>

@@ -137,7 +137,7 @@ const handleLogout = () => {
 
             {/* DESKTOP MENU */}
             <div className="navbar-center hidden lg:flex">
-              <ul className="menu menu-horizontal px-1 gap-6 font-bold text-white uppercase tracking-wide text-[15px] font-['Barlow_Condensed']">
+              <ul className="menu menu-horizontal px-1 gap-6 font-bold text-white  tracking-wide text-[15px] font-['Barlow_Condensed']">
                 {user && (user.role === 0 || user.role === '0') && (
                   <li>
                     <Link to="/admin" className="hover:text-white theme-accent p-0 bg-transparent">
@@ -173,7 +173,7 @@ const handleLogout = () => {
                     </div>
                   </div>
 
-                  <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-40 text-sm mt-2 border-t-4 theme-border font-['Barlow_Condensed'] uppercase font-bold before:absolute before:-top-4 before:left-0 before:h-4 before:w-full before:content-['']">
+                  <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow-lg bg-white text-black rounded-none w-40 text-sm mt-2 border-t-4 theme-border font-['Barlow_Condensed']  font-bold before:absolute before:-top-4 before:left-0 before:h-4 before:w-full before:content-['']">
                     <li>
                         <Link to="/profile" className="hover-theme-accent hover:bg-transparent">Profile</Link>
                     </li>
@@ -188,7 +188,7 @@ const handleLogout = () => {
               {!user && (
                 <Link 
                   to="/login" 
-                  className="btn btn-sm bg-transparent border theme-border text-white hover-theme-accent-bg hover-theme-bg-text rounded-[4px] px-5 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex mr-2 transition-all duration-300"
+                  className="btn btn-sm bg-transparent border theme-border text-white hover-theme-accent-bg hover-theme-bg-text rounded-[4px] px-5 font-['Barlow_Condensed'] font-bold  tracking-wider hidden xl:inline-flex mr-2 transition-all duration-300"
                 >
                   Login
                 </Link>
@@ -208,7 +208,7 @@ const handleLogout = () => {
                 )}
               </button>
 
-              <Link to="/reservation" className="btn theme-accent-bg hover:bg-white hover-theme-bg-text text-white border-none rounded-[4px] px-7 font-['Barlow_Condensed'] font-bold uppercase tracking-wider hidden xl:inline-flex transition-all duration-300">
+              <Link to="/reservation" className="btn theme-accent-bg hover:bg-white hover-theme-bg-text text-white border-none rounded-[4px] px-7 font-['Barlow_Condensed'] font-bold  tracking-wider hidden xl:inline-flex transition-all duration-300">
                 Reserve a Table
               </Link>
 
@@ -226,13 +226,13 @@ const handleLogout = () => {
         <div className="fixed inset-0 z-[60] bg-black/70 lg:hidden backdrop-blur-sm transition-all">
           <div className="absolute right-0 top-0 h-full w-[85%] max-w-sm theme-bg text-white shadow-2xl p-6 border-l border-white/10">
             <div className="flex justify-between items-center mb-8">
-               <h2 className="text-3xl font-['Barlow_Condensed'] font-extrabold uppercase italic tracking-wider">
+               <h2 className="text-3xl font-['Barlow_Condensed'] font-extrabold  italic tracking-wider">
                   <span className="text-white">Khabar</span><span className="theme-accent">Table</span>
                </h2>
                <button onClick={() => setIsMobileMenuOpen(false)} className="btn btn-circle btn-sm btn-ghost border border-white/20 hover-theme-accent-bg hover:text-white">✕</button>
             </div>
             
-            <div className="flex flex-col gap-0 font-['Barlow_Condensed'] text-lg uppercase tracking-wide">
+            <div className="flex flex-col gap-0 font-['Barlow_Condensed'] text-lg  tracking-wide">
               {user && (
                   <div className="flex items-center gap-4 border-b border-white/10 py-4 mb-2">
                     <div className="avatar">
@@ -253,7 +253,7 @@ const handleLogout = () => {
               
               <button 
                 onClick={() => { openCart(); setIsMobileMenuOpen(false); }}
-                className="border-b border-white/10 py-3 hover-theme-accent transition-colors flex items-center gap-2 text-left w-full uppercase font-['Barlow_Condensed'] text-lg tracking-wide"
+                className="border-b border-white/10 py-3 hover-theme-accent transition-colors flex items-center gap-2 text-left w-full  font-['Barlow_Condensed'] text-lg tracking-wide"
               >
                 Cart <FaShoppingCart size={16} /> 
                 {cartItems.length > 0 && <span className="theme-accent font-bold">({cartItems.length})</span>}
@@ -266,7 +266,7 @@ const handleLogout = () => {
               )}
 
               <div className="mt-8">
-                <Link to="/reservation" onClick={() => setIsMobileMenuOpen(false)} className="btn theme-accent-bg hover:bg-white hover:text-black text-white border-none w-full font-bold uppercase rounded-[4px]">Reserve Table</Link>
+                <Link to="/reservation" onClick={() => setIsMobileMenuOpen(false)} className="btn theme-accent-bg hover:bg-white hover:text-black text-white border-none w-full font-bold  rounded-[4px]">Reserve Table</Link>
               </div>
             </div>
           </div>

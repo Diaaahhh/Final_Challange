@@ -665,7 +665,7 @@ useEffect(() => {
             className="grid grid-cols-1 lg:grid-cols-2 gap-12"
           >
             <div>
-              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-gray-900 mb-8 border-l-4 theme-border pl-4">
+              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold  italic text-gray-900 mb-8 border-l-4 theme-border pl-4">
                 Billing Details
               </h3>
               <div className="space-y-6">
@@ -726,12 +726,12 @@ useEffect(() => {
                   {isOtpEnabled && otpSent && !isPhoneVerified && (
                     <div className="mt-4 p-5 border-2 theme-border rounded-lg bg-yellow-50 animate-fadeIn">
                       <div className="flex justify-between items-center mb-2">
-                        <label className="block text-gray-800 text-sm font-bold uppercase tracking-wider">
+                        <label className="block text-gray-800 text-sm font-bold  tracking-wider">
                           Enter 4-Digit OTP
                         </label>
                         {/* Optional: Show an "Expired" badge when time runs out */}
                         {countdown === 0 && (
-                          <span className="text-red-500 text-xs font-bold uppercase">
+                          <span className="text-red-500 text-xs font-bold ">
                             OTP Expired
                           </span>
                         )}
@@ -801,17 +801,17 @@ useEffect(() => {
             </div>
 
             <div>
-              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold uppercase italic text-gray-900 mb-8 border-l-4 theme-border pl-4">
+              <h3 className="text-2xl md:text-3xl font-['Barlow_Condensed'] font-bold  italic text-gray-900 mb-8 border-l-4 theme-border pl-4">
                 Your Order
               </h3>
               <div className="bg-white border border-gray-100 rounded-lg shadow-sm p-8">
                 <table className="w-full mb-8">
                   <thead>
                     <tr className="border-b-2 border-gray-100">
-                      <th className="text-left font-['Barlow_Condensed'] uppercase text-gray-900 pb-4 text-lg">
+                      <th className="text-left font-['Barlow_Condensed']  text-gray-900 pb-4 text-lg">
                         Product
                       </th>
-                      <th className="text-right font-['Barlow_Condensed'] uppercase text-gray-900 pb-4 text-lg">
+                      <th className="text-right font-['Barlow_Condensed']  text-gray-900 pb-4 text-lg">
                         Total
                       </th>
                     </tr>
@@ -909,7 +909,7 @@ useEffect(() => {
                     )}
 
                     <tr>
-                      <td className="py-5 text-xl font-['Barlow_Condensed'] uppercase">
+                      <td className="py-5 text-xl font-['Barlow_Condensed'] ">
                         Order Total
                       </td>
                       <td className="py-5 text-right text-xl text-[#38260c]">
@@ -939,7 +939,7 @@ useEffect(() => {
                     !isPhoneVerified ||
                     (isCaptchaEnabled && !captchaToken)
                   }
-                  className={`w-full font-['Barlow_Condensed'] font-bold uppercase italic tracking-wider py-4 rounded transition-all duration-300 ${
+                  className={`w-full font-['Barlow_Condensed'] font-bold  italic tracking-wider py-4 rounded transition-all duration-300 ${
                     loading || !isPhoneSubmitted || !isPhoneVerified
                       ? "bg-gray-400 text-gray-200 cursor-not-allowed" // Disabled styles
                       : "theme-bg text-white hover:theme-accent-bg" // Active styles
@@ -955,7 +955,7 @@ useEffect(() => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col relative">
                 <div className="theme-bg p-5 flex justify-between items-center shrink-0 rounded-t-2xl">
-                  <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white uppercase tracking-wider">
+                  <h3 className="text-xl font-['Barlow_Condensed'] font-bold text-white  tracking-wider">
                     Order Method:{" "}
                     <span className="theme-accent">
                       {formData.order_method}
@@ -973,7 +973,7 @@ useEffect(() => {
                   {formData.order_method === "Dine-in" ? (
                     <div>
                       <div className="mb-6">
-                        <label className="block text-gray-600 text-sm font-bold mb-2 uppercase tracking-wide">
+                        <label className="block text-gray-600 text-sm font-bold mb-2  tracking-wide">
                           Number of Persons
                         </label>
                         <input
@@ -1016,7 +1016,7 @@ useEffect(() => {
                         return (
                           <>
                             <div className="flex justify-between items-end mb-3">
-                              <label className="block text-gray-600 text-sm font-bold uppercase tracking-wide">
+                              <label className="block text-gray-600 text-sm font-bold  tracking-wide">
                                 Select Table(s)
                               </label>
                             </div>
@@ -1036,7 +1036,7 @@ useEffect(() => {
                                 <div className="flex flex-col sm:flex-row justify-between gap-4">
                                   {/* Left Side: Selected Tables Badges */}
                                   <div className="flex-1">
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
+                                    <p className="text-[10px] text-gray-400 font-bold  tracking-wider mb-2">
                                       Selected Tables
                                     </p>
                                     <div className="flex flex-wrap gap-2">
@@ -1060,7 +1060,7 @@ useEffect(() => {
                                   {/* Right Side: Capacity vs Guests Stats */}
                                   <div className="flex flex-row sm:flex-col gap-6 sm:gap-1 justify-center sm:text-right border-t sm:border-t-0 sm:border-l border-gray-200 pt-3 sm:pt-0 sm:pl-5 min-w-[100px]">
                                     <div className="flex flex-col sm:items-end">
-                                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                      <p className="text-[10px] text-gray-400 font-bold  tracking-wider">
                                         Total Guests
                                       </p>
                                       <p className="text-lg font-bold text-gray-800 leading-none mt-1">
@@ -1068,7 +1068,7 @@ useEffect(() => {
                                       </p>
                                     </div>
                                     <div className="flex flex-col sm:items-end mt-1">
-                                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                      <p className="text-[10px] text-gray-400 font-bold  tracking-wider">
                                         Table Capacity
                                       </p>
                                       <p
@@ -1189,7 +1189,7 @@ useEffect(() => {
                                       Table {table.table_no}
                                     </span>
                                     <span
-                                      className={`text-[10px] uppercase font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
+                                      className={`text-[10px]  font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
                                         isSelected
                                           ? "bg-black/20 text-white"
                                           : "bg-gray-200 text-gray-700"
@@ -1290,7 +1290,7 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                                       Table {t.table_no}
                                     </span>
                                     <span
-                                      className={`text-[10px] uppercase font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
+                                      className={`text-[10px]  font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
                                         isSelected
                                           ? "bg-black/20 text-white"
                                           : "bg-gray-200 text-gray-700"
@@ -1317,7 +1317,7 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-gray-600 text-sm font-bold mb-2 uppercase tracking-wide">
+                      <label className="block text-gray-600 text-sm font-bold mb-2  tracking-wide">
                         Table No.
                       </label>
                       <select
@@ -1398,7 +1398,7 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                   <button
                     type="button"
                     onClick={saveDetails}
-                    className="w-full theme-accent-bg text-white font-bold py-3 rounded-lg uppercase tracking-widest hover:theme-bg transition-all duration-300 shadow-md mt-4"
+                    className="w-full theme-accent-bg text-white font-bold py-3 rounded-lg  tracking-widest hover:theme-bg transition-all duration-300 shadow-md mt-4"
                   >
                     Confirm Selection
                   </button>
