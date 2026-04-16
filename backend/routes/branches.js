@@ -10,68 +10,74 @@ const axios = require('axios'); // Requires: npm install axios
 
 router.get('/', (req, res) => {
 
-    // 1. Get the Company Code from the 'settings' table
-
-    const sql = "SELECT company_code FROM settings WHERE id = 1";
-
-
+    const sql = "SELECT * FROM settings WHERE id = 1";
 
     db.query(sql, async (err, result) => {
 
         if (err) {
-
-            console.error("Database Error:", err);
-
             return res.status(500).json({ error: "Database error" });
-
         }
 
+        const branchId = result[0]?.branch_id;
+        const soft_api_key = result[0]?.api_key;
 
-
-        // Check if code exists
-
-        const companyCode = result[0]?.company_code;
-
-
-
-        if (!companyCode) {
-
-            return res.status(404).json({ error: "Company Code not set in Settings." });
-
+        if (!branchId || !soft_api_key) {
+            return res.json({
+                status: false,
+                message: "Branch ID or API Key missing"
+            });
         }
-
-
 
         try {
-
-            // 2. Call the External API using the code from DB
-
-            const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}`;
-
-            console.log(`Fetching branches from: ${apiUrl}`); // Debug log
-
-
+            const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${branchId}?soft_api_key=${soft_api_key}`;
 
             const apiResponse = await axios.get(apiUrl);
+            const data = apiResponse.data;
 
+            // ❌ Invalid API or ID
+            if (!data.status) {
+                return res.json({
+                    status: false,
+                    message: data.message,
+                    data: []
+                });
+            }
 
+            // ✅ SUCCESS CASE
+            if (data.status === true && data.data) {
 
-            // 3. Send the external data back to your frontend
+                const branchData = data.data;
 
-            return res.json(apiResponse.data);
+                const branch_id = branchData.branch_id;
+                const company_id = branchData.company_id;
 
+                // 🔥 UPDATE DB WITH VERIFIED DATA
+                const updateSql = `
+                    UPDATE settings 
+                    SET branch_id = ?, company_code = ?
+                    WHERE id = 1
+                `;
 
+                db.query(updateSql, [branch_id, company_id], (err) => {
+    if (err) {
+        console.error("DB update error:", err);
+    }
+});
 
-        } catch (apiError) {
+                return res.json({
+                    status: true,
+                    message: data.message,
+                    data: branchData
+                });
+            }
 
-            console.error("External API Error:", apiError.message);
-
-            return res.status(502).json({ error: "Failed to fetch data from POS system" });
-
+        } catch (error) {
+            return res.status(502).json({
+                status: false,
+                message: "External API error"
+            });
         }
-
     });
-
 });
 
 

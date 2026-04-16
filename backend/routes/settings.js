@@ -23,7 +23,8 @@ router.get('/', (req, res) => {
             rest_close, 
             table_prelock_duration,
             otp,
-            captcha
+            captcha, 
+            api_key 
         FROM settings 
         WHERE id = 1
     `;
@@ -55,7 +56,8 @@ router.post('/update', (req, res) => {
         rest_close, 
         table_prelock_duration,
         otp,
-        captcha
+        captcha,
+        api_key   
     } = req.body;
     
     // Default delivery charge to 0 if an empty string or invalid number is passed
@@ -79,9 +81,10 @@ router.post('/update', (req, res) => {
             rest_close, 
             table_prelock_duration,
             otp,
-            captcha
+            captcha, 
+            api_key
         ) 
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?) 
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
         ON DUPLICATE KEY UPDATE 
             company_code = VALUES(company_code),
             branch_id= VALUES(branch_id),
@@ -90,7 +93,8 @@ router.post('/update', (req, res) => {
             rest_close = VALUES(rest_close),
             table_prelock_duration = VALUES(table_prelock_duration),
             otp = VALUES(otp),
-            captcha = VALUES(captcha)
+            captcha = VALUES(captcha),
+            api_key = VALUES(api_key)
     `;
     
     const values = [
@@ -101,7 +105,8 @@ router.post('/update', (req, res) => {
         rest_close, 
         safeTablePrelock,
         safeOtp,
-        safeCaptcha
+        safeCaptcha,
+        api_key   
     ];
 
     db.query(sql, values, (err, result) => {

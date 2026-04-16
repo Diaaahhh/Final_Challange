@@ -7,11 +7,14 @@ import {
   FaHourglassHalf,
   FaMobileAlt,
   FaStore,
+  FaKey,
 } from "react-icons/fa";
 import api from "../../api";
 import toast from "react-hot-toast";
 
 export default function Settings() {
+  const [apiKey, setApiKey] = useState("");
+
   const [companyCode, setCompanyCode] = useState("");
   const [branchId, setBranchId] = useState(""); // NEW STATE FOR BRANCH ID
   const [deliveryCharge, setDeliveryCharge] = useState("");
@@ -97,15 +100,15 @@ export default function Settings() {
   useEffect(() => {
     if (!initialLoadDone) return; // Don't run while the page is still loading
 
-    const safeCode = String(companyCode);
+    // const safeCode = String(companyCode);
     const safeBranchId = String(branchId);
 
     // Combine them to check if EITHER changed
-    const currentCombined = safeCode + "-" + safeBranchId;
+    const currentCombined = safeBranchId + "-" + apiKey;
     if (currentCombined === prevCodeRef.current) return;
     prevCodeRef.current = currentCombined; // Update the ref
 
-    if (!safeCode.trim()) {
+    if (!safeBranchId.trim() || !apiKey.trim()) {
       setIsFormUnlocked(false);
       setIsValidatingCode(false);
       setApiMessage(""); // Clear message if empty
@@ -128,6 +131,7 @@ export default function Settings() {
           table_prelock_duration: tablePrelockDuration,
           otp: otpEnabled ? 1 : 0,
           captcha: captchaEnabled ? 1 : 0,
+          api_key: apiKey 
         });
 
         // STEP B: The verification process starts automatically
@@ -139,21 +143,14 @@ export default function Settings() {
         }
 
         if (res.data && res.data.status === true) {
-          const branches = res.data.data || [];
+          const branch = res.data.data;
 
           // 🔍 CHECK BRANCH MATCH
-          if (safeBranchId) {
-            const match = branches.find(
-              (b) => String(b.branch_id) === String(safeBranchId)
-            );
-
-            if (!match) {
-              // ❌ Branch NOT found
-              setIsFormUnlocked(false);
-              toast.error("No such branch found under this company");
-              return; // 🚨 STOP here
-            }
-          }
+          if (!branch || String(branch.branch_id) !== String(safeBranchId)) {
+  setIsFormUnlocked(false);
+  toast.error("Invalid Branch ID or API Key");
+  return;
+}
 
           // ✅ Branch valid OR empty (means all branches)
           setIsFormUnlocked(true);
@@ -162,7 +159,7 @@ export default function Settings() {
           setIsFormUnlocked(false);
 
           if (res.data.message !== "Company found but no branches available") {
-            toast.error("No company found with this code.");
+            toast.error("Invalid Branch ID or API Key");
           }
         }
       } catch (error) {
@@ -185,6 +182,7 @@ export default function Settings() {
     otpEnabled,
     captchaEnabled,
     initialLoadDone,
+    apiKey
   ]);
 
   // 3. Handle Submit (Manual Save Button)
@@ -194,7 +192,7 @@ export default function Settings() {
 
     try {
       await api.post("/settings/update", {
-        company_code: companyCode,
+        // company_code: companyCode,
         branch_id: branchId ? Number(branchId) : null, // Store as number or null for DB
         delivery_charge: deliveryCharge,
         rest_open: restOpen,
@@ -202,6 +200,7 @@ export default function Settings() {
         table_prelock_duration: tablePrelockDuration,
         otp: otpEnabled ? 1 : 0,
         captcha: captchaEnabled ? 1 : 0,
+        api_key: apiKey 
       });
       toast.success("Settings updated successfully!");
     } catch (err) {
@@ -252,11 +251,63 @@ export default function Settings() {
           className="bg-[#111111] p-8 rounded-2xl shadow-2xl border border-[#222]"
         >
           <div className="space-y-6">
-            {/* COMPANY CODE */}
+            {/* --- API KEY (NEW FIELD) --- */}
             <div className="group">
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
-                  Company Code
+                  API Key
+                </label>
+                {isValidatingCode && (
+  <span className="text-[#007BFF] text-[10px] font-bold animate-pulse">
+    Verifying API Key...
+  </span>
+)}
+
+{!isValidatingCode && apiKey && apiMessage && (
+  <span className={`text-[20px] font-bold ${
+    apiMessage === "Branch found"
+      ? "text-green-500"
+      : "text-red-500"
+  }`}>
+    {apiMessage === "Branch found" ? "Valid Key" : "Invalid Key"}
+  </span>
+)} 
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <FaKey
+                    className={`transition-colors ${
+                      isFormUnlocked
+                        ? "text-green-500"
+                        : "text-[#555] group-focus-within:text-[#007BFF]"
+                    }`}
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Enter API Key"
+                  className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
+                    ${
+                      isFormUnlocked
+                        ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
+                        : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
+                    }`}
+                  required
+                />
+              </div>
+              <p className="mt-2 text-[10px] text-[#555] tracking-wide font-bold">
+                * Required to authenticate application requests
+              </p>
+            </div>
+
+            {/* Branch ID */}
+            <div className="group pt-4 border-t border-[#222]">
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
+                  Branch ID
                 </label>
 
                 {/* --- DYNAMIC STATUS INDICATORS BASED ON API MESSAGE --- */}
@@ -266,25 +317,27 @@ export default function Settings() {
                   </span>
                 )}
 
-                {!isValidatingCode && branchId && apiMessage && (
-  <span
-    className={`text-[20px] font-bold ${
-      apiMessage === "All branches of company found" ||
-      apiMessage === "Branch found"
-        ? "text-green-500"
-        : apiMessage === "Company found but no branches available"
-        ? "text-yellow-500"
-        : "text-red-500"
-    }`}
-  >
-    {apiMessage === "All branches of company found" ||
-    apiMessage === "Branch found"
-      ? "Connected"
-      : apiMessage === "Company found but no branches available"
-      ? "Connected but no branch available"
-      : "✕ Invalid"}
-  </span>
-)}
+                {/* Removed branchId dependency here */}
+                {!isValidatingCode && companyCode && apiMessage && (
+                  <span
+                    className={`text-[20px] font-bold ${
+                      apiMessage === "All branches of company found" ||
+                      apiMessage === "Branch found"
+                        ? "text-green-500"
+                        : apiMessage ===
+                          "Company found but no branches available"
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {apiMessage === "All branches of company found" ||
+                    apiMessage === "Branch found"
+                      ? "Connected"
+                      : apiMessage === "Company found but no branches available"
+                      ? "Connected but no branch available"
+                      : "✕ Invalid"}
+                  </span>
+                )}
               </div>
 
               <div className="relative">
@@ -299,8 +352,8 @@ export default function Settings() {
                 </div>
                 <input
                   type="text"
-                  value={companyCode}
-                  onChange={(e) => setCompanyCode(e.target.value)}
+                  value={branchId}
+                  onChange={(e) => setBranchId(e.target.value)}
                   className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
                     ${
                       isFormUnlocked
@@ -312,105 +365,11 @@ export default function Settings() {
                         ? "border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
                         : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
                     }`}
-                  required
+                  
                 />
               </div>
               <p className="mt-2 text-[10px] text-[#555] tracking-wide font-bold">
                 * Used for POS integration and synchronization
-              </p>
-            </div>
-
-            {/* BRANCH ID (NEW FIELD) */}
-            <div className="group pt-4 border-t border-[#222]">
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
-                  Branch ID (Optional)
-                </label>
-
-                {/* --- DYNAMIC STATUS INDICATORS FOR BRANCH ID --- */}
-                {isValidatingCode && branchId && (
-                  <span className="text-[#007BFF] text-[10px] font-bold animate-pulse">
-                    Saving & Verifying...
-                  </span>
-                )}
-
-                {!isValidatingCode && branchId && apiMessage && (
-                  <>
-                    {(apiMessage === "All branches of company found"||apiMessage ==="Branch found" ) && (
-                      <span className="text-green-500 text-[20px] font-bold">
-                        Connected
-                      </span>
-                    )}
-                    {apiMessage ===
-                      "Company found but no branches available" && (
-                      <span className="text-yellow-500 text-[20px] font-bold">
-                        Connected but no branch available
-                      </span>
-                    )}
-                    {apiMessage ===
-                      "No company or branch found for this ID" && (
-                      <span className="text-red-500 text-[20px] font-bold">
-                        ✕ Invalid
-                      </span>
-                    )}
-
-                    {/* Fallback for other successful messages */}
-                    {/* {isFormUnlocked &&
-                      ![
-                        "All branches of company found",
-                        "Branch found",
-                      ].includes(apiMessage) && (
-                        <span className="text-green-500 text-[20px] font-bold">
-                          Connected
-                        </span>
-                      )} */}
-                    {/* Fallback for other error messages */}
-                    {/* {!isFormUnlocked &&
-                      ![
-                        "Company found but no branches available",
-                        "No company or branch found for this ID",
-                      ].includes(apiMessage) && (
-                        <span className="text-red-500 text-[20px] font-bold">
-                          ✕ Invalid
-                        </span>
-                      )} */}
-                  </>
-                )}
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FaStore
-                    className={`transition-colors ${
-                      isFormUnlocked
-                        ? "text-green-500"
-                        : "text-[#555] group-focus-within:text-[#007BFF]"
-                    }`}
-                  />
-                </div>
-                <input
-                  type="number"
-                  value={branchId}
-                  /* REMOVED disabled={!isFormUnlocked} so you can actively type into this input to trigger re-verification */
-                  onChange={(e) => setBranchId(e.target.value)}
-                  min="0"
-                  placeholder="Leave empty for all branches"
-                  className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
-                    ${
-                      isFormUnlocked
-                        ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
-                        : apiMessage ===
-                          "Company found but no branches available"
-                        ? "border-yellow-500/50 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/30"
-                        : branchId && !isValidatingCode
-                        ? "border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
-                        : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
-                    }`}
-                />
-              </div>
-              <p className="mt-2 text-[10px] text-[#555] tracking-wide font-bold">
-                * Specify a branch ID if you are setting up a single-branch
-                location
               </p>
             </div>
 

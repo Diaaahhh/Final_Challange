@@ -56,7 +56,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         // ==========================================
         let branchPhone = "the restaurant"; // Default fallback
         try {
-            const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}`;
+            const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}?soft_api_key=${soft_api_key}`;
             const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
 
             let branches = [];

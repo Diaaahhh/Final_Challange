@@ -30,31 +30,44 @@ const upload = multer({ storage: storage });
 
 // --- 3. Create/Replace Route ---
 router.post('/create', upload.single('image'), (req, res) => {
-    const { heading, text } = req.body; // Added heading
+    const { heading, text } = req.body; 
     const image = req.file ? req.file.filename : null;
 
     if (!text || !heading) {
         return res.status(400).json({ error: "Please fill in all fields (Heading & Text)." });
     }
 
-    // STEP 1: Delete all existing records (To ensure only 1 record exists)
-    const deleteSql = "DELETE FROM about";
+    // STEP 0: Fetch company_code from the settings table
+    const settingsSql = "SELECT company_code FROM settings LIMIT 1";
     
-    db.query(deleteSql, (deleteErr) => {
-        if (deleteErr) {
-            console.error("Delete Error:", deleteErr);
-            return res.status(500).json({ error: "Database error during cleanup" });
+    db.query(settingsSql, (settingsErr, settingsResult) => {
+        if (settingsErr) {
+            console.error("Settings Fetch Error:", settingsErr);
+            return res.status(500).json({ error: "Database error while fetching settings" });
         }
 
-        // STEP 2: Insert the new record
-        const insertSql = "INSERT INTO about (heading, text, image) VALUES (?, ?, ?)";
+        // Safely extract the company code (default to null if settings is empty)
+        const companyCode = settingsResult.length > 0 ? settingsResult[0].company_code : null;
+
+        // STEP 1: Delete all existing records (To ensure only 1 record exists)
+        const deleteSql = "DELETE FROM about";
         
-        db.query(insertSql, [heading, text, image], (insertErr, result) => {
-            if (insertErr) {
-                console.error("Insert Error:", insertErr);
-                return res.status(500).json({ error: "Database error during save" });
+        db.query(deleteSql, (deleteErr) => {
+            if (deleteErr) {
+                console.error("Delete Error:", deleteErr);
+                return res.status(500).json({ error: "Database error during cleanup" });
             }
-            res.json({ message: "Content updated successfully!", id: result.insertId });
+
+            // STEP 2: Insert the new record including the fetched company_code
+            const insertSql = "INSERT INTO about (company_code, heading, text, image) VALUES (?, ?, ?, ?)";
+            
+            db.query(insertSql, [companyCode, heading, text, image], (insertErr, result) => {
+                if (insertErr) {
+                    console.error("Insert Error:", insertErr);
+                    return res.status(500).json({ error: "Database error during save" });
+                }
+                res.json({ message: "Content updated successfully!", id: result.insertId });
+            });
         });
     });
 });

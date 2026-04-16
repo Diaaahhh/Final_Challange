@@ -71,15 +71,29 @@ router.post('/create', cpUpload, (req, res) => {
             imagesFilenames = files['images'].map(file => file.filename);
         }
 
-        const sql = "INSERT INTO portfolio (category, title, description, images, banner) VALUES (?, ?, ?, ?, ?)";
-        const values = [category, title, description, JSON.stringify(imagesFilenames), bannerFilename];
+        // STEP 0: Fetch company_code from the settings table
+        const settingsSql = "SELECT company_code FROM settings LIMIT 1";
 
-        db.query(sql, values, (err, result) => {
-            if (err) {
-                console.error("Insert error:", err);
-                return res.status(500).json({ status: false, message: "Database error" });
+        db.query(settingsSql, (settingsErr, settingsResult) => {
+            if (settingsErr) {
+                console.error("Settings Fetch Error:", settingsErr);
+                return res.status(500).json({ status: false, message: "Database error while fetching settings" });
             }
-            res.status(201).json({ status: true, message: "Success", id: result.insertId });
+
+            // Safely extract the company code (default to null if settings is empty)
+            const companyCode = settingsResult.length > 0 ? settingsResult[0].company_code : null;
+
+            // STEP 1: Insert the new record including the fetched company_code
+            const sql = "INSERT INTO portfolio (company_code, category, title, description, images, banner) VALUES (?, ?, ?, ?, ?, ?)";
+            const values = [companyCode, category, title, description, JSON.stringify(imagesFilenames), bannerFilename];
+
+            db.query(sql, values, (err, result) => {
+                if (err) {
+                    console.error("Insert error:", err);
+                    return res.status(500).json({ status: false, message: "Database error" });
+                }
+                res.status(201).json({ status: true, message: "Success", id: result.insertId });
+            });
         });
 
     } catch (error) {

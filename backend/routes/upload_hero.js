@@ -26,48 +26,61 @@ router.post('/upload-hero', upload.single('image'), (req, res) => {
         return res.status(400).json({ message: "Name and Image are required" });
     }
 
-    // STEP 1: Find the old image so we can delete the file from the folder
-    const getOldSql = "SELECT image FROM hero";
+    // STEP 0: Fetch company_code from the settings table
+    const settingsSql = "SELECT company_code FROM settings LIMIT 1";
 
-    db.query(getOldSql, (err, data) => {
-        if (err) {
-            console.error("Error fetching old image:", err);
-            return res.status(500).json({ message: "Database Error" });
+    db.query(settingsSql, (settingsErr, settingsResult) => {
+        if (settingsErr) {
+            console.error("Settings Fetch Error:", settingsErr);
+            return res.status(500).json({ message: "Database error while fetching settings" });
         }
 
-        // If there is an old image, delete the physical file from public/uploads
-        if (data.length > 0) {
-            data.forEach(row => {
-                const oldImagePath = path.join(__dirname, '../public/uploads', row.image);
-                // Check if file exists, then delete it
-                if (fs.existsSync(oldImagePath)) {
-                    fs.unlink(oldImagePath, (err) => {
-                        if (err) console.error("Failed to delete old image file:", err);
-                    });
-                }
-            });
-        }
+        // Safely extract the company code (default to null if settings is empty)
+        const companyCode = settingsResult.length > 0 ? settingsResult[0].company_code : null;
 
-        // STEP 2: Clear the table (Remove previous DB entry)
-        // TRUNCATE is faster and resets the ID back to 1
-        const truncateSql = "TRUNCATE TABLE hero";
+        // STEP 1: Find the old image so we can delete the file from the folder
+        const getOldSql = "SELECT image FROM hero";
 
-        db.query(truncateSql, (err) => {
+        db.query(getOldSql, (err, data) => {
             if (err) {
-                console.error("Error clearing table:", err);
-                return res.status(500).json({ message: "Database Error Clearing Table" });
+                console.error("Error fetching old image:", err);
+                return res.status(500).json({ message: "Database Error" });
             }
 
-            // STEP 3: Insert the NEW entry
-            const sql = "INSERT INTO hero (name, image) VALUES (?, ?)";
-            const values = [name, image];
+            // If there is an old image, delete the physical file from public/uploads
+            if (data.length > 0) {
+                data.forEach(row => {
+                    const oldImagePath = path.join(__dirname, '../public/uploads', row.image);
+                    // Check if file exists, then delete it
+                    if (fs.existsSync(oldImagePath)) {
+                        fs.unlink(oldImagePath, (err) => {
+                            if (err) console.error("Failed to delete old image file:", err);
+                        });
+                    }
+                });
+            }
 
-            db.query(sql, values, (err, result) => {
+            // STEP 2: Clear the table (Remove previous DB entry)
+            // TRUNCATE is faster and resets the ID back to 1
+            const truncateSql = "TRUNCATE TABLE hero";
+
+            db.query(truncateSql, (err) => {
                 if (err) {
-                    console.error("Error inserting new hero:", err);
-                    return res.status(500).json({ message: "Database Error Inserting" });
+                    console.error("Error clearing table:", err);
+                    return res.status(500).json({ message: "Database Error Clearing Table" });
                 }
-                return res.status(201).json({ message: "Hero uploaded successfully!" });
+
+                // STEP 3: Insert the NEW entry including the fetched company_code
+                const sql = "INSERT INTO hero (company_code, name, image) VALUES (?, ?, ?)";
+                const values = [companyCode, name, image];
+
+                db.query(sql, values, (err, result) => {
+                    if (err) {
+                        console.error("Error inserting new hero:", err);
+                        return res.status(500).json({ message: "Database Error Inserting" });
+                    }
+                    return res.status(201).json({ message: "Hero uploaded successfully!" });
+                });
             });
         });
     });

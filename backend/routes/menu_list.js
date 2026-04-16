@@ -230,7 +230,7 @@ router.get('/list', async (req, res) => {
 router.get('/branches', async (req, res) => {
     try {
         const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}`;
+        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}?soft_api_key=${soft_api_key}`;
         
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}` }
