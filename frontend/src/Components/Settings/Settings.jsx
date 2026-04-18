@@ -15,7 +15,7 @@ import toast from "react-hot-toast";
 export default function Settings() {
   const [apiKey, setApiKey] = useState("");
 
-  const [companyCode, setCompanyCode] = useState("");
+  // const [companyCode, setCompanyCode] = useState("");
   const [branchId, setBranchId] = useState(""); // NEW STATE FOR BRANCH ID
   const [deliveryCharge, setDeliveryCharge] = useState("");
 
@@ -41,149 +41,137 @@ export default function Settings() {
   // To track the previous code so we only save when the text ACTUALLY changes
   const prevCodeRef = useRef("");
 
-  // 1. Fetch existing settings on load
-  useEffect(() => {
-    api
-      .get("/settings")
-      .then(async (res) => {
-        if (res.data) {
-          if (res.data.branch_id !== null && res.data.branch_id !== undefined) {
-            setBranchId(String(res.data.branch_id)); // Load Branch ID
-          }
-          if (res.data.delivery_charge !== undefined)
-            setDeliveryCharge(res.data.delivery_charge);
-          if (res.data.rest_open)
-            setRestOpen(res.data.rest_open.substring(0, 5));
-          if (res.data.rest_close)
-            setRestClose(res.data.rest_close.substring(0, 5));
-          if (res.data.table_prelock_duration !== undefined)
-            setTablePrelockDuration(res.data.table_prelock_duration);
-          if (res.data.otp !== undefined) setOtpEnabled(res.data.otp === 1);
-          if (res.data.captcha !== undefined)
-            setCaptchaEnabled(res.data.captcha === 1);
+ useEffect(() => {
+  const fetchSettings = async () => {
+    try {
+      const res = await api.get("/settings");
 
-          if (res.data.company_code) {
-            const loadedCode = String(res.data.company_code);
-            setCompanyCode(loadedCode);
-            prevCodeRef.current = loadedCode;
+      if (res.data) {
+        if (res.data.api_key) {
+          setApiKey(res.data.api_key);
+        }
 
-            // Auto-verify the loaded code to unlock the form initially
-            setIsValidatingCode(true);
-            try {
-              const branchRes = await api.get(`/branches`);
-              // Store the exact message from the response
-              if (branchRes.data && branchRes.data.message) {
-                setApiMessage(branchRes.data.message);
-              }
+        if (
+          res.data.branch_id !== null &&
+          res.data.branch_id !== undefined
+        ) {
+          setBranchId(String(res.data.branch_id));
+        }
 
-              if (branchRes.data && branchRes.data.status === true) {
-                setIsFormUnlocked(true);
-              }
-            } catch (e) {
-              setIsFormUnlocked(false);
-            } finally {
-              setIsValidatingCode(false);
+        if (res.data.delivery_charge !== undefined)
+          setDeliveryCharge(res.data.delivery_charge);
+
+        if (res.data.rest_open)
+          setRestOpen(res.data.rest_open.substring(0, 5));
+
+        if (res.data.rest_close)
+          setRestClose(res.data.rest_close.substring(0, 5));
+
+        if (res.data.table_prelock_duration !== undefined)
+          setTablePrelockDuration(res.data.table_prelock_duration);
+
+        if (res.data.otp !== undefined)
+          setOtpEnabled(res.data.otp === 1);
+
+        if (res.data.captcha !== undefined)
+          setCaptchaEnabled(res.data.captcha === 1);
+
+        // 🔥 AUTO VERIFY ON LOAD
+        if (res.data.api_key && res.data.branch_id) {
+          setIsValidatingCode(true);
+
+          try {
+            const verifyRes = await api.post("/branches/verify", {
+              api_key: res.data.api_key,
+              code: res.data.branch_id ? String(res.data.branch_id) : null
+            });
+
+            if (verifyRes.data?.message) {
+              setApiMessage(verifyRes.data.message);
             }
+
+            if (
+              verifyRes.data?.status === true &&
+              verifyRes.data?.data &&
+              String(verifyRes.data.data.branch_id) ===
+                String(res.data.branch_id)
+            ) {
+              setIsFormUnlocked(true);
+            } else {
+              setIsFormUnlocked(false);
+            }
+          } catch (e) {
+            setIsFormUnlocked(false);
+            setApiMessage("Connection failed");
+          } finally {
+            setIsValidatingCode(false);
           }
         }
-        setLoading(false);
-        setInitialLoadDone(true); // Mark that initial load is finished
-      })
-      .catch((err) => {
-        console.error("Error fetching settings", err);
-        setLoading(false);
-        setInitialLoadDone(true);
-      });
-  }, []);
+      }
+    } catch (err) {
+      console.error("Error fetching settings", err);
+    } finally {
+      setLoading(false);
+      setInitialLoadDone(true);
+    }
+  };
 
-  // 2. Debounce -> Save to DB -> Verify via branches.js
+  fetchSettings();
+}, []);
+
   useEffect(() => {
-    if (!initialLoadDone) return; // Don't run while the page is still loading
+    if (!initialLoadDone) return;
 
-    // const safeCode = String(companyCode);
-    const safeBranchId = String(branchId);
+    const safeCode = String(branchId).trim() || null; // Will be null if empty
+    const safeApiKey = String(apiKey).trim();
 
-    // Combine them to check if EITHER changed
-    const currentCombined = safeBranchId + "-" + apiKey;
+    // Prevent unnecessary calls if nothing actually changed
+    const currentCombined = `${safeCode}-${safeApiKey}`;
     if (currentCombined === prevCodeRef.current) return;
-    prevCodeRef.current = currentCombined; // Update the ref
+    prevCodeRef.current = currentCombined;
 
-    if (!safeBranchId.trim() || !apiKey.trim()) {
+    // If API key is empty, stop completely
+    if (!safeApiKey) {
       setIsFormUnlocked(false);
       setIsValidatingCode(false);
-      setApiMessage(""); // Clear message if empty
+      setApiMessage("");
       return;
     }
 
-    setIsFormUnlocked(false); // Lock the form instantly
-    setIsValidatingCode(true); // Show "Verifying..."
-    setApiMessage(""); // Clear old message while validating
+    // Lock the form while typing/verifying
+    setIsFormUnlocked(false);
+    setIsValidatingCode(true);
+    setApiMessage("");
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        // STEP A: Store inside database FIRST
-        await api.post("/settings/update", {
-          company_code: safeCode,
-          branch_id: branchId ? Number(branchId) : null, // Handle null appropriately
-          delivery_charge: deliveryCharge,
-          rest_open: restOpen,
-          rest_close: restClose,
-          table_prelock_duration: tablePrelockDuration,
-          otp: otpEnabled ? 1 : 0,
-          captcha: captchaEnabled ? 1 : 0,
-          api_key: apiKey 
+        
+        // Trigger Verification via our new backend route
+        const res = await api.post("/branches/verify", {
+          api_key: safeApiKey,
+          code: safeCode
         });
 
-        // STEP B: The verification process starts automatically
-        const res = await api.get(`/branches`);
-
-        // Capture the exact message string from the API
-        if (res.data && res.data.message) {
+        if (res.data?.message) {
           setApiMessage(res.data.message);
         }
 
-        if (res.data && res.data.status === true) {
-          const branch = res.data.data;
-
-          // 🔍 CHECK BRANCH MATCH
-          if (!branch || String(branch.branch_id) !== String(safeBranchId)) {
-  setIsFormUnlocked(false);
-  toast.error("Invalid Branch ID or API Key");
-  return;
-}
-
-          // ✅ Branch valid OR empty (means all branches)
+        // If backend verification succeeds, unlock form
+        if (res.data?.status === true) {
           setIsFormUnlocked(true);
-          toast.success("Settings saved & Company Verified!");
         } else {
           setIsFormUnlocked(false);
-
-          if (res.data.message !== "Company found but no branches available") {
-            toast.error("Invalid Branch ID or API Key");
-          }
         }
       } catch (error) {
         setIsFormUnlocked(false);
         setApiMessage("Error connecting to server");
-        toast.error("No company found or network error.");
       } finally {
         setIsValidatingCode(false);
       }
-    }, 1000); // Waits 1000ms (1 second) after the user stops typing
+    }, 1000);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [
-    companyCode,
-    branchId,
-    deliveryCharge,
-    restOpen,
-    restClose,
-    tablePrelockDuration,
-    otpEnabled,
-    captchaEnabled,
-    initialLoadDone,
-    apiKey
-  ]);
+  }, [branchId, apiKey, initialLoadDone]);
 
   // 3. Handle Submit (Manual Save Button)
   const handleSubmit = async (e) => {
@@ -200,7 +188,7 @@ export default function Settings() {
         table_prelock_duration: tablePrelockDuration,
         otp: otpEnabled ? 1 : 0,
         captcha: captchaEnabled ? 1 : 0,
-        api_key: apiKey 
+        api_key: apiKey,
       });
       toast.success("Settings updated successfully!");
     } catch (err) {
@@ -251,126 +239,104 @@ export default function Settings() {
           className="bg-[#111111] p-8 rounded-2xl shadow-2xl border border-[#222]"
         >
           <div className="space-y-6">
-            {/* --- API KEY (NEW FIELD) --- */}
-            <div className="group">
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
-                  API Key
-                </label>
-                {isValidatingCode && (
-  <span className="text-[#007BFF] text-[10px] font-bold animate-pulse">
-    Verifying API Key...
-  </span>
-)}
+            {/* --- CONNECTION SETTINGS --- */}
+            <div className="group pt-2 pb-2">
+              <h3 className="text-[#007BFF] font-bold tracking-wider text-sm mb-4">
+                Connection Settings
+              </h3>
 
-{!isValidatingCode && apiKey && apiMessage && (
-  <span className={`text-[20px] font-bold ${
-    apiMessage === "Branch found"
-      ? "text-green-500"
-      : "text-red-500"
-  }`}>
-    {apiMessage === "Branch found" ? "Valid Key" : "Invalid Key"}
-  </span>
-)} 
-              </div>
+              {/* Grid Container to put API Key and Branch ID side-by-side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                
+                {/* --- API KEY --- */}
+                <div className="group">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
+                      API Key
+                    </label>
+                  </div>
 
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FaKey
-                    className={`transition-colors ${
-                      isFormUnlocked
-                        ? "text-green-500"
-                        : "text-[#555] group-focus-within:text-[#007BFF]"
-                    }`}
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <FaKey
+                        className={`transition-colors ${
+                          isFormUnlocked
+                            ? "text-green-500"
+                            : "text-[#555] group-focus-within:text-[#007BFF]"
+                        }`}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Enter API Key"
+                      className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
+                        ${
+                          isFormUnlocked
+                            ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
+                            : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
+                        }`}
+                      required
+                    />
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter API Key"
-                  className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
-                    ${
-                      isFormUnlocked
-                        ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
-                        : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
-                    }`}
-                  required
-                />
-              </div>
-              <p className="mt-2 text-[10px] text-[#555] tracking-wide font-bold">
-                * Required to authenticate application requests
-              </p>
-            </div>
 
-            {/* Branch ID */}
-            <div className="group pt-4 border-t border-[#222]">
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
-                  Branch ID
-                </label>
+                {/* --- BRANCH ID / CODE --- */}
+                <div className="group">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
+                      Branch ID or Company code (Optional)
+                    </label>
+                  </div>
 
-                {/* --- DYNAMIC STATUS INDICATORS BASED ON API MESSAGE --- */}
-                {isValidatingCode && (
-                  <span className="text-[#007BFF] text-[10px] font-bold animate-pulse">
-                    Saving & Verifying...
-                  </span>
-                )}
-
-                {/* Removed branchId dependency here */}
-                {!isValidatingCode && companyCode && apiMessage && (
-                  <span
-                    className={`text-[20px] font-bold ${
-                      apiMessage === "All branches of company found" ||
-                      apiMessage === "Branch found"
-                        ? "text-green-500"
-                        : apiMessage ===
-                          "Company found but no branches available"
-                        ? "text-yellow-500"
-                        : "text-red-500"
-                    }`}
-                  >
-                    {apiMessage === "All branches of company found" ||
-                    apiMessage === "Branch found"
-                      ? "Connected"
-                      : apiMessage === "Company found but no branches available"
-                      ? "Connected but no branch available"
-                      : "✕ Invalid"}
-                  </span>
-                )}
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <FaBuilding
-                    className={`transition-colors ${
-                      isFormUnlocked
-                        ? "text-green-500"
-                        : "text-[#555] group-focus-within:text-[#007BFF]"
-                    }`}
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <FaBuilding
+                        className={`transition-colors ${
+                          isFormUnlocked
+                            ? "text-green-500"
+                            : "text-[#555] group-focus-within:text-[#007BFF]"
+                        }`}
+                      />
+                    </div>
+                    <input
+                      type="text"
+                      value={branchId}
+                      onChange={(e) => setBranchId(e.target.value)}
+                      placeholder="Leave blank for whole company"
+                      className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
+                        ${
+                          isFormUnlocked
+                            ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
+                            : apiMessage && !isFormUnlocked
+                            ? "border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
+                            : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
+                        }`}
+                    />
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  value={branchId}
-                  onChange={(e) => setBranchId(e.target.value)}
-                  className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
-                    ${
-                      isFormUnlocked
-                        ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
-                        : apiMessage ===
-                          "Company found but no branches available"
-                        ? "border-yellow-500/50 focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/30"
-                        : companyCode && !isValidatingCode
-                        ? "border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
-                        : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
-                    }`}
-                  
-                />
               </div>
-              <p className="mt-2 text-[10px] text-[#555] tracking-wide font-bold">
-                * Used for POS integration and synchronization
-              </p>
+
+              {/* --- UNIFIED INLINE MESSAGE DISPLAY BELOW FIELDS --- */}
+              <div className="min-h-[24px] mt-2">
+                {isValidatingCode ? (
+                  <span className="text-[#007BFF] text-[13px] font-bold animate-pulse flex items-center gap-2">
+                    <div className="w-3 h-3 border-2 border-[#007BFF] border-t-transparent rounded-full animate-spin"></div>
+                    Verifying Credentials...
+                  </span>
+                ) : (
+                  apiMessage && (
+                    <span
+                      className={`text-[13px] font-bold tracking-wide ${
+                        isFormUnlocked ? "text-green-500" : "text-red-500"
+                      }`}
+                    >
+                      {isFormUnlocked ? "✓ " : "✕ "} {apiMessage}
+                    </span>
+                  )
+                )}
+              </div>
             </div>
 
             {/* DELIVERY CHARGE */}

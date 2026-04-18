@@ -1,85 +1,100 @@
 const express = require('express');
-
 const router = express.Router();
-
 const db = require('../db');
-
 const axios = require('axios'); // Requires: npm install axios
 
+// Changed to POST to receive inputs from the frontend
+router.post('/verify', async (req, res) => {
+    const { api_key, code } = req.body;
 
+    if (!api_key) {
+        return res.json({
+            status: false,
+            message: "API Key is required"
+        });
+    }
 
-router.get('/', (req, res) => {
+    try {
+        const apiUrl = `https://pos.chulkani.com/company/all-branch-list?soft_api_key=${api_key}`;
+        const apiResponse = await axios.get(apiUrl);
+        const data = apiResponse.data;
 
-    const sql = "SELECT * FROM settings WHERE id = 1";
-
-    db.query(sql, async (err, result) => {
-
-        if (err) {
-            return res.status(500).json({ error: "Database error" });
-        }
-
-        const branchId = result[0]?.branch_id;
-        const soft_api_key = result[0]?.api_key;
-
-        if (!branchId || !soft_api_key) {
+        // ❌ External API rejected the request
+        if (data.status !== true) {
             return res.json({
                 status: false,
-                message: "Branch ID or API Key missing"
+                message: data.message,
+                data: []
             });
         }
 
-        try {
-            const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${branchId}?soft_api_key=${soft_api_key}`;
+        // ✅ External API returned success
+            if (data.status === true && data.data) {
+                let isMatch = false;
+                let finalBranchId = null;
+                let finalCompanyCode = null;
 
-            const apiResponse = await axios.get(apiUrl);
-            const data = apiResponse.data;
+                // 1. If type is "branch"
+                if (data.type === "branch") {
+                    // CHANGED: If code is empty (!code) OR if it matches, accept it
+                    if (!code || String(code) === String(data.data.branch_id)) {
+                        isMatch = true;
+                        finalBranchId = data.data.branch_id; 
+                        finalCompanyCode = data.data.company_id;
+                    }
+                } 
+               // 2. If type is "company"
+            else if (data.type === "company") {
+                // Safely extract company ID if data is an array
+                let compId = null;
+                if (Array.isArray(data.data) && data.data.length > 0) {
+                    compId = data.data[0].company_id || data.data[0].id;
+                } else if (!Array.isArray(data.data)) {
+                    compId = data.data.company_id || data.data.id;
+                }
 
-            // ❌ Invalid API or ID
-            if (!data.status) {
-                return res.json({
-                    status: false,
-                    message: data.message,
-                    data: []
-                });
+                // If code is empty (!code) OR if it matches, accept it
+                if (!code || String(code) === String(compId)) {
+                    isMatch = true;
+                    finalBranchId = null; 
+                    finalCompanyCode = compId;
+                }
             }
 
-            // ✅ SUCCESS CASE
-            if (data.status === true && data.data) {
+                // 🔥 MATCH FOUND: Update Local Database
+                if (isMatch) {
+                    const updateSql = `
+                        UPDATE settings 
+                        SET api_key = ?, branch_id = ?, company_code = ?
+                        WHERE id = 1
+                    `;
 
-                const branchData = data.data;
+                    db.query(updateSql, [api_key, finalBranchId, finalCompanyCode], (err) => {
+                        if (err) console.error("DB update error:", err);
+                    });
 
-                const branch_id = branchData.branch_id;
-                const company_id = branchData.company_id;
+                    return res.json({
+                        status: true,
+                        message: "Connected", // Success message
+                        data: data.data
+                    });
+                } 
+                // ❌ MATCH FAILED
+                else {
+                    return res.json({
+                        status: false,
+                        message: "wrong company code or branch id"
+                    });
+                }
+            }
 
-                // 🔥 UPDATE DB WITH VERIFIED DATA
-                const updateSql = `
-                    UPDATE settings 
-                    SET branch_id = ?, company_code = ?
-                    WHERE id = 1
-                `;
-
-                db.query(updateSql, [branch_id, company_id], (err) => {
-    if (err) {
-        console.error("DB update error:", err);
+    } catch (error) {
+        console.error("External API Error:", error.message);
+        return res.status(502).json({
+            status: false,
+            message: "External API error"
+        });
     }
 });
-
-                return res.json({
-                    status: true,
-                    message: data.message,
-                    data: branchData
-                });
-            }
-
-        } catch (error) {
-            return res.status(502).json({
-                status: false,
-                message: "External API error"
-            });
-        }
-    });
-});
-
-
 
 module.exports = router;

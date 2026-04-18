@@ -49,7 +49,6 @@ router.get('/', (req, res) => {
 // 2. UPDATE or INSERT Settings 
 router.post('/update', (req, res) => {
     const { 
-        company_code, 
         branch_id,
         delivery_charge, 
         rest_open, 
@@ -70,11 +69,11 @@ router.post('/update', (req, res) => {
     const safeOtp = otp === 1 ? 1 : 0;
     const safeCaptcha = captcha === 1 ? 1 : 0;
 
-    // This logic updates all fields
+    // Notice: company_code is completely removed. 
+    // This safely updates all other fields while leaving company_code completely untouched!
     const sql = `
         INSERT INTO settings (
             id, 
-            company_code, 
             branch_id,
             delivery_charge, 
             rest_open, 
@@ -84,10 +83,9 @@ router.post('/update', (req, res) => {
             captcha, 
             api_key
         ) 
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?) 
         ON DUPLICATE KEY UPDATE 
-            company_code = VALUES(company_code),
-            branch_id= VALUES(branch_id),
+            branch_id = VALUES(branch_id),
             delivery_charge = VALUES(delivery_charge),
             rest_open = VALUES(rest_open),
             rest_close = VALUES(rest_close),
@@ -97,8 +95,8 @@ router.post('/update', (req, res) => {
             api_key = VALUES(api_key)
     `;
     
+    // Exactly 8 values to match the 8 question mark (?) placeholders above
     const values = [
-        company_code, 
         branch_id,
         safeDeliveryCharge, 
         rest_open, 
