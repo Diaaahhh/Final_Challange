@@ -229,20 +229,48 @@ router.get('/list', async (req, res) => {
 // --- ROUTE: GET BRANCH LIST ---
 router.get('/branches', async (req, res) => {
     try {
-        const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}?soft_api_key=${soft_api_key}`;
+        // 1. Fetch the api_key from the local settings table
+        const settingsResult = await new Promise((resolve, reject) => {
+            db.query("SELECT api_key FROM settings WHERE id = 1", (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
+
+        const soft_api_key = settingsResult[0]?.api_key;
+        
+        if (!soft_api_key) {
+            return res.json([]); // Return empty array if no API key is set
+        }
+
+        // 2. Use the fetched soft_api_key
+        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
         
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}` }
         });
 
         if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            return res.json([]); // Fail safely
+            return res.json([]); // Fail safely on Laravel HTML error
         }
 
-        const branches = Array.isArray(response.data) ? response.data : (response.data.data || []);
+        // 3. Normalize the data so MenuList.jsx ALWAYS receives an array
+        let branches = [];
+        if (response.data && response.data.status === true) {
+            if (response.data.type === "company" && Array.isArray(response.data.data)) {
+                // It's a company, data is already an array of branches
+                branches = response.data.data;
+            } else if (response.data.type === "branch" && typeof response.data.data === 'object') {
+                // It's a single branch object, wrap it in an array for the frontend
+                branches = [response.data.data];
+            }
+        }
+
+        // Send the perfectly formatted array to MenuList.jsx
         res.json(branches);
+
     } catch (error) {
+        console.error("Error fetching branches for menu:", error.message);
         res.json([]); // Fail safely
     }
 });

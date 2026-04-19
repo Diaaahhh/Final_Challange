@@ -36,9 +36,10 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
     if (!phone) return res.status(400).json({ success: false, message: "Phone number is required" });
 
     try {
-        // Fetch company_code dynamically from settings
-        const settings = await queryPromise("SELECT company_code FROM settings WHERE id = 1");
+        // FIX 1: Fetch BOTH company_code and api_key dynamically from settings
+        const settings = await queryPromise("SELECT company_code, api_key FROM settings WHERE id = 1");
         const companyCode = settings[0]?.company_code || '26672691';
+        const soft_api_key = settings[0]?.api_key; // Extract api_key
 
         // 1. Call the external API for customers
         const apiUrl = `https://pos.chulkani.com/branch/all_customer?company_id=${companyCode}`;
@@ -66,30 +67,36 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         // ==========================================
         let branchPhone = "the restaurant"; // Default fallback
         try {
-            const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}?soft_api_key=${soft_api_key}`;
-            const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
+            // FIX 2: Only attempt to fetch if the API key exists in the database
+            if (soft_api_key) {
+                const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
+                const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
 
-            let branches = [];
-            if (branchRes.data && branchRes.data.data && branchRes.data.data.branches) {
-                branches = branchRes.data.data.branches;
-            } else if (branchRes.data && Array.isArray(branchRes.data.data)) {
-                branches = branchRes.data.data;
-            } else if (Array.isArray(branchRes.data)) {
-                branches = branchRes.data;
-            }
+                // FIX 3: Safely parse branches based on Chulkani API structure (Object vs Array)
+                let branches = [];
+                if (branchRes.data && branchRes.data.status === true) {
+                    if (branchRes.data.type === "company" && Array.isArray(branchRes.data.data)) {
+                        branches = branchRes.data.data;
+                    } else if (branchRes.data.type === "branch" && typeof branchRes.data.data === 'object') {
+                        branches = [branchRes.data.data];
+                    } else if (branchRes.data.data && Array.isArray(branchRes.data.data.branches)) {
+                        branches = branchRes.data.data.branches;
+                    }
+                }
 
-            // FIX: Check both 'branch_id' and 'id' just in case the API structure varies
-            const matchedBranch = branches.find(b => String(b.branch_id) === String(branch_id) || String(b.id) === String(branch_id));
+                // Check both 'branch_id' and 'id' just in case the API structure varies
+                const matchedBranch = branches.find(b => String(b.branch_id) === String(branch_id) || String(b.id) === String(branch_id));
 
-            if (matchedBranch) {
-                // FIX: Check multiple possible property names for the phone number
-                branchPhone = matchedBranch.phone || matchedBranch.branch_phone || matchedBranch.contact_number || "the restaurant";
+                if (matchedBranch) {
+                    // Check multiple possible property names for the phone number
+                    branchPhone = matchedBranch.phone || matchedBranch.branch_phone || matchedBranch.contact_number || "the restaurant";
+                }
             }
         } catch (branchErr) {
             console.error("Failed to fetch branch info for error message:", branchErr.message);
         }
 
-        // FIX: Return Status 200 so the console doesn't show a red error!
+        // Return Status 200 so the console doesn't show a red error!
         // We use 'success: false' to tell the frontend the user wasn't found.
         return res.status(200).json({
             success: false,
@@ -107,26 +114,42 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 // ==========================================
 router.get('/branches', async (req, res) => {
     try {
-        const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}?soft_api_key=${soft_api_key}`;
-        const response = await axios.get(apiUrl, { headers: { 'Accept': 'application/json' } });
+        // 1. Fetch the api_key from the local settings table
+        const settingsResult = await queryPromise("SELECT api_key FROM settings WHERE id = 1");
+        const soft_api_key = settingsResult[0]?.api_key;
+        
+        if (!soft_api_key) {
+            return res.json([]); // Return empty array if no API key is set
+        }
 
+        // 2. Fetch branches from external API safely
+        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
+        const response = await axios.get(apiUrl, { 
+            headers: { 'Accept': 'application/json' } 
+        });
+        
         if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            throw new Error("Laravel block");
+            return res.json([]); // Fail safely if Laravel throws an HTML error
         }
 
+        // 3. Normalize the data so Reservation.jsx ALWAYS receives an array
         let branches = [];
-        if (response.data && response.data.data && response.data.data.branches) {
-            branches = response.data.data.branches;
-        } else if (response.data && Array.isArray(response.data.data)) {
-            branches = response.data.data;
-        } else if (Array.isArray(response.data)) {
-            branches = response.data;
+        if (response.data && response.data.status === true) {
+            if (response.data.type === "company" && Array.isArray(response.data.data)) {
+                branches = response.data.data;
+            } else if (response.data.type === "branch" && typeof response.data.data === 'object') {
+                branches = [response.data.data];
+            } else if (response.data.data && Array.isArray(response.data.data.branches)) {
+                branches = response.data.data.branches;
+            }
         }
 
+        // Send the perfectly formatted array to the frontend
         res.json(branches);
-    } catch (error) {
-        res.json([]);
+
+    } catch (err) {
+        console.warn("Error fetching branches for reservation:", err.message);
+        res.json([]); // Fail safely
     }
 });
 

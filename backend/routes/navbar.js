@@ -25,32 +25,36 @@ router.get("/logo", async (req, res) => {
     const response = await axios.get(
       `https://pos.chulkani.com/company/user-details/${companyCode}`
     );
-console.log('Full API Response:', JSON.stringify(response.data, null, 2));
 
-    const data = response.data.data;
+    // ==========================================
+    // ADDED CONSOLE LOG HERE
+    // ==========================================
+    console.log("External API Response for Logo:", JSON.stringify(response.data, null, 2));
 
-    const logoItem = data.find(item => item.image);
-
-    if (!logoItem) {
-      return res.status(404).send("No logo found");
+    // FIX 1: Don't throw 404. Just cleanly return success: false
+    if (!response.data || !response.data.data) {
+        return res.json({ success: false, message: "No company data found", logo: null });
     }
 
+    const data = response.data.data;
+    
+    // Safely find the item that contains the image property
+    const logoItem = Array.isArray(data) ? data.find(item => item.image) : (data.image ? data : null);
+
+    // FIX 2: Again, cleanly return success: false instead of an error status
+    if (!logoItem || !logoItem.image) {
+      return res.json({ success: false, message: "No logo found for this company", logo: null });
+    }
+
+    // Construct the full URL
     const logoUrl = `https://pos.chulkani.com/assets/uploads/user_logo/${logoItem.image}`;
 
-    // FETCH IMAGE FROM POS SERVER
-    const imageResponse = await axios.get(logoUrl, {
-      responseType: "arraybuffer",
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
-
-    res.set("Content-Type", "image/png");
-    res.send(imageResponse.data);
+    res.json({ success: true, logo: logoUrl });
 
   } catch (error) {
     console.error("Logo fetch error:", error.message);
-    res.status(500).send("Failed to fetch logo");
+    // FIX 3: Don't crash the frontend if the external API is down.
+    res.json({ success: false, message: "Failed to fetch logo", logo: null });
   }
 });
 

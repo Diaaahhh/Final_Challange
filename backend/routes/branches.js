@@ -3,6 +3,37 @@ const router = express.Router();
 const db = require('../db');
 const axios = require('axios'); // Requires: npm install axios
 
+router.get('/', (req, res) => {
+    const sql = "SELECT * FROM settings WHERE id = 1";
+
+    db.query(sql, async (err, result) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        
+        if (!result || result.length === 0) {
+            return res.json({ status: false, message: "Settings not found" });
+        }
+
+        const branchId = result[0].branch_id;
+        const soft_api_key = result[0].api_key;
+
+        if (!soft_api_key) {
+            return res.json({ status: false, message: "API Key missing" });
+        }
+
+        try {
+            // If branchId exists, get that specific branch. Otherwise get all branches for the company.
+            const urlPath = branchId ? `/${branchId}` : '';
+            const apiUrl = `https://pos.chulkani.com/company/all-branch-list${urlPath}?soft_api_key=${soft_api_key}`;
+
+            const apiResponse = await axios.get(apiUrl);
+            return res.json(apiResponse.data);
+
+        } catch (error) {
+            console.error("External API Error:", error.message);
+            return res.status(502).json({ status: false, message: "External API error" });
+        }
+    });
+});
 // Changed to POST to receive inputs from the frontend
 router.post('/verify', async (req, res) => {
     const { api_key, code } = req.body;
@@ -61,12 +92,16 @@ router.post('/verify', async (req, res) => {
                 }
             }
 
-                // 🔥 MATCH FOUND: Update Local Database
+               // 🔥 MATCH FOUND: Update Local Database
                 if (isMatch) {
+                    // Upgraded to UPSERT so it saves even if the database table is completely empty
                     const updateSql = `
-                        UPDATE settings 
-                        SET api_key = ?, branch_id = ?, company_code = ?
-                        WHERE id = 1
+                        INSERT INTO settings (id, api_key, branch_id, company_code)
+                        VALUES (1, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE 
+                            api_key = VALUES(api_key), 
+                            branch_id = VALUES(branch_id), 
+                            company_code = VALUES(company_code)
                     `;
 
                     db.query(updateSql, [api_key, finalBranchId, finalCompanyCode], (err) => {
@@ -78,7 +113,7 @@ router.post('/verify', async (req, res) => {
                         message: "Connected", // Success message
                         data: data.data
                     });
-                } 
+                }
                 // ❌ MATCH FAILED
                 else {
                     return res.json({

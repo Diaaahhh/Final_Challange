@@ -159,6 +159,9 @@ export default function Settings() {
         // If backend verification succeeds, unlock form
         if (res.data?.status === true) {
           setIsFormUnlocked(true);
+          
+          // Auto-fill process removed. The input will now stay empty if the user leaves it empty.
+          
         } else {
           setIsFormUnlocked(false);
         }

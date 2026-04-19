@@ -18,27 +18,51 @@ const getCompanyCode = () => {
 // 1. GET BRANCH LIST 
 router.get('/branches', async (req, res) => {
     try {
-        const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/${companyCode}?soft_api_key=${soft_api_key}`;
-        const response = await axios.get(apiUrl, { headers: { 'Accept': 'application/json' } });
+        // 1. Fetch the api_key from the local settings table
+        const settingsResult = await new Promise((resolve, reject) => {
+            db.query("SELECT api_key FROM settings WHERE id = 1", (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
+
+        const soft_api_key = settingsResult[0]?.api_key;
+        
+        if (!soft_api_key) {
+            return res.json([]); // Return empty array if no API key is set
+        }
+
+        // 2. Safely use the fetched soft_api_key
+        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
+        const response = await axios.get(apiUrl, { 
+            headers: { 'Accept': 'application/json' } 
+        });
         
         if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            throw new Error("Laravel block");
+            return res.json([]); // Fail safely if Laravel throws an HTML error
         }
 
+        // 3. Normalize the data so MenuUser.jsx ALWAYS receives an array
         let branches = [];
-        if (response.data && response.data.data && response.data.data.branches) {
-            branches = response.data.data.branches;
-        } else if (response.data && Array.isArray(response.data.data)) {
-            // ---> THIS is the missing check! It grabs the array from the 'data' key <---
-            branches = response.data.data;
-        } else if (Array.isArray(response.data)) {
-            branches = response.data;
+        if (response.data && response.data.status === true) {
+            if (response.data.type === "company" && Array.isArray(response.data.data)) {
+                // If it's a company, data is already an array of branches
+                branches = response.data.data;
+            } else if (response.data.type === "branch" && typeof response.data.data === 'object') {
+                // If it's a single branch object, wrap it in an array for the frontend
+                branches = [response.data.data];
+            } else if (response.data.data && Array.isArray(response.data.data.branches)) {
+                // Fallback for alternate JSON structures
+                branches = response.data.data.branches;
+            }
         }
 
+        // Send the perfectly formatted array to MenuUser.jsx
         res.json(branches);
-    } catch (error) {
-        res.json([]);
+
+    } catch (err) {
+        console.warn("Error fetching branches for menu_user:", err.message);
+        res.json([]); // Fail safely by sending an empty array instead of crashing
     }
 });
 

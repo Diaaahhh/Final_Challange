@@ -19,10 +19,7 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 2. Check for User Login Status
-
-
-  // 3. Handle Logout Logic
+  
 
 
 return (

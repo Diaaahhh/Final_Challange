@@ -44,17 +44,20 @@ export default function Navbar() {
     }
   }, []);
 
-  useEffect(() => {
-  const fetchLogo = async () => {
-    try {
-      const res = await api.get("/navbar/logo");
-      setLogo(res.data.logo);
-    } catch (err) {
-      console.error("Logo fetch failed", err);
-    }
-  };
-  fetchLogo();
-}, []);
+useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const res = await api.get("/navbar/logo");
+        // Access the 'logo' property from the JSON response
+        if (res.data && res.data.logo) {
+            setLogo(res.data.logo);
+        }
+      } catch (err) {
+        console.error("Logo fetch failed", err.message);
+      }
+    };
+    fetchLogo();
+  }, []);
 
 const handleLogout = () => {
     localStorage.removeItem('token');

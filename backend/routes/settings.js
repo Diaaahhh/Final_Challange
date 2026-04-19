@@ -69,8 +69,8 @@ router.post('/update', (req, res) => {
     const safeOtp = otp === 1 ? 1 : 0;
     const safeCaptcha = captcha === 1 ? 1 : 0;
 
-    // Notice: company_code is completely removed. 
-    // This safely updates all other fields while leaving company_code completely untouched!
+    // Notice: branch_id and api_key have been REMOVED from the UPDATE clause.
+    // This stops the manual "Save" button from erasing your verified credentials!
     const sql = `
         INSERT INTO settings (
             id, 
@@ -85,14 +85,12 @@ router.post('/update', (req, res) => {
         ) 
         VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?) 
         ON DUPLICATE KEY UPDATE 
-            branch_id = VALUES(branch_id),
             delivery_charge = VALUES(delivery_charge),
             rest_open = VALUES(rest_open),
             rest_close = VALUES(rest_close),
             table_prelock_duration = VALUES(table_prelock_duration),
             otp = VALUES(otp),
-            captcha = VALUES(captcha),
-            api_key = VALUES(api_key)
+            captcha = VALUES(captcha)
     `;
     
     // Exactly 8 values to match the 8 question mark (?) placeholders above
@@ -115,7 +113,6 @@ router.post('/update', (req, res) => {
         return res.json({ message: "Settings updated successfully" });
     });
 });
-
 // GET Theme Setting
 router.get('/get-theme', async (req, res) => {
     try {
