@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import api from "../../api"; // Make sure the path to your api.js is correct
 import {
   FaUtensils,
   FaListUl,
@@ -12,13 +13,31 @@ import {
   FaCog,
   FaStore,
   FaFolderPlus,
-  FaTachometerAlt
+  FaTachometerAlt,
 } from "react-icons/fa";
-
+import { IMAGE_BASE_URL } from "../../config"; // Adjust path as needed
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const [portfolioOpen, setPortfolioOpen] = useState(false);
+  const [logo, setLogo] = useState(null); // STATE FOR LOGO
   const location = useLocation();
+
+  // FETCH LOGO ON MOUNT
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const res = await api.get("/navbar/logo");
+        if (res.data && res.data.success === true && res.data.logo) {
+          setLogo(res.data.logo);
+        } else {
+          setLogo(null);
+        }
+      } catch (err) {
+        console.error("Logo fetch failed", err.message);
+      }
+    };
+    fetchLogo();
+  }, []);
 
   // Helper to check active link for styling
   const isActive = (path) => {
@@ -35,6 +54,7 @@ export default function Sidebar() {
       icon: FaCalendarAlt,
       label: "Reservations",
     },
+    { path: "/admin/upload_logo", icon: FaImage, label: "Upload Logo" }, // <--- ADD THIS LINE
     { path: "/admin/write_about", icon: FaPenNib, label: "Write About" },
     { path: "/admin/upload_hero", icon: FaImage, label: "Upload Banner" },
     { path: "/admin/settings", icon: FaCog, label: "Settings" },
@@ -51,36 +71,50 @@ export default function Sidebar() {
         } bg-[#0A0A0A] border-r border-[#1E1E1E] transition-all duration-300 ease-in-out flex flex-col h-full overflow-hidden`}
       >
         {/* Header */}
-        <div className="h-20 flex items-center justify-center border-b border-[#1E1E1E] bg-[#111111]">
+        <div className="h-[170px] flex items-center justify-center border-b border-[#1E1E1E] bg-[#111111]">
           <div
-            className={`text-2xl  tracking-widest text-white ${
+            className={`text-2xl tracking-widest text-white w-full px-4 ${
               !isOpen && "lg:hidden"
             }`}
           >
-            <div className="navbar-start w-auto mr-0">
+            {/* --- REPLACED LOGO SECTION --- */}
+            <div className="navbar-start w-full flex justify-center">
               <Link
                 to="/"
-                className="group flex flex-col items-center leading-none"
+                className="group flex flex-col items-center justify-center leading-none"
               >
-                <h2 className="text-4xl  italic tracking-wider">
-                  <span className="text-white group-hover:text-[#007BFF] transition-colors">
-                    Khabar
-                  </span>
-                  <span className="text-[#C59D5F] group-hover:text-white transition-colors">
-                    Table
-                  </span>
-                </h2>
-                <p className="text-xs tracking-[0.4em] text-[#A0A0A0]  mt-1 group-hover:tracking-[0.5em] transition-all duration-300">
-                  .com
-                </p>
+                <div className="w-[150px] h-[150px] flex items-center justify-center overflow-hidden">
+                  {logo ? (
+                    <img
+                      src={`${IMAGE_BASE_URL}/uploads/logo/${logo}`}
+                      alt="Company Logo"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    // Fallback Text Logo if no image is found
+                    <div className="text-center">
+                      <h2 className="text-3xl italic tracking-wider">
+                        <span className="text-white group-hover:text-[#007BFF] transition-colors">
+                          Khabar
+                        </span>
+                        <span className="text-[#C59D5F] group-hover:text-white transition-colors">
+                          Table
+                        </span>
+                      </h2>
+                      <p className="text-[10px] tracking-[0.4em] text-[#A0A0A0] mt-1 group-hover:tracking-[0.5em] transition-all duration-300">
+                        .com
+                      </p>
+                    </div>
+                  )}
+                </div>
               </Link>
             </div>
+            {/* --- END REPLACED LOGO SECTION --- */}
           </div>
         </div>
 
         {/* NAVIGATION */}
         <nav className="flex-1 py-6 flex flex-col gap-1 px-3 overflow-y-auto">
-
           {menuItems.map((item) => (
             <Link
               key={item.path}
@@ -135,10 +169,8 @@ export default function Sidebar() {
                   View Portfolio
                 </Link>
               </div>
-              
             )}
           </div>
-
         </nav>
       </div>
     </div>

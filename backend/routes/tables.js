@@ -8,7 +8,7 @@ router.get('/get-tables/:company_id/:branch_id', async (req, res) => {
 
    try {
         // Call the external API using GET 
-        const response = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${company_id}&branch_id=${branch_id}`);
+        const response = await axios.get(`https://pos.khabartable.com/branch/order/website/table?company_id=${company_id}&branch_id=${branch_id}`);
 
         // The Laravel API returns JSON with { status, message, data }
         if (response.data && response.data.status === true) {

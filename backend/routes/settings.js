@@ -1,3 +1,6 @@
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const router = express.Router();
 const db = require('../db'); 
@@ -11,6 +14,41 @@ const queryPromise = (sql, params = []) => {
         });
     });
 };
+// Upload directory
+const uploadDir = path.join(__dirname, '../public/uploads/logo'); 
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure Multer
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir); 
+    },
+    filename: function (req, file, cb) {
+        cb(null, 'logo-' + Date.now() + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage: storage });
+
+// POST route to upload logo
+router.post('/upload-logo', upload.single('logo'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file uploaded" });
+    }
+
+    const filename = req.file.filename;
+
+    // Save filename to database
+    db.query("UPDATE settings SET logo = ? WHERE id = 1", [filename], (err) => {
+        if (err) {
+            console.error("DB Error saving logo:", err);
+            return res.status(500).json({ success: false, message: "Database error" });
+        }
+        res.json({ success: true, message: "Logo updated successfully", logo: filename });
+    });
+});
+
 // 1. GET Current Settings
 router.get('/', (req, res) => {
     // Select all the columns from the settings table

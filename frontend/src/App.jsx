@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import api from "./api"; // <--- Ensure API is imported for fetching the theme
 
 // Import Components
@@ -9,7 +15,7 @@ import Signup from "./Components/Authentication/Signup";
 import Login from "./Components/Authentication/Login";
 import Footer from "./Components/Footer/Footer";
 import { CartProvider } from "./Components/Cart/CartContext";
-import CartSidebar from "./Components/Cart/CartSidebar"; 
+import CartSidebar from "./Components/Cart/CartSidebar";
 
 // Admin Imports
 import AdminLayout from "./Components/Layout/AdminLayout";
@@ -36,15 +42,46 @@ import BranchUser from "./Components/Contact/BranchUser";
 import CreatePortfolio from "./Components/Portfolio/CreatePortfolio";
 import PortfolioUser from "./Components/Portfolio/PortfolioUser";
 import ViewPortfolio from "./Components/Portfolio/ViewPortfolio";
+import UploadLogo from "./Components/Header/UploadLogo";
 
 // --- DYNAMIC THEME DICTIONARY ---
 export const themes = {
-  1: { navbar: "#0E1014", body: "#F3F4F7", footer: "#0E1014", accent: "#C59D5F" }, // Dark & Gold (Your Default)
-  2: { navbar: "#1E3A8A", body: "#f2e9e1", footer: "#1E3A8A", accent: "#FBBF24" }, // Blue & Yellow
-  3: { navbar: "#064E3B", body: "#ECFDF5", footer: "#064E3B", accent: "#34D399" }, // Green & Mint
-  4: { navbar: "#7F1100", body: "#f2e9e1", footer: "#02332D", accent: "#BF9861" }, // Green & Mint
-  5: { navbar: "#ae341e", body: "#EFD9C7", footer: "#a36546", accent: "#F1BD78" }, // Green & Mint
-  6: { navbar: "#6a4162", body: "#fefafa", footer: "#f6d2d6", accent: "#d46a92" }, // Green & Mint
+  1: {
+    navbar: "#0E1014",
+    body: "#F3F4F7",
+    footer: "#0E1014",
+    accent: "#C59D5F",
+  }, // Dark & Gold (Your Default)
+  2: {
+    navbar: "#1E3A8A",
+    body: "#f2e9e1",
+    footer: "#1E3A8A",
+    accent: "#FBBF24",
+  }, // Blue & Yellow
+  3: {
+    navbar: "#064E3B",
+    body: "#ECFDF5",
+    footer: "#064E3B",
+    accent: "#34D399",
+  }, // Green & Mint
+  4: {
+    navbar: "#7F1100",
+    body: "#f2e9e1",
+    footer: "#02332D",
+    accent: "#BF9861",
+  }, // Green & Mint
+  5: {
+    navbar: "#ae341e",
+    body: "#EFD9C7",
+    footer: "#a36546",
+    accent: "#F1BD78",
+  }, // Green & Mint
+  6: {
+    navbar: "#6a4162",
+    body: "#fefafa",
+    footer: "#f6d2d6",
+    accent: "#d46a92",
+  }, // Green & Mint
 };
 
 // --- ADMIN PROTECTION GUARD ---
@@ -89,7 +126,7 @@ function App() {
     const fetchTheme = async () => {
       try {
         // Fetch theme_id from your new settings API endpoint
-        const res = await api.get("/settings/get-theme"); 
+        const res = await api.get("/settings/get-theme");
         if (res.data && res.data.theme_id && themes[res.data.theme_id]) {
           setCurrentTheme(themes[res.data.theme_id]);
         }
@@ -102,10 +139,22 @@ function App() {
 
   // --- INJECT CSS VARIABLES GLOBALLY ---
   useEffect(() => {
-    document.documentElement.style.setProperty('--theme-navbar', currentTheme.navbar);
-    document.documentElement.style.setProperty('--theme-body', currentTheme.body);
-    document.documentElement.style.setProperty('--theme-footer', currentTheme.footer);
-    document.documentElement.style.setProperty('--theme-accent', currentTheme.accent);
+    document.documentElement.style.setProperty(
+      "--theme-navbar",
+      currentTheme.navbar
+    );
+    document.documentElement.style.setProperty(
+      "--theme-body",
+      currentTheme.body
+    );
+    document.documentElement.style.setProperty(
+      "--theme-footer",
+      currentTheme.footer
+    );
+    document.documentElement.style.setProperty(
+      "--theme-accent",
+      currentTheme.accent
+    );
     document.body.style.backgroundColor = currentTheme.body;
   }, [currentTheme]);
 
@@ -129,7 +178,7 @@ function App() {
 
       <CartSidebar />
       <Toaster position="top-right" />
-      
+
       <Routes>
         <Route path="/" element={<HomeDecision />} />
         <Route path="/signup" element={<Signup />} />
@@ -141,13 +190,53 @@ function App() {
         <Route path="/portfolio_user" element={<PortfolioUser />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
-        
-        <Route path="/address" element={<div className="min-h-screen flex items-center justify-center pt-20"><h1 className="text-3xl font-bold"><Address /></h1></div>} />
-        <Route path="/branch_user" element={<div className="bg-base-200 min-h-screen"><BranchUser /></div>} />
-        <Route path="/review" element={<div className="pt-24 pb-12 bg-base-200 min-h-screen"><WriteReview /></div>} />
-        <Route path="/map" element={<div className="min-h-screen flex items-center justify-center pt-20"><h1 className="text-3xl font-bold"><Map /></h1></div>} />
 
-        <Route path="/admin" element={<AdminGuard><AdminLayout /></AdminGuard>}>
+        <Route
+          path="/address"
+          element={
+            <div className="min-h-screen flex items-center justify-center pt-20">
+              <h1 className="text-3xl font-bold">
+                <Address />
+              </h1>
+            </div>
+          }
+        />
+        <Route
+          path="/branch_user"
+          element={
+            <div className="bg-base-200 min-h-screen">
+              <BranchUser />
+            </div>
+          }
+        />
+        <Route
+          path="/review"
+          element={
+            <div className="pt-24 pb-12 bg-base-200 min-h-screen">
+              <WriteReview />
+            </div>
+          }
+        />
+        <Route
+          path="/map"
+          element={
+            <div className="min-h-screen flex items-center justify-center pt-20">
+              <h1 className="text-3xl font-bold">
+                <Map />
+              </h1>
+            </div>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <AdminGuard>
+              <AdminLayout />
+            </AdminGuard>
+          }
+        >
+          <Route path="upload_logo" element={<UploadLogo />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="create_portfolio" element={<CreatePortfolio />} />
           <Route path="branch_list" element={<Branches />} />

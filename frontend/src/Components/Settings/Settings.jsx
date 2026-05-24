@@ -41,88 +41,84 @@ export default function Settings() {
   // To track the previous code so we only save when the text ACTUALLY changes
   const prevCodeRef = useRef("");
 
- useEffect(() => {
-  const fetchSettings = async () => {
-    try {
-      const res = await api.get("/settings");
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get("/settings");
 
-      if (res.data) {
-        if (res.data.api_key) {
-          setApiKey(res.data.api_key);
-        }
+        if (res.data) {
+          if (res.data.api_key) {
+            setApiKey(res.data.api_key);
+          }
 
-        if (
-          res.data.branch_id !== null &&
-          res.data.branch_id !== undefined
-        ) {
-          setBranchId(String(res.data.branch_id));
-        }
+          if (res.data.branch_id !== null && res.data.branch_id !== undefined) {
+            setBranchId(String(res.data.branch_id));
+          }
 
-        if (res.data.delivery_charge !== undefined)
-          setDeliveryCharge(res.data.delivery_charge);
+          if (res.data.delivery_charge !== undefined)
+            setDeliveryCharge(res.data.delivery_charge);
 
-        if (res.data.rest_open)
-          setRestOpen(res.data.rest_open.substring(0, 5));
+          if (res.data.rest_open)
+            setRestOpen(res.data.rest_open.substring(0, 5));
 
-        if (res.data.rest_close)
-          setRestClose(res.data.rest_close.substring(0, 5));
+          if (res.data.rest_close)
+            setRestClose(res.data.rest_close.substring(0, 5));
 
-        if (res.data.table_prelock_duration !== undefined)
-          setTablePrelockDuration(res.data.table_prelock_duration);
+          if (res.data.table_prelock_duration !== undefined)
+            setTablePrelockDuration(res.data.table_prelock_duration);
 
-        if (res.data.otp !== undefined)
-          setOtpEnabled(res.data.otp === 1);
+          if (res.data.otp !== undefined) setOtpEnabled(res.data.otp === 1);
 
-        if (res.data.captcha !== undefined)
-          setCaptchaEnabled(res.data.captcha === 1);
+          if (res.data.captcha !== undefined)
+            setCaptchaEnabled(res.data.captcha === 1);
 
-        // 🔥 AUTO VERIFY ON LOAD
-        if (res.data.api_key && res.data.branch_id) {
-          setIsValidatingCode(true);
+          // 🔥 AUTO VERIFY ON LOAD
+          if (res.data.api_key && res.data.branch_id) {
+            setIsValidatingCode(true);
 
-          try {
-            const verifyRes = await api.post("/branches/verify", {
-              api_key: res.data.api_key,
-              code: res.data.branch_id ? String(res.data.branch_id) : null
-            });
+            try {
+              const verifyRes = await api.post("/branches/verify", {
+                api_key: res.data.api_key,
+                code: res.data.branch_id ? String(res.data.branch_id) : null,
+              });
 
-            if (verifyRes.data?.message) {
-              setApiMessage(verifyRes.data.message);
-            }
+              if (verifyRes.data?.message) {
+                setApiMessage(verifyRes.data.message);
+              }
 
-            if (
-              verifyRes.data?.status === true &&
-              verifyRes.data?.data &&
-              String(verifyRes.data.data.branch_id) ===
-                String(res.data.branch_id)
-            ) {
-              setIsFormUnlocked(true);
-            } else {
+              if (
+                verifyRes.data?.status === true &&
+                verifyRes.data?.data &&
+                String(verifyRes.data.data.branch_id) ===
+                  String(res.data.branch_id)
+              ) {
+                setIsFormUnlocked(true);
+              } else {
+                setIsFormUnlocked(false);
+              }
+            } catch (e) {
               setIsFormUnlocked(false);
+              setApiMessage("Connection failed");
+            } finally {
+              setIsValidatingCode(false);
             }
-          } catch (e) {
-            setIsFormUnlocked(false);
-            setApiMessage("Connection failed");
-          } finally {
-            setIsValidatingCode(false);
           }
         }
+      } catch (err) {
+        console.error("Error fetching settings", err);
+      } finally {
+        setLoading(false);
+        setInitialLoadDone(true);
       }
-    } catch (err) {
-      console.error("Error fetching settings", err);
-    } finally {
-      setLoading(false);
-      setInitialLoadDone(true);
-    }
-  };
+    };
 
-  fetchSettings();
-}, []);
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     if (!initialLoadDone) return;
 
-    const safeCode = String(branchId).trim() || null; // Will be null if empty
+    const safeCode = String(branchId).trim(); // Will be null if empty
     const safeApiKey = String(apiKey).trim();
 
     // Prevent unnecessary calls if nothing actually changed
@@ -131,7 +127,7 @@ export default function Settings() {
     prevCodeRef.current = currentCombined;
 
     // If API key is empty, stop completely
-    if (!safeApiKey) {
+    if (!safeApiKey || !safeCode) {
       setIsFormUnlocked(false);
       setIsValidatingCode(false);
       setApiMessage("");
@@ -145,11 +141,10 @@ export default function Settings() {
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        
         // Trigger Verification via our new backend route
         const res = await api.post("/branches/verify", {
           api_key: safeApiKey,
-          code: safeCode
+          code: safeCode,
         });
 
         if (res.data?.message) {
@@ -159,9 +154,8 @@ export default function Settings() {
         // If backend verification succeeds, unlock form
         if (res.data?.status === true) {
           setIsFormUnlocked(true);
-          
+
           // Auto-fill process removed. The input will now stay empty if the user leaves it empty.
-          
         } else {
           setIsFormUnlocked(false);
         }
@@ -250,7 +244,6 @@ export default function Settings() {
 
               {/* Grid Container to put API Key and Branch ID side-by-side */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                
                 {/* --- API KEY --- */}
                 <div className="group">
                   <div className="flex justify-between items-center mb-2">
@@ -289,7 +282,7 @@ export default function Settings() {
                 <div className="group">
                   <div className="flex justify-between items-center mb-2">
                     <label className="text-xs font-bold text-[#A0A0A0] tracking-wider group-focus-within:text-[#007BFF] transition-colors">
-                      Branch ID or Company code (Optional)
+                      Branch ID or Company code
                     </label>
                   </div>
 
@@ -305,17 +298,26 @@ export default function Settings() {
                     </div>
                     <input
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={branchId}
-                      onChange={(e) => setBranchId(e.target.value)}
-                      placeholder="Leave blank for whole company"
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        // 🔥 Allow ONLY digits
+                        if (/^\d*$/.test(value)) {
+                          setBranchId(value);
+                        }
+                      }}
                       className={`w-full bg-[#1A1A1A] border rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base
-                        ${
-                          isFormUnlocked
-                            ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
-                            : apiMessage && !isFormUnlocked
-                            ? "border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
-                            : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
-                        }`}
+    ${
+      isFormUnlocked
+        ? "border-green-500/50 focus:border-green-500 focus:ring-1 focus:ring-green-500/30"
+        : apiMessage && !isFormUnlocked
+        ? "border-red-500/50 focus:border-red-500 focus:ring-1 focus:ring-red-500/30"
+        : "border-[#2A2A2A] focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30"
+    }`}
+                      required
                     />
                   </div>
                 </div>
@@ -352,14 +354,21 @@ export default function Settings() {
                   <FaTruck className="text-[#555] group-focus-within:text-[#007BFF] transition-colors" />
                 </div>
                 <input
-                  type="number"
-                  value={deliveryCharge}
-                  disabled={!isFormUnlocked}
-                  onChange={(e) => setDeliveryCharge(e.target.value)}
-                  min="0"
-                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base disabled:opacity-40 disabled:cursor-not-allowed"
-                  required
-                />
+  type="text"
+  inputMode="numeric"
+  value={deliveryCharge}
+  disabled={!isFormUnlocked}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    // 🔥 Only allow numbers
+    if (/^\d*$/.test(value)) {
+      setDeliveryCharge(value);
+    }
+  }}
+  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-[#007BFF] focus:ring-1 focus:ring-[#007BFF]/30 transition-all placeholder-[#444] font-mono tracking-wide font-bold shadow-sm text-base disabled:opacity-40 disabled:cursor-not-allowed"
+  required
+/>
               </div>
             </div>
 

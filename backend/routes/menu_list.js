@@ -97,7 +97,7 @@ router.get('/list', async (req, res) => {
         console.log("1. [MENU SYNC] /list route triggered!");
         
         const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/api/menus/${companyCode}`;
+        const apiUrl = `https://pos.khabartable.com/company/api/menus/${companyCode}`;
         
         console.log(`2. [MENU SYNC] Fetching external menus from: ${apiUrl}`);
         const response = await axios.get(apiUrl, {
@@ -244,7 +244,7 @@ router.get('/branches', async (req, res) => {
         }
 
         // 2. Use the fetched soft_api_key
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
+        const apiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
         
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}` }
@@ -279,7 +279,7 @@ router.get('/branches', async (req, res) => {
 router.get('/categories', async (req, res) => {
     try {
         const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/menu-category/${companyCode}/1`;
+        const apiUrl = `https://pos.khabartable.com/company/menu-category/${companyCode}/1`;
         
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}` }

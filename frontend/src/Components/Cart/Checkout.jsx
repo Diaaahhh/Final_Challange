@@ -44,8 +44,8 @@ export default function Checkout() {
   const [otpSent, setOtpSent] = useState(false);
   const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
-const [reservedTablesByCustomer, setReservedTablesByCustomer] = useState([]);
-const [maxTableSelection, setMaxTableSelection] = useState(1);
+  const [reservedTablesByCustomer, setReservedTablesByCustomer] = useState([]);
+  const [maxTableSelection, setMaxTableSelection] = useState(1);
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const verifyAbortRef = useRef(null);
   const lastVerifiedPhoneRef = useRef(null);
@@ -54,6 +54,7 @@ const [maxTableSelection, setMaxTableSelection] = useState(1);
   const [isPhoneSubmitted, setIsPhoneSubmitted] = useState(false);
   const [dineInTables, setDineInTables] = useState([]);
   const [loadingTables, setLoadingTables] = useState(false);
+  const [originalAddress, setOriginalAddress] = useState("");
   const navigate = useNavigate();
   const { cartItems, cartSubTotal, clearCart, cartDiscount, cartTotal } =
     useCart();
@@ -76,8 +77,7 @@ const [maxTableSelection, setMaxTableSelection] = useState(1);
       const res = await api.get(`get-dine-in-tables/${branchId}`);
       if (res.data.status) {
         setDineInTables(res.data.data);
-          setMaxTableSelection(res.data.max_table_selection || 1);
-
+        setMaxTableSelection(res.data.max_table_selection || 1);
       }
     } catch (error) {
       console.error("Error fetching dine-in tables:", error);
@@ -86,7 +86,7 @@ const [maxTableSelection, setMaxTableSelection] = useState(1);
     }
   };
 
-   // ======================================
+  // ======================================
   // 2. FETCH CUSTOMER RESERVATIONS
   // ======================================
   const fetchCustomerReservations = async (customerId, branchId) => {
@@ -94,16 +94,21 @@ const [maxTableSelection, setMaxTableSelection] = useState(1);
       const res = await api.get(
         `/customer-reservations/${customerId}/${branchId}`
       );
-
+console.log("API RAW RESPONSE:", res.data);
       if (res.data.success) {
-        const tables = res.data.tables || [];
+        let tables = res.data.tables || [];
 
-        setReservedTablesByCustomer(tables || []);
+        // 🔥 NORMALIZE HERE
+        tables = tables.map((t) =>
+          typeof t === "object" ? String(t.table_no) : String(t)
+        );
+
+        setReservedTablesByCustomer(tables);
 
         if (tables.length > 0) {
           setBookingData((prev) => ({
             ...prev,
-            table_no: tables
+            table_no: tables,
           }));
         }
       }
@@ -134,7 +139,7 @@ const [maxTableSelection, setMaxTableSelection] = useState(1);
   // Feed the active tables into your custom hook
   const suggestedTables = useTableSuggestion(
     personCount,
-    activeTablesForSuggestion,
+    activeTablesForSuggestion
   );
   // --- FETCH DELIVERY SETTING ON PAGE LOAD ---
   useEffect(() => {
@@ -257,22 +262,22 @@ const [maxTableSelection, setMaxTableSelection] = useState(1);
 
       const res = await api.get(
         `/get-user-by-phone/${phoneNumber}?branch_id=${branchId}`,
-        { signal: verifyAbortRef.current.signal },
+        { signal: verifyAbortRef.current.signal }
       );
 
-      if (res.data && res.data.success === true) {
+      if (res.data && res.data.success === true&& res.data.customer_id) {
         setIsPhoneSubmitted(true);
         // Fetch reservations for this customer
-if (res.data.customer_id) {
-  const firstItem = cartItems[0] || {};
-  const companyId = firstItem.m_company_id || firstItem.company_id;
-  const branchId =
-    firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
+        if (res.data.customer_id) {
+          const firstItem = cartItems[0] || {};
+          const companyId = firstItem.m_company_id || firstItem.company_id;
+          const branchId =
+            firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
 
-  if (companyId && branchId) {
-    fetchCustomerReservations(res.data.customer_id, branchId);
-  }
-}
+          if (companyId && branchId) {
+            fetchCustomerReservations(res.data.customer_id, branchId);
+          }
+        }
 
         setFormData((prev) => ({
           ...prev,
@@ -280,7 +285,8 @@ if (res.data.customer_id) {
           cust_name: res.data.name || prev.cust_name,
           address: res.data.address || prev.address,
         }));
-
+        console.log("✅ Customer verified:", res.data.customer_id);
+        setOriginalAddress(res.data.address || "");
         lastVerifiedPhoneRef.current = phoneNumber;
       } else {
         setIsPhoneSubmitted(false);
@@ -309,7 +315,7 @@ if (res.data.customer_id) {
       verifyPhone(formData.phone);
     } else {
       setIsPhoneSubmitted(false);
-      setReservedTablesByCustomer([]); 
+      setReservedTablesByCustomer([]);
       lastVerifiedPhoneRef.current = null;
     }
   }, [formData.phone]);
@@ -401,51 +407,48 @@ if (res.data.customer_id) {
   };
 
   const getTableCapacity = (tableNo) => {
-  const tables =
-    dineInTables.length > 0 ? dineInTables : availableTables;
+    const tables = dineInTables.length > 0 ? dineInTables : availableTables;
 
-  const table = tables.find(
-    (t) => String(t.table_no) === String(tableNo)
-  );
+    const table = tables.find((t) => String(t.table_no) === String(tableNo));
 
-  return Number(table?.person_no || table?.capacity || 4);
-};
+    return Number(table?.person_no || table?.capacity || 4);
+  };
 
   const handleTableSelect = (tableNo) => {
-  setBookingData((prev) => {
-    const currentTables = Array.isArray(prev.table_no) ? prev.table_no : [];
+    setBookingData((prev) => {
+      const currentTables = Array.isArray(prev.table_no) ? prev.table_no : [];
 
-    // remove if already selected
-    if (currentTables.includes(tableNo)) {
+      // remove if already selected
+      if (currentTables.includes(tableNo)) {
+        return {
+          ...prev,
+          table_no: currentTables.filter((t) => t !== tableNo),
+        };
+      }
+
+      // calculate current seat capacity
+      const currentSeatTotal = currentTables.reduce(
+        (sum, t) => sum + getTableCapacity(t),
+        0
+      );
+
+      const newTableSeats = getTableCapacity(tableNo);
+      const newSeatTotal = currentSeatTotal + newTableSeats;
+
+      // LIMIT CHECK (SEATS instead of tables)
+      if (newSeatTotal > maxTableSelection) {
+        showToastWarning(
+          `You can select maximum ${maxTableSelection} seat(s).`
+        );
+        return prev;
+      }
+
       return {
         ...prev,
-        table_no: currentTables.filter((t) => t !== tableNo),
+        table_no: [...currentTables, tableNo],
       };
-    }
-
-    // calculate current seat capacity
-    const currentSeatTotal = currentTables.reduce(
-      (sum, t) => sum + getTableCapacity(t),
-      0
-    );
-
-    const newTableSeats = getTableCapacity(tableNo);
-    const newSeatTotal = currentSeatTotal + newTableSeats;
-
-    // LIMIT CHECK (SEATS instead of tables)
-    if (newSeatTotal > maxTableSelection) {
-      showToastWarning(
-        `You can select maximum ${maxTableSelection} seat(s).`
-      );
-      return prev;
-    }
-
-    return {
-      ...prev,
-      table_no: [...currentTables, tableNo],
-    };
-  });
-};
+    });
+  };
 
   const showToastWarning = (msg) => {
     setToast({ show: true, message: msg });
@@ -457,7 +460,7 @@ if (res.data.customer_id) {
       alert(
         formData.order_method === "Dine-in"
           ? "Please select at least one table."
-          : "Please select a table.",
+          : "Please select a table."
       );
       return;
     }
@@ -465,12 +468,12 @@ if (res.data.customer_id) {
     if (formData.order_method === "Parcel") {
       const isValid = availableTables.some(
         (t) =>
-          String(t.table_no).trim() === String(bookingData.table_no[0]).trim(),
+          String(t.table_no).trim() === String(bookingData.table_no[0]).trim()
       );
 
       if (!isValid) {
         showToastWarning(
-          `Warning: Table "${bookingData.table_no[0]}" does not exist!`,
+          `Warning: Table "${bookingData.table_no[0]}" does not exist!`
         );
         return;
       }
@@ -630,21 +633,17 @@ if (res.data.customer_id) {
       </div>
     ));
   };
-useEffect(() => {
-  if (
-    formData.customer_id &&
-    reservedTablesByCustomer.length === 0 &&
-    dineInTables.length > 0
-  ) {
-    const firstItem = cartItems[0] || {};
-    const branchId =
-      firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
+  useEffect(() => {
+    if (formData.customer_id && cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      const branchId =
+        firstItem.branchId || firstItem.m_branch_id || firstItem.branch_id;
 
-    if (branchId) {
-      fetchCustomerReservations(formData.customer_id, branchId);
+      if (branchId) {
+        fetchCustomerReservations(formData.customer_id, branchId);
+      }
     }
-  }
-}, [dineInTables]);
+  }, [formData.customer_id]);
   return (
     <>
       <style>{autofillFixStyles}</style>
@@ -703,8 +702,8 @@ useEffect(() => {
                         {countdown > 0
                           ? `Resend in ${formatTime(countdown)}`
                           : otpSent
-                            ? "Resend OTP"
-                            : "Send OTP"}
+                          ? "Resend OTP"
+                          : "Send OTP"}
                       </button>
                     )}
                   </div>
@@ -821,10 +820,7 @@ useEffect(() => {
                       <tr className="border-b border-gray-100" key={item.id}>
                         <td className="py-4">
                           {/* Styled Serial Number with a space after it */}
-                          <span
-                            strong
-                            className="text-gray-900 font-bold mr-1"
-                          >
+                          <span strong className="text-gray-900 font-bold mr-1">
                             {index + 1}.
                           </span>
                           {item.m_menu_name}{" "}
@@ -869,7 +865,7 @@ useEffect(() => {
                         </select>
 
                         {["Dine-in", "Parcel"].includes(
-                          formData.order_method,
+                          formData.order_method
                         ) &&
                           bookingData.table_no &&
                           bookingData.table_no.length > 0 && (
@@ -997,17 +993,17 @@ useEffect(() => {
                         // 1. Calculate Summary Data
                         const selectedTableObjects = tablesToUse
                           .filter((t) =>
-                            bookingData.table_no.includes(t.table_no),
+                            bookingData.table_no.includes(t.table_no)
                           )
                           .sort(
-                            (a, b) => Number(a.table_no) - Number(b.table_no),
+                            (a, b) => Number(a.table_no) - Number(b.table_no)
                           ); // Sort ascending
 
                         const totalSelectedCapacity =
                           selectedTableObjects.reduce(
                             (sum, t) =>
                               sum + Number(t.person_no || t.capacity || 4),
-                            0,
+                            0
                           );
                         const parsedGuestCount = Number(personCount) || 0;
                         const capacityMet =
@@ -1110,28 +1106,47 @@ useEffect(() => {
                         <div className="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar mt-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 px-2">
                             {dineInTables.map((table) => {
+                              console.log(
+                                "Reserved:",
+                                reservedTablesByCustomer
+                              );
+                              console.log("Table:", table.table_no);
+
                               const totalChairs =
                                 table.person_no || table.capacity || 4;
                               const topRow = Math.ceil(totalChairs / 2);
                               const bottomRow = Math.floor(totalChairs / 2);
 
-                              const isSelected = bookingData.table_no.includes(
-                                String(table.table_no),
-                              );
-                              const isOccupied = !table.isAvailable;
-                              // CHANGED: Now using the smart array returned from useTableSuggestion.js
-                              const isSuggested = suggestedTables.includes(
-                                String(table.table_no),
-                              );
-                              const isReservedByCustomer = reservedTablesByCustomer.includes(
-  String(table.table_no)
-);
+                              const tableNoStr = String(table.table_no);
+                              const isSelected =
+                                bookingData.table_no.includes(tableNoStr);
+                              const isSuggested =
+                                suggestedTables.includes(tableNoStr);
+                              const isReservedByCustomer =
+                                reservedTablesByCustomer.includes(
+                                  String(table.table_no)
+                                );
+
+                              const isNormallyOccupied =
+                                table.isAvailable === false ||
+                                table.is_occupied === true ||
+                                table.status === "occupied";
+
+                              // 🔥 FINAL LOGIC
+                              let isOccupied = false;
+
+                              if (isReservedByCustomer) {
+                                isOccupied = false; // YOU can use it
+                              } else if (isNormallyOccupied) {
+                                isOccupied = true; // Others see busy
+                              }
                               return (
                                 <div
                                   key={table.id}
                                   onClick={() => {
+                                    // Because we overrode isOccupied, the customer can click their own table
                                     if (!isOccupied)
-                                      handleTableSelect(String(table.table_no));
+                                      handleTableSelect(tableNoStr);
                                   }}
                                   className={`
                                     group flex flex-col items-center justify-center p-2 mt-4 mb-5 transition-all duration-300 relative cursor-pointer
@@ -1142,19 +1157,22 @@ useEffect(() => {
                                     }
                                   `}
                                 >
+                                  {/* --- BADGES --- */}
                                   {isSuggested &&
                                     !isOccupied &&
-                                    !isSelected && (
+                                    !isSelected &&
+                                    !isReservedByCustomer && (
                                       <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap animate-bounce">
                                         ⭐ BEST FIT
                                       </div>
                                     )}
 
-{isReservedByCustomer && (
-  <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
-   reserved
-  </div>
-)}
+                                  {isReservedByCustomer && (
+                                    <div className="absolute -top-6 -left-2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
+                                      Reserved by you
+                                    </div>
+                                  )}
+
                                   {isOccupied && (
                                     <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
                                       {table.bookingMessage || "BUSY"}
@@ -1174,11 +1192,12 @@ useEffect(() => {
                                         isOccupied
                                           ? "bg-red-100 border-red-300 text-red-800"
                                           : isReservedByCustomer
-      ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
-                                            ? "theme-accent-bg theme-border text-white transform scale-105 shadow-lg"
-                                            : isSuggested
-                                              ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
-                                              : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                          ? "bg-blue-100 border-blue-400 text-blue-900"
+                                          : isSelected
+                                          ? "theme-accent-bg theme-border text-white transform scale-105 shadow-lg"
+                                          : isSuggested
+                                          ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                          : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
                                       }
                                     `}
                                   >
@@ -1189,7 +1208,7 @@ useEffect(() => {
                                       Table {table.table_no}
                                     </span>
                                     <span
-                                      className={`text-[10px]  font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
+                                      className={`text-[10px] font-bold relative z-10 mt-1 px-2 py-0.5 rounded ${
                                         isSelected
                                           ? "bg-black/20 text-white"
                                           : "bg-gray-200 text-gray-700"
@@ -1219,15 +1238,16 @@ useEffect(() => {
                               const bottomRow = Math.floor(totalChairs / 2);
 
                               const isSelected = bookingData.table_no.includes(
-                                String(t.table_no),
+                                String(t.table_no)
                               );
                               const isOccupied = t.is_occupied;
                               const isSuggested = suggestedTables.includes(
-                                String(t.table_no),
+                                String(t.table_no)
                               );
-const isReservedByCustomer = reservedTablesByCustomer.includes(
-  String(t.table_no)
-);
+                              const isReservedByCustomer =
+                                reservedTablesByCustomer.includes(
+                                  String(t.table_no)
+                                );
                               return (
                                 <div
                                   key={t.id}
@@ -1251,11 +1271,9 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                                         ⭐ BEST FIT
                                       </div>
                                     )}
-{isReservedByCustomer && (
-  <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap">
-   
-  </div>
-)}
+                                  {isReservedByCustomer && (
+                                    <div className="absolute -top-6 left-[20%] -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm whitespace-nowrap"></div>
+                                  )}
                                   {isOccupied && (
                                     <div className="absolute -top-6 -right-2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full z-20 shadow-sm">
                                       BUSY
@@ -1275,11 +1293,12 @@ const isReservedByCustomer = reservedTablesByCustomer.includes(
                                         isOccupied
                                           ? "bg-red-100 border-red-300 text-red-800"
                                           : isReservedByCustomer
-      ? "bg-blue-100 border-blue-400 text-blue-900": isSelected
-                                            ? "theme-accent-bg theme-border text-white transform scale-105 shadow-lg"
-                                            : isSuggested
-                                              ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
-                                              : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
+                                          ? "bg-blue-100 border-blue-400 text-blue-900"
+                                          : isSelected
+                                          ? "theme-accent-bg theme-border text-white transform scale-105 shadow-lg"
+                                          : isSuggested
+                                          ? "bg-green-50 border-green-400 shadow-[0_0_15px_rgba(34,197,94,0.4)] text-gray-800 transform scale-105"
+                                          : "bg-white border-gray-300 hover:border-gray-500 text-gray-700"
                                       }
                                     `}
                                   >

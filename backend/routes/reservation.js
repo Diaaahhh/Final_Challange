@@ -42,7 +42,7 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         const soft_api_key = settings[0]?.api_key; // Extract api_key
 
         // 1. Call the external API for customers
-        const apiUrl = `https://pos.chulkani.com/branch/all_customer?company_id=${companyCode}`;
+        const apiUrl = `https://pos.khabartable.com/branch/all_customer?company_id=${companyCode}`;
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' }
         });
@@ -69,10 +69,10 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         try {
             // FIX 2: Only attempt to fetch if the API key exists in the database
             if (soft_api_key) {
-                const branchApiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
+                const branchApiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
                 const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
 
-                // FIX 3: Safely parse branches based on Chulkani API structure (Object vs Array)
+                // FIX 3: Safely parse branches based on khabartable API structure (Object vs Array)
                 let branches = [];
                 if (branchRes.data && branchRes.data.status === true) {
                     if (branchRes.data.type === "company" && Array.isArray(branchRes.data.data)) {
@@ -123,7 +123,7 @@ router.get('/branches', async (req, res) => {
         }
 
         // 2. Fetch branches from external API safely
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
+        const apiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
         const response = await axios.get(apiUrl, { 
             headers: { 'Accept': 'application/json' } 
         });
@@ -179,7 +179,7 @@ router.get('/tables/:branch_id', async (req, res) => {
 
         }
 
-        const tablesResponse = await axios.get(`https://pos.chulkani.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
+        const tablesResponse = await axios.get(`https://pos.khabartable.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
         let tables = [];
         if (tablesResponse.data && tablesResponse.data.status === true) {
             tables = tablesResponse.data.data || [];
@@ -188,7 +188,7 @@ router.get('/tables/:branch_id', async (req, res) => {
         // 1. FETCH RESERVATIONS
         let reservations = [];
         try {
-            const reservationApi = `https://pos.chulkani.com/reservations?company_id=${companyCode}&branch_id=${branch_id}`;
+            const reservationApi = `https://pos.khabartable.com/reservations?company_id=${companyCode}&branch_id=${branch_id}`;
             console.log(`📡 Fetching live reservations from: ${reservationApi}`);
 
             const reservationResponse = await axios.get(reservationApi, {
@@ -218,7 +218,7 @@ router.get('/tables/:branch_id', async (req, res) => {
         // 2. FETCH ORDERS
         let orders = [];
         try {
-            const ordersApi = `https://pos.chulkani.com/api/website/order?company_id=${companyCode}&branch_id=${branch_id}`;
+            const ordersApi = `https://pos.khabartable.com/api/website/order?company_id=${companyCode}&branch_id=${branch_id}`;
             console.log(`📡 Fetching live orders from: ${ordersApi}`);
 
             const ordersResponse = await axios.get(ordersApi, {
@@ -254,7 +254,7 @@ router.get('/tables/:branch_id', async (req, res) => {
                 if (nowMs - createAtMs >= THIRTY_MINS_MS) {
                     console.log(`⏳ Auto-expiring Reservation ID [${res.id}] (Pending for >30 mins)...`);
                     try {
-                        await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
+                        await axios.put(`https://pos.khabartable.com/reservations/${res.id}`, {
                             re_status: 3
                         });
                         console.log(`✅ Successfully updated Reservation ID [${res.id}] to status 3 (Expired)`);
@@ -275,7 +275,7 @@ router.get('/tables/:branch_id', async (req, res) => {
                 if (matchingOrder) {
                     console.log(`🍽️ Found completed order for Reservation ID [${res.id}]. Auto-updating status to 3...`);
                     try {
-                        await axios.put(`https://pos.chulkani.com/reservations/${res.id}`, {
+                        await axios.put(`https://pos.khabartable.com/reservations/${res.id}`, {
                             re_status: 3
                         });
                         console.log(`✅ Successfully fulfilled Reservation ID [${res.id}] to status 3`);
@@ -512,10 +512,10 @@ router.post('/create', async (req, res) => {
         };
 
         // ==========================================
-        // 4. SEND TO CHULKANI RESERVATION API
+        // 4. SEND TO khabartable RESERVATION API
         // ==========================================
         const apiResponse = await axios.post(
-            "https://pos.chulkani.com/reservations",
+            "https://pos.khabartable.com/reservations",
             payload
         );
 
@@ -525,7 +525,7 @@ router.post('/create', async (req, res) => {
         });
 
     } catch (error) {
-        // This will catch Google Captcha errors, Database errors, AND Axios Chulkani API errors safely
+        // This will catch Google Captcha errors, Database errors, AND Axios khabartable API errors safely
         console.error("Error creating reservation:", error.response?.data || error.message);
         res.status(500).json({ error: "Internal Server Error" });
     }
@@ -552,31 +552,109 @@ router.get('/reservation-settings', async (req, res) => {
 // ==========================================
 router.post('/send-otp', async (req, res) => {
     const { phone } = req.body;
-    if (!phone) return res.status(400).json({ success: false, message: "Phone required" });
 
+    if (!phone) {
+        return res.status(400).json({ success: false, message: "Phone required" });
+    }
+
+    // Generate OTP
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
     otpCache.set(phone, otp);
 
+    // Format phone
     let formattedPhone = phone.replace(/\D/g, '');
-    if (formattedPhone.startsWith('01') && formattedPhone.length === 11) formattedPhone = '88' + formattedPhone;
-    if (!formattedPhone.startsWith('88') && formattedPhone.length === 13) formattedPhone = '88' + formattedPhone;
+    if (formattedPhone.startsWith('01') && formattedPhone.length === 11) {
+        formattedPhone = '88' + formattedPhone;
+    }
+    if (!formattedPhone.startsWith('88') && formattedPhone.length === 13) {
+        formattedPhone = '88' + formattedPhone;
+    }
 
     try {
-        const message = `Your reservation OTP is ${otp}. Please do not share this with anyone.`;
-        const apiUrl = `http://sms.iglweb.com/api/v1/send?api_key=4451773340833151773340833&contacts=${formattedPhone}&senderid=01844532630&msg=${encodeURIComponent(message)}`;
+        // 🔥 STEP 1: Get saved API key from DB
+        const settings = await queryPromise(
+            "SELECT api_key FROM settings WHERE id = 1"
+        );
 
-        const response = await fetch(apiUrl, {
+        const soft_api_key = settings[0]?.api_key;
+
+        if (!soft_api_key) {
+            return res.status(400).json({
+                success: false,
+                message: "Soft API key missing in settings"
+            });
+        }
+
+        // 🔥 STEP 2: Fetch branch list from external API
+        const branchApiUrl = `https://pos.khabartable.com/company/all-branch-list?soft_api_key=${soft_api_key}`;
+        const branchResponse = await axios.get(branchApiUrl);
+
+        if (!branchResponse.data?.status) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetch branch data"
+            });
+        }
+
+
+        // 🔥 STEP 3: Extract correct data structure
+const apiData = branchResponse.data.data;
+
+// Prefer branch if exists, otherwise fallback to company
+let smsApiKey = null;
+let senderId = null;
+
+// ✅ If branches exist → use first branch (or match later if needed)
+if (Array.isArray(apiData.branches) && apiData.branches.length > 0) {
+    smsApiKey = apiData.branches[0].api_key;
+    senderId = apiData.branches[0].sender_id;
+} 
+// ✅ Fallback → use company credentials
+else if (apiData.company) {
+    smsApiKey = apiData.company.api_key;
+    senderId = apiData.company.sender_id;
+}
+
+if (!smsApiKey || !senderId) {
+    return res.status(400).json({
+        success: false,
+        message: "SMS credentials missing"
+    });
+}
+
+        // 🔥 STEP 4: Send OTP
+        const message = `Your reservation OTP is ${otp}. Please do not share this with anyone.`;
+
+        const smsUrl = `http://sms.iglweb.com/api/v1/send?api_key=${smsApiKey}&contacts=${formattedPhone}&senderid=${senderId}&msg=${encodeURIComponent(message)}`;
+
+        console.log("Sending OTP to:", formattedPhone);
+
+        const response = await fetch(smsUrl, {
             method: 'GET',
             headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                "User-Agent": "Mozilla/5.0",
+                "Accept": "*/*"
             }
         });
 
-        if (response.ok) return res.json({ success: true, message: "OTP sent successfully" });
-        return res.status(500).json({ success: false, message: "Failed to send OTP. Gateway rejected." });
+        const responseText = await response.text();
+        console.log("SMS API Response:", responseText);
+
+        if (response.ok) {
+            return res.json({ success: true, message: "OTP sent successfully" });
+        } else {
+            return res.status(500).json({
+                success: false,
+                message: "SMS gateway rejected request"
+            });
+        }
+
     } catch (error) {
-        return res.status(500).json({ success: false, message: "Internal Error: Could not reach SMS Gateway" });
+        console.error("OTP Error:", error.message);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
     }
 });
 

@@ -56,7 +56,7 @@ return (
           <div className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-[#111111] text-white shadow-2xl p-6 border-l border-[#1E1E1E]">
             <div className="flex justify-between items-center mb-8">
                <h2 className="text-3xl font-['Barlow_Condensed'] font-extrabold  italic tracking-wider">
-                  <span className="text-white">Khabar</span><span className="text-[#C59D5F]">Table</span>
+                  <span className="text-white"></span><span className="text-[#C59D5F]"></span>
                </h2>
                <button onClick={() => setIsMobileMenuOpen(false)} className="btn btn-circle btn-sm btn-ghost border border-[#2A2A2A] hover:bg-[#007BFF] hover:text-white text-white">✕</button>
             </div>

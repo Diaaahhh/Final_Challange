@@ -50,7 +50,7 @@ router.post('/upload-hero', upload.single('image'), (req, res) => {
             // If there is an old image, delete the physical file from public/uploads
             if (data.length > 0) {
                 data.forEach(row => {
-                    const oldImagePath = path.join(__dirname, '../public/uploads', row.image);
+                    const oldImagePath = path.join(__dirname, '../public/uploads/logo', row.image);
                     // Check if file exists, then delete it
                     if (fs.existsSync(oldImagePath)) {
                         fs.unlink(oldImagePath, (err) => {

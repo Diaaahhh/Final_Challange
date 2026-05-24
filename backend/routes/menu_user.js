@@ -33,7 +33,7 @@ router.get('/branches', async (req, res) => {
         }
 
         // 2. Safely use the fetched soft_api_key
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
+        const apiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
         const response = await axios.get(apiUrl, { 
             headers: { 'Accept': 'application/json' } 
         });
@@ -73,7 +73,7 @@ router.get('/categories/:branchId', async (req, res) => {
         const companyCode = await getCompanyCode();
         
         // Pass the dynamic branchId to the external API instead of hardcoded '1'
-        const apiUrl = `https://pos.chulkani.com/company/menu-category/${companyCode}/${branchId}`;
+        const apiUrl = `https://pos.khabartable.com/company/menu-category/${companyCode}/${branchId}`;
         
         const response = await axios.get(apiUrl, { headers: { 'Accept': 'application/json' } });
         
@@ -98,7 +98,7 @@ router.get('/categories/:branchId', async (req, res) => {
 router.get('/list', async (req, res) => {
     try {
         const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.chulkani.com/company/api/menus/${companyCode}`;
+        const apiUrl = `https://pos.khabartable.com/company/api/menus/${companyCode}`;
         
         const response = await axios.get(apiUrl, {
             headers: { 'Accept': 'application/json' }

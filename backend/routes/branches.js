@@ -23,7 +23,7 @@ router.get('/', (req, res) => {
         try {
             // If branchId exists, get that specific branch. Otherwise get all branches for the company.
             const urlPath = branchId ? `/${branchId}` : '';
-            const apiUrl = `https://pos.chulkani.com/company/all-branch-list${urlPath}?soft_api_key=${soft_api_key}`;
+            const apiUrl = `https://pos.khabartable.com/company/all-branch-list${urlPath}?soft_api_key=${soft_api_key}`;
 
             const apiResponse = await axios.get(apiUrl);
             return res.json(apiResponse.data);
@@ -46,7 +46,7 @@ router.post('/verify', async (req, res) => {
     }
 
     try {
-        const apiUrl = `https://pos.chulkani.com/company/all-branch-list?soft_api_key=${api_key}`;
+        const apiUrl = `https://pos.khabartable.com/company/all-branch-list?soft_api_key=${api_key}`;
         const apiResponse = await axios.get(apiUrl);
         const data = apiResponse.data;
 
@@ -68,7 +68,7 @@ router.post('/verify', async (req, res) => {
                 // 1. If type is "branch"
                 if (data.type === "branch") {
                     // CHANGED: If code is empty (!code) OR if it matches, accept it
-                    if (!code || String(code) === String(data.data.branch_id)) {
+                    if (code && String(code) === String(data.data.branch_id)) {
                         isMatch = true;
                         finalBranchId = data.data.branch_id; 
                         finalCompanyCode = data.data.company_id;
@@ -76,21 +76,19 @@ router.post('/verify', async (req, res) => {
                 } 
                // 2. If type is "company"
             else if (data.type === "company") {
-                // Safely extract company ID if data is an array
-                let compId = null;
-                if (Array.isArray(data.data) && data.data.length > 0) {
-                    compId = data.data[0].company_id || data.data[0].id;
-                } else if (!Array.isArray(data.data)) {
-                    compId = data.data.company_id || data.data.id;
-                }
+    let compId = null;
 
-                // If code is empty (!code) OR if it matches, accept it
-                if (!code || String(code) === String(compId)) {
-                    isMatch = true;
-                    finalBranchId = null; 
-                    finalCompanyCode = compId;
-                }
-            }
+    // ✅ Correct extraction
+    if (data.data?.company?.company_id) {
+        compId = data.data.company.company_id;
+    }
+
+    if (code && String(code) === String(compId)) {
+        isMatch = true;
+        finalBranchId = null;
+        finalCompanyCode = compId;
+    }
+}
 
                // 🔥 MATCH FOUND: Update Local Database
                 if (isMatch) {
