@@ -3,36 +3,277 @@ const router = express.Router();
 const db = require('../db');
 const axios = require('axios'); // Requires: npm install axios
 
-router.get('/', (req, res) => {
-    const sql = "SELECT * FROM settings WHERE id = 1";
+const queryDb = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        db.query(sql, params, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+        });
+    });
+};
 
-    db.query(sql, async (err, result) => {
-        if (err) return res.status(500).json({ error: "Database error" });
-        
-        if (!result || result.length === 0) {
-            return res.json({ status: false, message: "Settings not found" });
+router.get('/', async (req, res) => {
+    try {
+
+        // --------------------------------------------------
+        // STEP 1: SETTINGS
+        // --------------------------------------------------
+
+        const settingsRows = await queryDb(
+            "SELECT * FROM settings WHERE id = 1"
+        );
+
+        if (!settingsRows.length) {
+            return res.json({
+                status: false,
+                message: "Settings not found"
+            });
         }
 
-        const branchId = result[0].branch_id;
-        const soft_api_key = result[0].api_key;
+        const settings = settingsRows[0];
+
+        const soft_api_key = settings.api_key;
+        const branchId = settings.branch_id;
+        const companyCode = settings.company_code;
 
         if (!soft_api_key) {
-            return res.json({ status: false, message: "API Key missing" });
+            return res.json({
+                status: false,
+                message: "API Key missing"
+            });
         }
+
+        // --------------------------------------------------
+        // STEP 2: CALL POS
+        // --------------------------------------------------
+
+        const urlPath = branchId
+            ? `/${branchId}`
+            : "";
+
+        const apiUrl =
+            `https://pos.khabartable.com/company/all-branch-list${urlPath}?soft_api_key=${soft_api_key}`;
+
+        const apiResponse = await axios.get(apiUrl);
+
+        // --------------------------------------------------
+        // STEP 3: HTML RESPONSE
+        // --------------------------------------------------
+
+        if (
+            typeof apiResponse.data === "string" &&
+            apiResponse.data.includes("<!doctype html>")
+        ) {
+            return res.send(apiResponse.data);
+        }
+
+        // --------------------------------------------------
+        // STEP 4: VALID JSON
+        // --------------------------------------------------
+
+        const apiBranches =
+            apiResponse.data?.data?.branches || [];
+
+        // --------------------------------------------------
+        // STEP 5: LOAD LOCAL DB
+        // --------------------------------------------------
+
+        const localBranches = await queryDb(
+            `
+            SELECT
+                branch_id,
+                branch_name,
+                name,
+                email,
+                phone,
+                status,
+                company_id
+            FROM branches
+            `
+        );
+
+        const localMap = new Map();
+
+        localBranches.forEach(branch => {
+            localMap.set(
+                Number(branch.branch_id),
+                branch
+            );
+        });
+
+        const insertValues = [];
+        const updateQueries = [];
+
+        // --------------------------------------------------
+        // STEP 6: SYNC
+        // --------------------------------------------------
+
+        for (const branch of apiBranches) {
+
+            const branchIdNum =
+                Number(branch.branch_id);
+
+            if (!localMap.has(branchIdNum)) {
+
+                insertValues.push([
+                    branch.branch_id,
+                    branch.branch_name,
+                    branch.name,
+                    branch.email,
+                    branch.phone,
+                    branch.status,
+                    branch.company_id
+                ]);
+
+            } else {
+
+                const dbBranch =
+                    localMap.get(branchIdNum);
+
+                const needsUpdate =
+                    dbBranch.branch_name !== branch.branch_name ||
+                    dbBranch.name !== branch.name ||
+                    dbBranch.email !== branch.email ||
+                    dbBranch.phone !== branch.phone ||
+                    Number(dbBranch.status) !== Number(branch.status) ||
+                    Number(dbBranch.company_id) !== Number(branch.company_id);
+
+                if (needsUpdate) {
+
+                    updateQueries.push({
+                        sql: `
+                            UPDATE branches
+                            SET
+                                branch_name = ?,
+                                name = ?,
+                                email = ?,
+                                phone = ?,
+                                status = ?,
+                                company_id = ?
+                            WHERE branch_id = ?
+                        `,
+                        params: [
+                            branch.branch_name,
+                            branch.name,
+                            branch.email,
+                            branch.phone,
+                            branch.status,
+                            branch.company_id,
+                            branch.branch_id
+                        ]
+                    });
+
+                }
+            }
+        }
+
+        // --------------------------------------------------
+        // STEP 7: INSERT NEW
+        // --------------------------------------------------
+
+        if (insertValues.length > 0) {
+
+            await queryDb(
+                `
+                INSERT INTO branches (
+                    branch_id,
+                    branch_name,
+                    name,
+                    email,
+                    phone,
+                    status,
+                    company_id
+                )
+                VALUES ?
+                `,
+                [insertValues]
+            );
+
+            console.log(
+                `[BRANCH SYNC] Inserted ${insertValues.length}`
+            );
+        }
+
+        // --------------------------------------------------
+        // STEP 8: UPDATE OLD
+        // --------------------------------------------------
+
+        for (const query of updateQueries) {
+            await queryDb(
+                query.sql,
+                query.params
+            );
+        }
+
+        if (updateQueries.length > 0) {
+
+            console.log(
+                `[BRANCH SYNC] Updated ${updateQueries.length}`
+            );
+        }
+
+        // --------------------------------------------------
+        // STEP 9: SEND LOCAL DB
+        // --------------------------------------------------
+
+        const finalData = await queryDb(
+            `
+            SELECT
+                id,
+                branch_id,
+                branch_name,
+                name,
+                email,
+                phone,
+                status,
+                company_id
+            FROM branches
+            WHERE company_id = ?
+            ORDER BY branch_name ASC
+            `,
+            [companyCode]
+        );
+
+        return res.json(finalData);
+
+    } catch (error) {
+
+        console.error(
+            "[BRANCH SYNC ERROR]",
+            error.message
+        );
 
         try {
-            // If branchId exists, get that specific branch. Otherwise get all branches for the company.
-            const urlPath = branchId ? `/${branchId}` : '';
-            const apiUrl = `https://pos.khabartable.com/company/all-branch-list${urlPath}?soft_api_key=${soft_api_key}`;
 
-            const apiResponse = await axios.get(apiUrl);
-            return res.json(apiResponse.data);
+            const settingsRows = await queryDb(
+                "SELECT company_code FROM settings WHERE id = 1"
+            );
 
-        } catch (error) {
-            console.error("External API Error:", error.message);
-            return res.status(502).json({ status: false, message: "External API error" });
+            const companyCode =
+                settingsRows[0]?.company_code;
+
+            const fallbackData = await queryDb(
+                `
+                SELECT *
+                FROM branches
+                WHERE company_id = ?
+                ORDER BY branch_name ASC
+                `,
+                [companyCode]
+            );
+
+            return res.json(fallbackData);
+
+        } catch (dbError) {
+
+            console.error(
+                "[BRANCH DB ERROR]",
+                dbError.message
+            );
+
+            return res.json([]);
         }
-    });
+    }
 });
 // Changed to POST to receive inputs from the frontend
 router.post('/verify', async (req, res) => {

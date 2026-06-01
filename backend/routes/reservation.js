@@ -180,9 +180,12 @@ router.get('/tables/:branch_id', async (req, res) => {
         }
 
         const tablesResponse = await axios.get(`https://pos.khabartable.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
+        
         let tables = [];
         if (tablesResponse.data && tablesResponse.data.status === true) {
             tables = tablesResponse.data.data || [];
+            console.log(tables);
+            
         }
 
         // 1. FETCH RESERVATIONS

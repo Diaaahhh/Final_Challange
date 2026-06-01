@@ -1,20 +1,20 @@
 const mysql = require('mysql2');
 
 // Create the connection configuration
-const dbConfig = {
-    host: "localhost",
-    user: "khabarta_pos",      
-    password: "khabarta_pos",  
-    database: "khabarta_pos"   
-};
-// Create the connection configuration
 // const dbConfig = {
 //     host: "localhost",
-//     user: "root",      
-//     password: "" ,  
-//     database: "restaurant",
-//     port: 3307
+//     user: "khabarta_pos",      
+//     password: "khabarta_pos",  
+//     database: "khabarta_pos"   
 // };
+// Create the connection configuration
+const dbConfig = {
+    host: "localhost",
+    user: "root",      
+    password: "" ,  
+    database: "restaurant",
+    // port: 3307
+};
 
 const db = mysql.createConnection(dbConfig);
 
