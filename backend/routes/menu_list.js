@@ -5,7 +5,7 @@ const axios = require('axios');
 const multer = require('multer'); 
 const path = require('path');
 const fs = require('fs');
-
+const syncMenus = require('./Cron Jobs/menu_cron');
 // --- CONFIG: Multer for Image Upload ---
 const uploadDir = path.join(__dirname, '../public/uploads'); 
 if (!fs.existsSync(uploadDir)){
@@ -39,7 +39,7 @@ const getCompanyCode = () => {
 
 // --- ROUTE: GET MENU LIST ---
 router.get('/list', async (req, res) => {
-    
+    await syncMenus();
     // Safely handle queries whether they have params or not
     const queryDb = (sql, params) => {
         return new Promise((resolve, reject) => {
@@ -55,7 +55,6 @@ router.get('/list', async (req, res) => {
             }
         });
     };
-
     // THE FIX: Helper function to apply the frontend return logic based on 'settings'
     // It now uses a Regular Expression to accurately find multiple branches formatted as strings (e.g., "14-15" or "14, 15")
     const getFilteredMenuData = async () => {
@@ -94,119 +93,7 @@ router.get('/list', async (req, res) => {
     };
 
     try {
-        console.log("1. [MENU SYNC] /list route triggered!");
         
-        const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.khabartable.com/company/api/menus/${companyCode}`;
-        
-        console.log(`2. [MENU SYNC] Fetching external menus from: ${apiUrl}`);
-        const response = await axios.get(apiUrl, {
-            headers: {
-                'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}`,
-                'Accept': 'application/json'
-            },
-            validateStatus: function (status) {
-                return status < 500;
-            }
-        });
-
-        if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            throw new Error("Laravel Authentication Block"); 
-        }
-
-        // --- PARSING JSON ---
-        let externalItems = [];
-        if (response.data && response.data.status === true && Array.isArray(response.data.data)) {
-            externalItems = response.data.data;
-        } else if (response.data && response.data.status === false) {
-            externalItems = [];
-        } else if (Array.isArray(response.data)) {
-            externalItems = response.data;
-        } else if (response.data && response.data.data === null) {
-            externalItems = [];
-        } else {
-            throw new Error("Unexpected JSON structure");
-        }
-
-        console.log(`3. [MENU SYNC] Found ${externalItems.length} items from POS API.`);
-
-        if (externalItems.length === 0) {
-            console.warn("4. [MENU SYNC] POS returned empty data. Fetching existing local DB...");
-            const finalData = await getFilteredMenuData();
-            return res.json(finalData);
-        }
-
-        // Fetch current local DB items to map
-        console.log("4. [MENU SYNC] Fetching local database to compare...");
-        const localItems = await queryDb("SELECT m_menu_id, m_branch_id FROM menu");
-        console.log(`   -> Found ${localItems.length} items currently in local DB.`);
-        
-        const localMap = new Map();
-        localItems.forEach(item => {
-            localMap.set(item.m_menu_id, String(item.m_branch_id || 'null'));
-        });
-
-        const insertValues = [];
-        const updateQueries = [];
-
-        // Apply logic to API Data
-        externalItems.forEach(item => {
-            const apiId = item.id;
-            const apiBranchId = String(item.m_branch_id || 'null');
-            
-            const ingredientStr = typeof item.m_ingredient === 'string' 
-                ? item.m_ingredient 
-                : JSON.stringify(item.m_ingredient || []);
-
-            if (!localMap.has(apiId)) {
-                // INSERT logic
-                insertValues.push([
-                    apiId, item.m_menu_sl, item.m_menu_name, item.m_main_category, 
-                    item.m_company_id, item.m_branch_id, ingredientStr, 
-                    item.m_cost, item.m_price, item.m_status
-                ]);
-            } else {
-                // UPDATE logic
-                const dbBranchId = localMap.get(apiId);
-                if (apiBranchId !== dbBranchId) {
-                    updateQueries.push({
-                        sql: `UPDATE menu SET 
-                            m_menu_sl = ?, m_menu_name = ?, category_id = ?, 
-                            m_company_id = ?, m_branch_id = ?, m_ingredient = ?, 
-                            m_cost = ?, m_price = ?, m_status = ? 
-                            WHERE m_menu_id = ?`,
-                        params: [
-                            item.m_menu_sl, item.m_menu_name, item.m_main_category, 
-                            item.m_company_id, item.m_branch_id, ingredientStr, 
-                            item.m_cost, item.m_price, item.m_status, apiId
-                        ]
-                    });
-                }
-            }
-        });
-
-        console.log(`5. [MENU SYNC] Ready to INSERT ${insertValues.length} new items.`);
-        console.log(`5. [MENU SYNC] Ready to UPDATE ${updateQueries.length} existing items.`);
-
-        // Execute pending Inserts
-        if (insertValues.length > 0) {
-            const insertSql = `INSERT INTO menu (
-                m_menu_id, m_menu_sl, m_menu_name, category_id, 
-                m_company_id, m_branch_id, m_ingredient, m_cost, 
-                m_price, m_status
-            ) VALUES ?`;
-            await queryDb(insertSql, [insertValues]);
-            console.log("6. [MENU SYNC] Inserts completed successfully!");
-        }
-
-        // Execute pending Updates
-        if (updateQueries.length > 0) {
-            for (const query of updateQueries) {
-                await queryDb(query.sql, query.params);
-            }
-            console.log("6. [MENU SYNC] Updates completed successfully!");
-        }
-
         // Return final DB (Filtered by complex string matching)
         console.log("7. [MENU SYNC] Sending final local data to frontend.");
         const finalData = await getFilteredMenuData();
@@ -229,51 +116,63 @@ router.get('/list', async (req, res) => {
 // --- ROUTE: GET BRANCH LIST ---
 router.get('/branches', async (req, res) => {
     try {
-        // 1. Fetch the api_key from the local settings table
+
+        // Get company code from settings
         const settingsResult = await new Promise((resolve, reject) => {
-            db.query("SELECT api_key FROM settings WHERE id = 1", (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-            });
+            db.query(
+                "SELECT company_code FROM settings WHERE id = 1",
+                (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result);
+                }
+            );
         });
 
-        const soft_api_key = settingsResult[0]?.api_key;
-        
-        if (!soft_api_key) {
-            return res.json([]); // Return empty array if no API key is set
+        const companyCode =
+            settingsResult[0]?.company_code;
+
+        if (!companyCode) {
+            return res.json([]);
         }
 
-        // 2. Use the fetched soft_api_key
-        const apiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
-        
-        const response = await axios.get(apiUrl, {
-            headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${process.env.LARAVEL_TOKEN || ''}` }
+        // Fetch branches from local table
+        const branches = await new Promise((resolve, reject) => {
+            db.query(
+                `
+                SELECT
+                    id,
+                    branch_id,
+                    branch_name,
+                    name,
+                    email,
+                    phone,
+                    status,
+                    company_id
+                FROM branches
+                WHERE company_id = ?
+                AND status = 1
+                ORDER BY branch_name ASC
+                `,
+                [companyCode],
+                (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result);
+                }
+            );
         });
 
-        if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            return res.json([]); // Fail safely on Laravel HTML error
-        }
-
-        // 3. Normalize the data so MenuList.jsx ALWAYS receives an array
-        let branches = [];
-        if (response.data && response.data.status === true) {
-            if (response.data.type === "company" && Array.isArray(response.data.data)) {
-                // It's a company, data is already an array of branches
-                branches = response.data.data;
-            } else if (response.data.type === "branch" && typeof response.data.data === 'object') {
-                // It's a single branch object, wrap it in an array for the frontend
-                branches = [response.data.data];
-            }
-        }
-
-        // Send the perfectly formatted array to MenuList.jsx
-        res.json(branches);
+        return res.json(branches);
 
     } catch (error) {
-        console.error("Error fetching branches for menu:", error.message);
-        res.json([]); // Fail safely
+
+        console.error(
+            "Error fetching branches for menu:",
+            error.message
+        );
+
+        return res.json([]);
     }
-});
+});    
 
 // --- ROUTE: GET CATEGORIES ---
 router.get('/categories', async (req, res) => {

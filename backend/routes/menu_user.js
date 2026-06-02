@@ -18,53 +18,63 @@ const getCompanyCode = () => {
 // 1. GET BRANCH LIST 
 router.get('/branches', async (req, res) => {
     try {
-        // 1. Fetch the api_key from the local settings table
+
+        // Get company code from settings
         const settingsResult = await new Promise((resolve, reject) => {
-            db.query("SELECT api_key FROM settings WHERE id = 1", (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-            });
+            db.query(
+                "SELECT company_code FROM settings WHERE id = 1",
+                (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result);
+                }
+            );
         });
 
-        const soft_api_key = settingsResult[0]?.api_key;
-        
-        if (!soft_api_key) {
-            return res.json([]); // Return empty array if no API key is set
+        const companyCode =
+            settingsResult[0]?.company_code;
+
+        if (!companyCode) {
+            return res.json([]);
         }
 
-        // 2. Safely use the fetched soft_api_key
-        const apiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
-        const response = await axios.get(apiUrl, { 
-            headers: { 'Accept': 'application/json' } 
+        // Fetch branches from local table
+        const branches = await new Promise((resolve, reject) => {
+            db.query(
+                `
+                SELECT
+                    id,
+                    branch_id,
+                    branch_name,
+                    name,
+                    email,
+                    phone,
+                    status,
+                    company_id
+                FROM branches
+                WHERE company_id = ?
+                AND status = 1
+                ORDER BY branch_name ASC
+                `,
+                [companyCode],
+                (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result);
+                }
+            );
         });
-        
-        if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            return res.json([]); // Fail safely if Laravel throws an HTML error
-        }
 
-        // 3. Normalize the data so MenuUser.jsx ALWAYS receives an array
-        let branches = [];
-        if (response.data && response.data.status === true) {
-            if (response.data.type === "company" && Array.isArray(response.data.data)) {
-                // If it's a company, data is already an array of branches
-                branches = response.data.data;
-            } else if (response.data.type === "branch" && typeof response.data.data === 'object') {
-                // If it's a single branch object, wrap it in an array for the frontend
-                branches = [response.data.data];
-            } else if (response.data.data && Array.isArray(response.data.data.branches)) {
-                // Fallback for alternate JSON structures
-                branches = response.data.data.branches;
-            }
-        }
+        return res.json(branches);
 
-        // Send the perfectly formatted array to MenuUser.jsx
-        res.json(branches);
+    } catch (error) {
 
-    } catch (err) {
-        console.warn("Error fetching branches for menu_user:", err.message);
-        res.json([]); // Fail safely by sending an empty array instead of crashing
+        console.error(
+            "Error fetching branches for menu:",
+            error.message
+        );
+
+        return res.json([]);
     }
-});
+}); 
 
 //2. GET CATEGORIES
 const queryDb = (sql, params) => {
@@ -286,65 +296,41 @@ router.get('/categories/:branchId', async (req, res) => {
 
 
 
-// 3. GET MENU LIST (WITH DISCOUNTS AND FALLBACK)
+// 3. GET MENU LIST (LOCAL DATABASE ONLY)
 router.get('/list', async (req, res) => {
     try {
-        const companyCode = await getCompanyCode();
-        const apiUrl = `https://pos.khabartable.com/company/api/menus/${companyCode}`;
-        
-        const response = await axios.get(apiUrl, {
-            headers: { 'Accept': 'application/json' }
+
+        const sql = `
+            SELECT *
+            FROM menu
+            ORDER BY m_menu_name ASC
+        `;
+
+        db.query(sql, (err, results) => {
+
+            if (err) {
+                console.error(
+                    "[MENU LIST ERROR]",
+                    err.message
+                );
+
+                return res.status(500).json({
+                    error: "Failed to fetch menu list"
+                });
+            }
+
+            return res.json(results);
         });
 
-        // DETECT LARAVEL LOGIN PAGE BLOCK
-        if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            throw new Error("Laravel Authentication Block");
-        }
+    } catch (error) {
 
-        let apiItems = [];
-        if (response.data && response.data.data) {
-            apiItems = response.data.data;
-        } else if (Array.isArray(response.data)) {
-            apiItems = response.data;
-        }
+        console.error(
+            "[MENU LIST ERROR]",
+            error.message
+        );
 
-        if (apiItems.length === 0) {
-            throw new Error("Empty API response");
-        }
-
-        const serialNumbers = apiItems.map(item => item.m_menu_sl).filter(sl => sl); 
-        if (serialNumbers.length === 0) return res.json(apiItems);
-
-        // Fetch Both Images AND Discount JSON from Local DB
-        const placeholders = serialNumbers.map(() => '?').join(',');
-        const sql = `SELECT m_menu_sl, m_image, discount FROM menu WHERE m_menu_sl IN (${placeholders})`;
-
-        db.query(sql, serialNumbers, (err, localResults) => {
-            if (err) return res.json(apiItems); 
-
-            const localDataMap = {};
-            localResults.forEach(row => {
-                localDataMap[row.m_menu_sl] = {
-                    m_image: row.m_image,
-                    discount: row.discount
-                };
-            });
-
-            const mergedItems = apiItems.map(item => ({
-                ...item,
-                m_image: localDataMap[item.m_menu_sl]?.m_image || item.m_image,
-                discount: localDataMap[item.m_menu_sl]?.discount || '{}' 
-            }));
-
-            res.json(mergedItems);
-        });
-
-    } catch (err) {
-        console.warn("External API blocked. Serving customer menu from local database.");
-        // FALLBACK TO LOCAL MYSQL DB
-        db.query("SELECT * FROM menu", (dbErr, dbResults) => {
-            if (dbErr) return res.status(500).json({ error: "Failed to fetch menu list" });
-            res.json(dbResults);
+        return res.status(500).json({
+            error: "Failed to fetch menu list"
         });
     }
 });

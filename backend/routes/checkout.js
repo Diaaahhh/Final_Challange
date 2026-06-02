@@ -28,7 +28,6 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         // FIX 1: Fetch BOTH company_code and api_key dynamically from settings
         const settings = await queryPromise("SELECT company_code, api_key FROM settings WHERE id = 1");
         const companyCode = settings[0]?.company_code || '26672691';
-        const soft_api_key = settings[0]?.api_key; // Extract api_key
 
         // 1. Call the external API for customers
         const apiUrl = `https://pos.khabartable.com/branch/all_customer?company_id=${companyCode}`;
@@ -51,39 +50,40 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
             }
         }
 
-        // ==========================================
-        // 2. IF CUSTOMER NOT FOUND: Fetch Branch Phone
-        // ==========================================
-        let branchPhone = "the restaurant"; // Default fallback
-        try {
-            // FIX 2: Only attempt to fetch if the API key exists in the database
-            if (soft_api_key) {
-                const branchApiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
-                const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
+     // ==========================================
+// 2. IF CUSTOMER NOT FOUND: Fetch Branch Phone
+// ==========================================
+let branchPhone = "the restaurant";
 
-                // FIX 3: Safely parse branches based on khabartable API structure (Object vs Array)
-                let branches = [];
-                if (branchRes.data && branchRes.data.status === true) {
-                    if (branchRes.data.type === "company" && Array.isArray(branchRes.data.data)) {
-                        branches = branchRes.data.data;
-                    } else if (branchRes.data.type === "branch" && typeof branchRes.data.data === 'object') {
-                        branches = [branchRes.data.data];
-                    } else if (branchRes.data.data && Array.isArray(branchRes.data.data.branches)) {
-                        branches = branchRes.data.data.branches;
-                    }
-                }
+try {
 
-                // Check both 'branch_id' and 'id' just in case the API structure varies
-                const matchedBranch = branches.find(b => String(b.branch_id) === String(branch_id) || String(b.id) === String(branch_id));
+  const branchRows = await queryPromise(
+    `
+    SELECT phone
+    FROM branches
+    WHERE branch_id = ?
+    AND company_id = ?
+    LIMIT 1
+    `,
+    [branch_id, companyCode]
+);
+console.log(phone, branch_id, companyCode, branchRows);
 
-                if (matchedBranch) {
-                    // Check multiple possible property names for the phone number
-                    branchPhone = matchedBranch.phone || matchedBranch.branch_phone || matchedBranch.contact_number || "the restaurant";
-                }
-            }
-        } catch (branchErr) {
-            console.error("Failed to fetch branch info for error message:", branchErr.message);
-        }
+    if (
+        branchRows.length > 0 &&
+        branchRows[0].phone
+    ) {
+        branchPhone = branchRows[0].phone;
+    }
+
+} catch (branchErr) {
+
+    console.error(
+        "Failed to fetch branch phone from database:",
+        branchErr.message
+    );
+
+}
 
         // Return Status 200 so the console doesn't show a red error!
         // We use 'success: false' to tell the frontend the user wasn't found.
