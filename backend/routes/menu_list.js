@@ -39,7 +39,7 @@ const getCompanyCode = () => {
 
 // --- ROUTE: GET MENU LIST ---
 router.get('/list', async (req, res) => {
-    await syncMenus();
+    // await syncMenus();
     // Safely handle queries whether they have params or not
     const queryDb = (sql, params) => {
         return new Promise((resolve, reject) => {

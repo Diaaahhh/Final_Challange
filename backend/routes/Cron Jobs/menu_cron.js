@@ -1,11 +1,12 @@
 const axios = require("axios");
-const db = require("../../db"); // adjust path
+const db = require("../../db");
 
 // ==========================================
-// GET COMPANY CODE FROM SETTINGS
+// GET COMPANY CODE
 // ==========================================
 const getCompanyCode = () => {
     return new Promise((resolve, reject) => {
+
         const settingsSql =
             "SELECT company_code FROM settings WHERE id = 1";
 
@@ -33,10 +34,17 @@ const getCompanyCode = () => {
 // ==========================================
 const queryDb = (sql, params = []) => {
     return new Promise((resolve, reject) => {
+
         db.query(sql, params, (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
+
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result);
+            }
+
         });
+
     });
 };
 
@@ -51,22 +59,30 @@ const syncMenus = async () => {
         console.log("MENU CRON STARTED");
         console.log("================================");
 
-        const companyCode = await getCompanyCode();
+        const companyCode =
+            await getCompanyCode();
 
         const apiUrl =
             `https://pos.khabartable.com/company/api/menus/${companyCode}`;
 
-        const response = await axios.get(apiUrl, {
-            headers: {
-                Accept: "application/json"
-            }
-        });
+        const response =
+            await axios.get(apiUrl, {
+                headers: {
+                    Accept: "application/json"
+                }
+            });
+
+        // ==========================================
+        // HTML BLOCK DETECTION
+        // ==========================================
 
         if (
             typeof response.data === "string" &&
             response.data.includes("<!doctype html>")
         ) {
-            throw new Error("Laravel login page returned");
+            throw new Error(
+                "Laravel login page returned"
+            );
         }
 
         if (
@@ -74,39 +90,72 @@ const syncMenus = async () => {
             response.data.status !== true ||
             !Array.isArray(response.data.data)
         ) {
-            throw new Error("Invalid API Response");
-        }
-
-        const apiCompanyId =
-            Number(response.data.company_id);
-
-        if (apiCompanyId !== Number(companyCode)) {
             throw new Error(
-                `Company mismatch POS=${apiCompanyId} LOCAL=${companyCode}`
+                "Invalid API response"
             );
         }
 
-        const apiMenus = response.data.data;
+        if (
+            Number(response.data.company_id) !==
+            Number(companyCode)
+        ) {
+            throw new Error(
+                `Company mismatch POS=${response.data.company_id} LOCAL=${companyCode}`
+            );
+        }
+
+        const apiMenus =
+            response.data.data;
+
+        console.log(
+            `API returned ${apiMenus.length} menu(s)`
+        );
 
         // ==========================================
         // LOCAL MENUS
         // ==========================================
 
-        const localMenus = await queryDb(`
-            SELECT *
-            FROM menu
-        `);
+        const localMenus =
+            await queryDb(`
+                SELECT *
+                FROM menu
+            `);
 
-        const localMenuMap = new Map();
+        const localMenuMap =
+            new Map();
 
         localMenus.forEach(menu => {
+
             localMenuMap.set(
                 Number(menu.m_menu_id),
                 menu
             );
+
         });
 
         const apiMenuIds = [];
+
+        // ==========================================
+        // LOCAL CATEGORIES
+        // ==========================================
+
+        const localCategories =
+            await queryDb(`
+                SELECT *
+                FROM menu_categories
+            `);
+
+        const localCategoryMap =
+            new Map();
+
+        localCategories.forEach(category => {
+
+            localCategoryMap.set(
+                Number(category.menu_id),
+                category
+            );
+
+        });
 
         // ==========================================
         // INSERT / UPDATE MENUS
@@ -114,9 +163,79 @@ const syncMenus = async () => {
 
         for (const menu of apiMenus) {
 
-            const menuId = Number(menu.id);
-
+            const menuId =
+                Number(menu.id);
+const branchId =
+        menu.m_branch_id || "";
             apiMenuIds.push(menuId);
+
+            // ======================================
+            // MENU CATEGORY
+            // ======================================
+
+            const localCategory =
+                localCategoryMap.get(menuId);
+
+            if (!localCategory) {
+
+                await queryDb(`
+                    INSERT INTO menu_categories (
+                        menu_id,
+                        cat_id,
+                        cat_name,
+                        company_id,
+                        branch_id
+                    )
+                    VALUES (
+                        ?, ?, ?, ?, ?
+                    )
+                `, [
+                    menu.id,
+                    menu.m_main_category,
+                    menu.m_main_category_name,
+                    menu.m_company_id,
+                    branchId
+                ]);
+
+                console.log(
+                    `Inserted category ${menu.m_main_category_name}`
+                );
+
+            } else {
+
+                const needsCategoryUpdate =
+                    Number(localCategory.cat_id) !== Number(menu.m_main_category) ||
+                    String(localCategory.cat_name || "") !== String(menu.m_main_category_name || "") ||
+                    Number(localCategory.company_id) !== Number(menu.m_company_id) ||
+                    String(localCategory.branch_id || "") !== String(branchId || "");
+
+                if (needsCategoryUpdate) {
+
+                    await queryDb(`
+                        UPDATE menu_categories
+                        SET
+                            cat_id = ?,
+                            cat_name = ?,
+                            company_id = ?,
+                            branch_id = ?
+                        WHERE menu_id = ?
+                    `, [
+                        menu.m_main_category,
+                        menu.m_main_category_name,
+                        menu.m_company_id,
+                        branchId,
+                        menu.id
+                    ]);
+
+                    console.log(
+                        `Updated category ${menu.m_main_category_name}`
+                    );
+                }
+            }
+
+            // ======================================
+            // MENU
+            // ======================================
 
             const localMenu =
                 localMenuMap.get(menuId);
@@ -145,7 +264,7 @@ const syncMenus = async () => {
                     menu.m_menu_name,
                     menu.m_main_category,
                     menu.m_company_id,
-                    menu.m_branch_id,
+                    branchId,
                     menu.m_ingredient,
                     menu.m_cost,
                     menu.m_price,
@@ -159,12 +278,12 @@ const syncMenus = async () => {
             } else {
 
                 const needsUpdate =
-                    localMenu.m_menu_sl !== menu.m_menu_sl ||
-                    localMenu.m_menu_name !== menu.m_menu_name ||
-                    String(localMenu.category_id) !== String(menu.m_main_category) ||
+                    String(localMenu.m_menu_sl || "") !== String(menu.m_menu_sl || "") ||
+                    String(localMenu.m_menu_name || "") !== String(menu.m_menu_name || "") ||
+                    String(localMenu.category_id || "") !== String(menu.m_main_category || "") ||
                     Number(localMenu.m_company_id) !== Number(menu.m_company_id) ||
-                    String(localMenu.m_branch_id) !== String(menu.m_branch_id) ||
-                    String(localMenu.m_ingredient) !== String(menu.m_ingredient) ||
+                    String(localMenu.m_branch_id || "") !== String(branchId || "") ||
+                    String(localMenu.m_ingredient || "") !== String(menu.m_ingredient || "") ||
                     Number(localMenu.m_cost) !== Number(menu.m_cost) ||
                     Number(localMenu.m_price) !== Number(menu.m_price) ||
                     Number(localMenu.m_status) !== Number(menu.m_status);
@@ -174,22 +293,22 @@ const syncMenus = async () => {
                     await queryDb(`
                         UPDATE menu
                         SET
-                            m_menu_sl=?,
-                            m_menu_name=?,
-                            category_id=?,
-                            m_company_id=?,
-                            m_branch_id=?,
-                            m_ingredient=?,
-                            m_cost=?,
-                            m_price=?,
-                            m_status=?
-                        WHERE m_menu_id=?
+                            m_menu_sl = ?,
+                            m_menu_name = ?,
+                            category_id = ?,
+                            m_company_id = ?,
+                            m_branch_id = ?,
+                            m_ingredient = ?,
+                            m_cost = ?,
+                            m_price = ?,
+                            m_status = ?
+                        WHERE m_menu_id = ?
                     `, [
                         menu.m_menu_sl,
                         menu.m_menu_name,
                         menu.m_main_category,
                         menu.m_company_id,
-                        menu.m_branch_id,
+                        branchId,
                         menu.m_ingredient,
                         menu.m_cost,
                         menu.m_price,
@@ -203,44 +322,47 @@ const syncMenus = async () => {
                 }
             }
 
-            // ==========================================
-            // VARIANT SYNC
-            // ==========================================
+            // ======================================
+            // VARIANTS
+            // ======================================
+
+            const localVariants =
+                await queryDb(`
+                    SELECT *
+                    FROM menus_variant
+                    WHERE menu_id = ?
+                `, [menuId]);
+
+            const localVariantMap =
+                new Map();
+
+            localVariants.forEach(v => {
+
+                localVariantMap.set(
+                    Number(v.variant_id),
+                    v
+                );
+
+            });
+
+            const apiVariantIds = [];
 
             if (
                 Array.isArray(menu.variants)
             ) {
 
-                const localVariants =
-                    await queryDb(`
-                        SELECT *
-                        FROM menus_variant
-                        WHERE menu_id = ?
-                    `, [menuId]);
-
-                const localVariantMap =
-                    new Map();
-
-                localVariants.forEach(v => {
-                    localVariantMap.set(
-                        Number(v.variant_id),
-                        v
-                    );
-                });
-
-                const apiVariantIds = [];
-
                 for (const variant of menu.variants) {
 
+                    const variantId =
+                        Number(variant.variant_id);
+
                     apiVariantIds.push(
-                        Number(variant.variant_id)
+                        variantId
                     );
 
                     const localVariant =
                         localVariantMap.get(
-                            Number(
-                                variant.variant_id
-                            )
+                            variantId
                         );
 
                     if (!localVariant) {
@@ -264,10 +386,14 @@ const syncMenus = async () => {
                             variant.price
                         ]);
 
+                        console.log(
+                            `Inserted variant ${variant.variant_name}`
+                        );
+
                     } else {
 
                         const needsVariantUpdate =
-                            localVariant.variant_name !== variant.variant_name ||
+                            String(localVariant.variant_name || "") !== String(variant.variant_name || "") ||
                             Number(localVariant.cost) !== Number(variant.cost) ||
                             Number(localVariant.price) !== Number(variant.price);
 
@@ -276,13 +402,11 @@ const syncMenus = async () => {
                             await queryDb(`
                                 UPDATE menus_variant
                                 SET
-                                    variant_name=?,
-                                    cost=?,
-                                    price=?
-                                WHERE
-                                    menu_id=?
-                                AND
-                                    variant_id=?
+                                    variant_name = ?,
+                                    cost = ?,
+                                    price = ?
+                                WHERE menu_id = ?
+                                AND variant_id = ?
                             `, [
                                 variant.variant_name,
                                 variant.cost,
@@ -290,33 +414,37 @@ const syncMenus = async () => {
                                 menuId,
                                 variant.variant_id
                             ]);
+
+                            console.log(
+                                `Updated variant ${variant.variant_name}`
+                            );
                         }
                     }
                 }
+            }
 
-                // DELETE REMOVED VARIANTS
+            // ======================================
+            // DELETE REMOVED VARIANTS
+            // ======================================
 
-                for (const localVariant of localVariants) {
+            for (const localVariant of localVariants) {
 
-                    if (
-                        !apiVariantIds.includes(
-                            Number(
-                                localVariant.variant_id
-                            )
-                        )
-                    ) {
+                if (
+                    !apiVariantIds.includes(
+                        Number(localVariant.variant_id)
+                    )
+                ) {
 
-                        await queryDb(`
-                            DELETE FROM menus_variant
-                            WHERE id = ?
-                        `, [
-                            localVariant.id
-                        ]);
+                    await queryDb(`
+                        DELETE FROM menus_variant
+                        WHERE id = ?
+                    `, [
+                        localVariant.id
+                    ]);
 
-                        console.log(
-                            `Deleted variant ${localVariant.variant_name}`
-                        );
-                    }
+                    console.log(
+                        `Deleted variant ${localVariant.variant_name}`
+                    );
                 }
             }
         }
@@ -335,6 +463,13 @@ const syncMenus = async () => {
 
                 await queryDb(`
                     DELETE FROM menus_variant
+                    WHERE menu_id = ?
+                `, [
+                    localMenu.m_menu_id
+                ]);
+
+                await queryDb(`
+                    DELETE FROM menu_categories
                     WHERE menu_id = ?
                 `, [
                     localMenu.m_menu_id
@@ -367,8 +502,7 @@ const syncMenus = async () => {
 };
 
 // ==========================================
-// RUN
+// EXPORT
 // ==========================================
-// syncMenus();
-
+// syncBranches();
 module.exports = syncMenus;

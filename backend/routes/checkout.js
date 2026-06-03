@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const axios = require('axios');
 const NodeCache = require("node-cache");
+const syncTables= require('./Cron Jobs/tables_cron')
 // Initialize cache: OTPs will automatically self-destruct after 300 seconds (5 minutes)
 const otpCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 // Helper function to wrap db.query in Promises
@@ -19,6 +20,7 @@ const queryPromise = (sql, params = []) => {
 // 1. GET User by Phone Number
 // ==========================================
 router.get('/get-user-by-phone/:phone', async (req, res) => {
+    await syncTables();
     const phone = req.params.phone;
     const branch_id = req.query.branch_id || 1;
 
@@ -125,6 +127,8 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
         let tables = [];
         if (tablesResponse.data && tablesResponse.data.status === true) {
             tables = tablesResponse.data.data || [];
+            console.log(`This is the api json data of tables: ${tables}`);
+            
         }
 
         // 1. FETCH RESERVATIONS

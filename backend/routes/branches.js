@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
         "GET /branches",
         new Date().toISOString()
     );
-        await syncBranches();
+        // await syncBranches();
         const settingsRows = await queryDb(
             "SELECT company_code FROM settings WHERE id = 1"
         );

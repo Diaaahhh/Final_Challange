@@ -65,36 +65,37 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
         // ==========================================
         // 2. IF CUSTOMER NOT FOUND: Fetch Branch Phone
         // ==========================================
-        let branchPhone = "the restaurant"; // Default fallback
-        try {
-            // FIX 2: Only attempt to fetch if the API key exists in the database
-            if (soft_api_key) {
-                const branchApiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
-                const branchRes = await axios.get(branchApiUrl, { headers: { 'Accept': 'application/json' } });
+        let branchPhone = "the restaurant";
 
-                // FIX 3: Safely parse branches based on khabartable API structure (Object vs Array)
-                let branches = [];
-                if (branchRes.data && branchRes.data.status === true) {
-                    if (branchRes.data.type === "company" && Array.isArray(branchRes.data.data)) {
-                        branches = branchRes.data.data;
-                    } else if (branchRes.data.type === "branch" && typeof branchRes.data.data === 'object') {
-                        branches = [branchRes.data.data];
-                    } else if (branchRes.data.data && Array.isArray(branchRes.data.data.branches)) {
-                        branches = branchRes.data.data.branches;
-                    }
-                }
+try {
 
-                // Check both 'branch_id' and 'id' just in case the API structure varies
-                const matchedBranch = branches.find(b => String(b.branch_id) === String(branch_id) || String(b.id) === String(branch_id));
+  const branchRows = await queryPromise(
+    `
+    SELECT phone
+    FROM branches
+    WHERE branch_id = ?
+    AND company_id = ?
+    LIMIT 1
+    `,
+    [branch_id, companyCode]
+);
+console.log(phone, branch_id, companyCode, branchRows);
 
-                if (matchedBranch) {
-                    // Check multiple possible property names for the phone number
-                    branchPhone = matchedBranch.phone || matchedBranch.branch_phone || matchedBranch.contact_number || "the restaurant";
-                }
-            }
-        } catch (branchErr) {
-            console.error("Failed to fetch branch info for error message:", branchErr.message);
-        }
+    if (
+        branchRows.length > 0 &&
+        branchRows[0].phone
+    ) {
+        branchPhone = branchRows[0].phone;
+    }
+
+} catch (branchErr) {
+
+    console.error(
+        "Failed to fetch branch phone from database:",
+        branchErr.message
+    );
+
+}
 
         // Return Status 200 so the console doesn't show a red error!
         // We use 'success: false' to tell the frontend the user wasn't found.
@@ -114,42 +115,52 @@ router.get('/get-user-by-phone/:phone', async (req, res) => {
 // ==========================================
 router.get('/branches', async (req, res) => {
     try {
-        // 1. Fetch the api_key from the local settings table
-        const settingsResult = await queryPromise("SELECT api_key FROM settings WHERE id = 1");
-        const soft_api_key = settingsResult[0]?.api_key;
-        
-        if (!soft_api_key) {
-            return res.json([]); // Return empty array if no API key is set
+
+        // Get company code from settings
+        const settingsResult =
+            await queryPromise(
+                "SELECT company_code FROM settings WHERE id = 1"
+            );
+
+        const companyCode =
+            settingsResult[0]?.company_code;
+
+        if (!companyCode) {
+            return res.json([]);
         }
 
-        // 2. Fetch branches from external API safely
-        const apiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${soft_api_key}`;
-        const response = await axios.get(apiUrl, { 
-            headers: { 'Accept': 'application/json' } 
-        });
-        
-        if (typeof response.data === 'string' && response.data.includes('<!doctype html>')) {
-            return res.json([]); // Fail safely if Laravel throws an HTML error
-        }
+        // Fetch branches from local table
+        const branches =
+            await queryPromise(
+                `
+                SELECT
+                    id,
+                    branch_id,
+                    branch_name,
+                    name,
+                    email,
+                    phone,
+                    status,
+                    company_id
+                FROM branches
+                WHERE company_id = ?
+                AND status = 1
+                ORDER BY branch_name ASC
+                `,
+                [companyCode]
+            );
 
-        // 3. Normalize the data so Reservation.jsx ALWAYS receives an array
-        let branches = [];
-        if (response.data && response.data.status === true) {
-            if (response.data.type === "company" && Array.isArray(response.data.data)) {
-                branches = response.data.data;
-            } else if (response.data.type === "branch" && typeof response.data.data === 'object') {
-                branches = [response.data.data];
-            } else if (response.data.data && Array.isArray(response.data.data.branches)) {
-                branches = response.data.data.branches;
-            }
-        }
-
-        // Send the perfectly formatted array to the frontend
-        res.json(branches);
+        // Send array to frontend
+        return res.json(branches);
 
     } catch (err) {
-        console.warn("Error fetching branches for reservation:", err.message);
-        res.json([]); // Fail safely
+
+        console.warn(
+            "Error fetching branches for reservation:",
+            err.message
+        );
+
+        return res.json([]);
     }
 });
 
@@ -677,8 +688,6 @@ router.post('/verify-otp', async (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 });
-
-
 
 // ==========================================
 // 6. READ ALL RESERVATIONS

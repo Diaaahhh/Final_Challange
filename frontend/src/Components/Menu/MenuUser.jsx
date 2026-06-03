@@ -278,6 +278,8 @@ export default function MenuUser() {
         
         setBranches(formattedBranches);
         setAllMenuItems(Array.isArray(itemRes.data) ? itemRes.data : []);
+        console.log("BRANCHES:", formattedBranches);
+console.log("MENU ITEMS:", itemRes.data);
 
         // --- NEW LOGIC: DB OVERRIDE CHECK ---
         const dbBranchId = settingsRes.data?.branch_id;
@@ -288,25 +290,112 @@ export default function MenuUser() {
           setShowBranchModal(false);
           setIsBranchForced(true); // Used to hide the "Choose another branch" button
         } else {
-          // If branch_id is empty/null, fall back to original logic
-          setIsBranchForced(false);
-          const cachedBranch = getCachedBranch();
-          
-          if (isSingleBranch && formattedBranches.length > 0) {
-            const singleBranchId = String(formattedBranches[0].branch_id);
-            setSelectedBranch(singleBranchId);
-            setShowBranchModal(false);
-            localStorage.setItem(
-              CACHE_KEY,
-              JSON.stringify({ branchId: singleBranchId, timestamp: Date.now() })
-            );
-          } else if (cachedBranch) {
-            setSelectedBranch(String(cachedBranch));
-            setShowBranchModal(false);
-          } else {
-            setShowBranchModal(true);
-          }
-        }
+  setIsBranchForced(false);
+
+  const cachedBranch = getCachedBranch();
+
+  // Single branch company
+  if (isSingleBranch && formattedBranches.length > 0) {
+    const singleBranchId = String(
+      formattedBranches[0].branch_id
+    );
+
+    setSelectedBranch(singleBranchId);
+    setShowBranchModal(false);
+
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        branchId: singleBranchId,
+        timestamp: Date.now(),
+      })
+    );
+  }
+
+  // Cached branch exists
+  else if (cachedBranch) {
+
+    const branchExists = formattedBranches.some(
+      (branch) =>
+        String(branch.branch_id) ===
+        String(cachedBranch)
+    );
+
+    if (branchExists) {
+
+      setSelectedBranch(
+        String(cachedBranch)
+      );
+
+      setShowBranchModal(false);
+
+    } else {
+
+      // Cached branch belongs to another company
+      localStorage.removeItem(
+        CACHE_KEY
+      );
+
+      // Auto select first branch if available
+      if (formattedBranches.length > 0) {
+
+        const firstBranchId = String(
+          formattedBranches[0].branch_id
+        );
+
+        setSelectedBranch(
+          firstBranchId
+        );
+
+        setShowBranchModal(false);
+
+        localStorage.setItem(
+          CACHE_KEY,
+          JSON.stringify({
+            branchId: firstBranchId,
+            timestamp: Date.now(),
+          })
+        );
+
+      } else {
+
+        setSelectedBranch(null);
+        setShowBranchModal(true);
+
+      }
+    }
+  }
+
+  // No cached branch
+  else {
+
+    if (formattedBranches.length === 1) {
+
+      const firstBranchId = String(
+        formattedBranches[0].branch_id
+      );
+
+      setSelectedBranch(
+        firstBranchId
+      );
+
+      setShowBranchModal(false);
+
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          branchId: firstBranchId,
+          timestamp: Date.now(),
+        })
+      );
+
+    } else {
+
+      setShowBranchModal(true);
+
+    }
+  }
+}
         
       } catch (err) {
         console.error("Error loading initial data:", err);
@@ -331,6 +420,7 @@ useEffect(() => {
         }));
 
         setAllCategories(formattedCategories);
+        console.log("CATEGORIES:", formattedCategories);
       } catch (err) {
         console.error("Error fetching categories for branch:", err);
         setAllCategories([]);
@@ -346,7 +436,7 @@ useEffect(() => {
       branchArray.includes(String(selectedBranch));
     const matchesCategory =
       activeCategory.id === "All" ||
-      String(item.m_main_category) === String(activeCategory.id);
+      String(item.category_id) === String(activeCategory.id);
     return matchesBranch && matchesCategory;
   });
 
@@ -363,7 +453,9 @@ useEffect(() => {
   const currentBranchName =
     branches.find((b) => String(b.branch_id) === String(selectedBranch))
       ?.branch_name || "Unknown Branch";
-
+console.log("selectedBranch =", selectedBranch);
+console.log("activeCategory =", activeCategory);
+console.log("filteredItems =", filteredItems);
   return (
     <div 
       className="min-h-screen p-4 md:p-8 font-sans relative transition-colors duration-300"
