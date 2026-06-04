@@ -133,8 +133,8 @@ router.get('/list', async (req, res) => {
             FROM menus_variant
         `;
 
-        const menus = await queryPromise(menuSql);
-        const variants = await queryPromise(variantSql);
+        const menus = await queryDb(menuSql);
+const variants = await queryDb(variantSql);
 
         const menuWithVariants = menus.map(menu => {
 

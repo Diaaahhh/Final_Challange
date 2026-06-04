@@ -14,25 +14,13 @@ import api from "../../api";
 import { IMAGE_BASE_URL } from "../../config";
 import { useNavigate } from "react-router-dom";
 
-const [showVariants, setShowVariants] = useState(false);
 // --- SUB-COMPONENT: Individual Menu Item Card ---
 const MenuItemCard = ({ item, branchId, branchName }) => {
+  const [showVariantModal, setShowVariantModal] = useState(false);
   const { handleAddToCart, setIsCartOpen, cartItems } = useCart();
 
   const [localQty, setLocalQty] = useState(0);
-  const addVariantToCart = (variant) => {
-
-    const itemWithVariant = {
-        ...item,
-        selectedVariant: variant.variant_name,
-        price: Number(variant.price),
-        variant_id: variant.variant_id
-    };
-
-    addToCart(itemWithVariant);
-
-    setShowVariants(false);
-};
+  
   const handleQtyChange = (value) => {
     const newQty = Number(value);
     if (isNaN(newQty) || newQty < 0) return;
@@ -75,7 +63,39 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
     handleAddToCart(item, qtyToAdd, branchId, branchName);
     if (setIsCartOpen) setIsCartOpen(true);
   };
+const handleVariantAdd = (variant) => {
+  const variantProduct = {
+    ...item,
 
+    // Unique cart key
+    m_menu_sl: `${item.m_menu_sl}_${variant.variant_id}`,
+
+    // Display name
+    m_menu_name: `${item.m_menu_name} (${variant.variant_name})`,
+
+    // Variant info
+    variant_id: variant.variant_id,
+    variant_name: variant.variant_name,
+
+    // Variant price overrides menu price
+    m_price: variant.price,
+
+    isVariant: true,
+  };
+
+  handleAddToCart(
+    variantProduct,
+    1,
+    branchId,
+    branchName
+  );
+
+  setShowVariantModal(false);
+
+  if (setIsCartOpen) {
+    setIsCartOpen(true);
+  }
+};
   const isActive = Number(item.m_status) === 1;
 
   // --- DISCOUNT JSON PARSING & MATH ---
@@ -101,10 +121,12 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
       return strVal.replace(/[\[\]"]/g, "").replace(/,/g, ", ");
     }
   };
-
+const hasVariants =
+  Array.isArray(item.variants) &&
+  item.variants.length > 0;
   return (
     <>
-<div
+    <div
       className={`group bg-white rounded-xl shadow-sm transition-all duration-300 border border-gray-100 flex p-4 gap-4 items-start relative
       ${
         !isActive
@@ -185,142 +207,130 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
           )}
 
           {isActive && (
-  <div className="flex items-center gap-3 w-full">
-    {localQty === 0 ? (
-      item.variants && item.variants.length > 0 ? (
+            <div className="flex items-center gap-3 w-full">
+              {localQty === 0 ? (
+  hasVariants ? (
+    <button
+      onClick={() => setShowVariantModal(true)}
+      className="flex-1 h-8 rounded-lg font-bold text-xs tracking-wider transition-all hover:scale-[1.02] flex items-center justify-center gap-2 shadow-sm bg-gradient-to-r from-amber-500 to-orange-500 text-white cursor-pointer"
+    >
+      View Variants
+    </button>
+  ) : (
+    <button
+      onClick={onAddToCart}
+      className="flex-1 h-8 rounded-lg font-bold text-xs tracking-wider transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm theme-accent-bg text-white cursor-pointer"
+    >
+      Add <FaCartPlus size={12} />
+    </button>
+  )
+) : (
+  <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
+    <button
+      onClick={decrement}
+      className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-l-lg transition-colors flex items-center justify-center"
+    >
+      <FaMinus size={8} />
+    </button>
 
-        <button
-          onClick={() => setShowVariants(true)}
-          className="flex-1 h-8 rounded-lg font-bold text-xs tracking-wider transition-all hover:scale-[1.02] bg-gradient-to-r from-amber-500 to-orange-500 text-white flex items-center justify-center gap-2 shadow-md cursor-pointer"
-        >
-          View Variants
-        </button>
+    <input
+      type="number"
+      min="0"
+      value={localQty}
+      onChange={(e) => handleQtyChange(e.target.value)}
+      className="w-10 text-center font-bold text-sm text-gray-800 bg-transparent outline-none"
+    />
 
-      ) : (
-
-        <button
-          onClick={onAddToCart}
-          className="flex-1 h-8 rounded-lg font-bold text-xs tracking-wider transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm theme-accent-bg text-white cursor-pointer"
-        >
-          Add <FaCartPlus size={12} />
-        </button>
-
-      )
-    ) : (
-      <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
-        <button
-          onClick={decrement}
-          className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-l-lg transition-colors flex items-center justify-center"
-        >
-          <FaMinus size={8} />
-        </button>
-
-        <input
-          type="number"
-          min="0"
-          value={localQty}
-          onChange={(e) => handleQtyChange(e.target.value)}
-          className="w-10 text-center font-bold text-sm text-gray-800 bg-transparent outline-none"
-        />
-
-        <button
-          onClick={increment}
-          className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
-        >
-          <FaPlus size={8} />
-        </button>
-      </div>
-    )}
+    <button
+      onClick={increment}
+      className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
+    >
+      <FaPlus size={8} />
+    </button>
   </div>
 )}
+            </div>
+          )}
         </div>
       </div>
     </div>
-    {showVariants && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    {showVariantModal && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
 
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in">
+    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-300">
 
-          {/* Header */}
-          <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-5">
+      {/* Header */}
+      <div className="theme-bg p-5 flex justify-between items-center">
 
-            <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-white">
+            {item.m_menu_name}
+          </h2>
 
-              <div>
-                <h2 className="text-xl font-bold">
-                  {item.m_menu_name}
-                </h2>
+          <p className="text-xs text-gray-300 mt-1">
+            Select your preferred variant
+          </p>
+        </div>
 
-                <p className="text-sm opacity-90">
-                  Select a variant
+        <button
+          onClick={() => setShowVariantModal(false)}
+          className="text-white text-xl hover:scale-110 transition-transform"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      {/* Body */}
+
+      <div
+        className={`p-4 ${
+          item.variants.length > 5
+            ? "max-h-[400px] overflow-y-auto custom-scrollbar"
+            : ""
+        }`}
+      >
+        <div className="space-y-3">
+
+          {item.variants.map((variant) => (
+
+            <button
+              key={variant.id}
+              onClick={() =>
+                handleVariantAdd(variant)
+              }
+              className="w-full flex items-center justify-between p-4 rounded-2xl border border-gray-200 hover:border-amber-500 hover:bg-amber-50 transition-all group"
+            >
+              <div className="text-left">
+                <h3 className="font-bold text-gray-800 group-hover:text-amber-600">
+                  {variant.variant_name}
+                </h3>
+
+                <p className="text-xs text-gray-400">
+                  Variant Option
                 </p>
               </div>
 
-              <button
-                onClick={() => setShowVariants(false)}
-                className="text-2xl hover:opacity-80"
-              >
-                ×
-              </button>
+              <div className="text-right">
+                <span className="text-lg font-bold theme-accent">
+                  Tk {Number(variant.price).toLocaleString()}
+                </span>
 
-            </div>
-
-          </div>
-
-          {/* Variant List */}
-          <div
-            className={`
-              p-3
-              ${
-                item.variants.length > 5
-                  ? "max-h-[350px] overflow-y-auto"
-                  : ""
-              }
-            `}
-          >
-
-            {item.variants.map((variant) => (
-
-              <div
-                key={variant.id}
-                onClick={() => addVariantToCart(variant)}
-                className="
-                  cursor-pointer
-                  border
-                  rounded-xl
-                  p-4
-                  mb-3
-                  hover:border-orange-500
-                  hover:bg-orange-50
-                  transition-all
-                  flex
-                  justify-between
-                  items-center
-                "
-              >
-
-                <div>
-                  <h4 className="font-semibold text-gray-800">
-                    {variant.variant_name}
-                  </h4>
-                </div>
-
-                <div className="text-right">
-                  <p className="font-bold text-orange-600">
-                    ৳{variant.price}
-                  </p>
-                </div>
-
+                <p className="text-xs text-gray-400">
+                  Click to add
+                </p>
               </div>
+            </button>
 
-            ))}
-
-          </div>
+          ))}
 
         </div>
-
       </div>
-    )}
+
+    </div>
+
+  </div>
+)}
     </>
     
   );
@@ -769,6 +779,5 @@ console.log("filteredItems =", filteredItems);
         </div>
       </div>
     </div>
-    
   );
 }

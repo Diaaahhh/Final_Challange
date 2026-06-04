@@ -582,11 +582,19 @@ console.log("API RAW RESPONSE:", res.data);
       pay_mtd: formData.payment_method.toLowerCase(),
       captcha: captchaToken,
       items: cartItems.map((item) => ({
-        menu_id: item.m_menu_id || item.id,
-        menu_name: item.m_menu_name,
-        qty: item.quantity,
-        price: Number(item.m_price),
-      })),
+  menu_id: item.m_menu_id || item.id,
+
+  variant_id: item.variant_id || null,
+
+  variant_name:
+    item.variant_name || null,
+
+  menu_name: item.m_menu_name,
+
+  qty: item.quantity,
+
+  price: Number(item.m_price),
+})),
     };
 
     try {
@@ -823,7 +831,13 @@ console.log("API RAW RESPONSE:", res.data);
                           <span strong className="text-gray-900 font-bold mr-1">
                             {index + 1}.
                           </span>
-                          {item.m_menu_name}{" "}
+                          {item.m_menu_name}
+
+{item.variant_name && (
+  <span className="ml-2 text-xs text-gray-500">
+    ({item.variant_name})
+  </span>
+)}{" "}
                           <strong className="text-gray-900 ml-2">
                             × {item.quantity}
                           </strong>
