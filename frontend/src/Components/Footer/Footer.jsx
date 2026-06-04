@@ -137,34 +137,35 @@ const Footer = () => {
       {/* Darkened background dynamically using bg-black/30 */}
       <div className="border-t border-white/10 bg-black/30 py-6 relative z-10">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4">
-          <p className="text-gray-400 text-sm text-center md:text-left">
+          <p className="text-white text-sm text-center md:text-left">
             Copyright © 2026 RamBD. All rights reserved | 
+            
+          </p>
+        </div>
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4 mt-2">
+          <p className="text-white text-sm text-center md:text-left">
             <a 
               href="https://iglweb.com/web/domains-services.php" 
-              className="theme-accent hover:text-white ml-1 mr-2 font-['Arial_Black'] transition-colors"
+              className="text-white hover:text-white ml-1 mr-2 font-['Arial_Black'] transition-colors"
             >
               Domain Registration by: IGL Web Ltd.
             </a> 
             | All Rights Reserved.
             <a
               href="https://iglweb.com/web/hosting-regular-shared.php" 
-              className="theme-accent hover:text-white ml-1 font-['Arial_Black'] transition-colors"
+              className="text-white hover:text-white ml-1 font-['Arial_Black'] transition-colors"
             >
               Web Hosting by: IGL Web Ltd.
             </a> | <a 
               href="https://iglweb.com/web/web-development.php" 
-              className="theme-accent hover:text-white ml-1 font-['Arial_Black'] transition-colors"
+              className="text-white hover:text-white ml-1 font-['Arial_Black'] transition-colors"
             >
               Web Design & Development by: IGL Web Ltd
             </a>
-          </p>
-        </div>
-        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-center items-center gap-4 mt-2">
-          <p className="text-gray-400 text-sm text-center md:text-left">
             A Concern of
             <a 
               href="https://iglgroup.com.bd/" 
-              className="theme-accent hover:text-white ml-1 font-['Arial_Black'] transition-colors"
+              className="text-white hover:text-white ml-1 font-['Arial_Black'] transition-colors"
             >
               IGL Group
             </a>

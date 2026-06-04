@@ -531,6 +531,7 @@ console.log("customer_id from frontend:", customer_id);
         const formattedItems = items.map(item => ({
             menu_id: parseInt(item.menu_id) || 0,
             menu_name: item.menu_name || '',
+            variant_id: item.variant_id,
             qty: parseInt(item.qty) || 1,
             price: parseFloat(item.price) || 0,
             size: item.size || null
