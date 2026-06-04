@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const axios = require('axios');
 const NodeCache = require("node-cache");
-const syncTables= require('./Cron Jobs/tables_cron')
+
 // Initialize cache: OTPs will automatically self-destruct after 300 seconds (5 minutes)
 const otpCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
 // Helper function to wrap db.query in Promises
@@ -20,7 +20,7 @@ const queryPromise = (sql, params = []) => {
 // 1. GET User by Phone Number
 // ==========================================
 router.get('/get-user-by-phone/:phone', async (req, res) => {
-    await syncTables();
+   
     const phone = req.params.phone;
     const branch_id = req.query.branch_id || 1;
 
@@ -123,13 +123,26 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
         // console.log(`System checking: Branch ${branch_id} for RIGHT NOW (${chosenDate} at ${chosenTime})`);
 
 
-        const tablesResponse = await axios.get(`https://pos.khabartable.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
-        let tables = [];
-        if (tablesResponse.data && tablesResponse.data.status === true) {
-            tables = tablesResponse.data.data || [];
-            console.log(`This is the api json data of tables: ${tables}`);
-            
-        }
+        // ==========================================
+// FETCH TABLES FROM LOCAL DATABASE
+// ==========================================
+const tables = await queryPromise(
+    `
+    SELECT
+        id,
+        table_no,
+        person_no,
+        status,
+        company_id,
+        branch_id
+    FROM tables
+    WHERE company_id = ?
+    AND branch_id = ?
+    `,
+    [companyCode, branch_id]
+);
+
+console.log("Tables fetched from local DB:", tables);
 
         // 1. FETCH RESERVATIONS
         let reservations = [];
@@ -245,7 +258,7 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
         const normalizedChosenTime = chosenTime.substring(0, 5);
 
         const processedTables = tables.map(table => {
-            let { id, table_no, capacity, person_no } = table;
+            let { id, table_no, person_no } = table;
             const stringTableNo = String(table_no).trim();
 
             let isAvailable = true;
@@ -320,7 +333,7 @@ router.get('/get-dine-in-tables/:branch_id', async (req, res) => {
                 id,
                 table_no: stringTableNo,
                 person_no: person_no,
-                capacity: capacity,
+                capacity: person_no,
                 isAvailable,
                 bookingMessage
             };

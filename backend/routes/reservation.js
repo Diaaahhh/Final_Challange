@@ -4,6 +4,7 @@ const db = require('../db');
 const axios = require('axios');
 const NodeCache = require("node-cache");
 const otpCache = new NodeCache({ stdTTL: 300, checkperiod: 60 });
+
 // Helper function to wrap db.query in Promises for clean async/await syntax
 const queryPromise = (sql, params = []) => {
     return new Promise((resolve, reject) => {
@@ -190,14 +191,33 @@ router.get('/tables/:branch_id', async (req, res) => {
 
         }
 
-        const tablesResponse = await axios.get(`https://pos.khabartable.com/branch/order/website/table?company_id=${companyCode}&branch_id=${branch_id}`);
-        
-        let tables = [];
-        if (tablesResponse.data && tablesResponse.data.status === true) {
-            tables = tablesResponse.data.data || [];
-            console.log(tables);
-            
-        }
+        // ==========================================
+// FETCH TABLES FROM LOCAL DATABASE
+// ==========================================
+const tables = await queryPromise(
+    `
+    SELECT
+        id,
+        create_by,
+        company_id,
+        branch_id,
+        table_no,
+        person_no,
+        created_at,
+        updated_at,
+        status,
+        date,
+        time
+    FROM tables
+    WHERE branch_id = ?
+    ORDER BY table_no ASC
+    `,
+    [branch_id]
+);
+
+console.log(
+    `Fetched ${tables.length} tables for Branch ${branch_id}`
+);
 
         // 1. FETCH RESERVATIONS
         let reservations = [];
@@ -316,7 +336,7 @@ router.get('/tables/:branch_id', async (req, res) => {
         const normalizedChosenTime = chosenTime.substring(0, 5);
 
         const processedTables = tables.map(table => {
-            let { id, table_no, capacity, person_no } = table;
+            let { id, table_no, person_no } = table;
             const stringTableNo = String(table_no).trim();
 
             let isAvailable = true;
@@ -390,7 +410,7 @@ router.get('/tables/:branch_id', async (req, res) => {
                 id,
                 table_no: stringTableNo,
                 person_no: person_no,
-                capacity: capacity,
+                capacity: person_no,
                 isAvailable,
                 bookingMessage
             };

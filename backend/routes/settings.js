@@ -4,6 +4,9 @@ const fs = require('fs');
 const express = require('express');
 const router = express.Router();
 const db = require('../db'); 
+const syncTables= require('./Cron Jobs/tables_cron')
+const syncBranches = require('./Cron Jobs/branch_cron')
+const syncMenus = require('./Cron Jobs/menu_cron');
 
 // Helper function to wrap db.query in Promises
 const queryPromise = (sql, params = []) => {
@@ -85,8 +88,11 @@ router.get('/', (req, res) => {
 });
 
 // 2. UPDATE or INSERT Settings 
-router.post('/update', (req, res) => {
-    const { 
+router.post('/update', async (req, res) => {
+    await syncTables();
+    await syncBranches();
+        await syncMenus();
+const { 
         branch_id,
         delivery_charge, 
         rest_open, 
@@ -150,6 +156,7 @@ router.post('/update', (req, res) => {
         }
         return res.json({ message: "Settings updated successfully" });
     });
+     
 });
 // GET Theme Setting
 router.get('/get-theme', async (req, res) => {

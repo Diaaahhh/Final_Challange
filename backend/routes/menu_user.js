@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db'); 
 const axios = require('axios');
-const syncBranches= require('./Cron Jobs/branch_cron')
-const syncMenus= require('./Cron Jobs/menu_cron')
 // --- HELPER: Get Company Code ---
 const getCompanyCode = () => {
     return new Promise((resolve, reject) => {
@@ -19,8 +17,6 @@ const getCompanyCode = () => {
 // 1. GET BRANCH LIST 
 router.get('/branches', async (req, res) => {
     try {
-        await syncBranches();
-await syncMenus();
         // Get company code from settings
         const settingsResult = await new Promise((resolve, reject) => {
             db.query(
@@ -122,34 +118,37 @@ router.get('/categories/:branchId', async (req, res) => {
     }
 });
 
-
-
-
 // 3. GET MENU LIST (LOCAL DATABASE ONLY)
 router.get('/list', async (req, res) => {
     try {
 
-        const sql = `
+        const menuSql = `
             SELECT *
             FROM menu
             ORDER BY m_menu_name ASC
         `;
 
-        db.query(sql, (err, results) => {
+        const variantSql = `
+            SELECT *
+            FROM menus_variant
+        `;
 
-            if (err) {
-                console.error(
-                    "[MENU LIST ERROR]",
-                    err.message
-                );
+        const menus = await queryPromise(menuSql);
+        const variants = await queryPromise(variantSql);
 
-                return res.status(500).json({
-                    error: "Failed to fetch menu list"
-                });
-            }
+        const menuWithVariants = menus.map(menu => {
 
-            return res.json(results);
+            const menuVariants = variants.filter(
+                v => Number(v.menu_id) === Number(menu.m_menu_id)
+            );
+
+            return {
+                ...menu,
+                variants: menuVariants
+            };
         });
+
+        return res.json(menuWithVariants);
 
     } catch (error) {
 

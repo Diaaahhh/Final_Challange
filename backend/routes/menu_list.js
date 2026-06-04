@@ -5,7 +5,6 @@ const axios = require('axios');
 const multer = require('multer'); 
 const path = require('path');
 const fs = require('fs');
-const syncMenus = require('./Cron Jobs/menu_cron');
 // --- CONFIG: Multer for Image Upload ---
 const uploadDir = path.join(__dirname, '../public/uploads'); 
 if (!fs.existsSync(uploadDir)){
@@ -39,7 +38,6 @@ const getCompanyCode = () => {
 
 // --- ROUTE: GET MENU LIST ---
 router.get('/list', async (req, res) => {
-    // await syncMenus();
     // Safely handle queries whether they have params or not
     const queryDb = (sql, params) => {
         return new Promise((resolve, reject) => {

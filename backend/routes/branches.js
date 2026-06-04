@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const axios = require('axios'); // Requires: npm install axios
-const syncBranches = require('./Cron Jobs/branch_cron')
 const queryDb = (sql, params = []) => {
     return new Promise((resolve, reject) => {
         db.query(sql, params, (err, results) => {
@@ -19,7 +18,6 @@ router.get('/', async (req, res) => {
         "GET /branches",
         new Date().toISOString()
     );
-        // await syncBranches();
         const settingsRows = await queryDb(
             "SELECT company_code FROM settings WHERE id = 1"
         );
@@ -74,7 +72,7 @@ router.post('/verify', async (req, res) => {
     }
 
     try {
-        const apiUrl = `https://pos.khabartable.com/company/all-branch-list?soft_api_key=${api_key}`;
+        const apiUrl = `https://pos.khabartable.com/company/all-branch-list/?soft_api_key=${api_key}`;
         const apiResponse = await axios.get(apiUrl);
         const data = apiResponse.data;
 

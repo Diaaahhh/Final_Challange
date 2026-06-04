@@ -14,12 +14,25 @@ import api from "../../api";
 import { IMAGE_BASE_URL } from "../../config";
 import { useNavigate } from "react-router-dom";
 
+const [showVariants, setShowVariants] = useState(false);
 // --- SUB-COMPONENT: Individual Menu Item Card ---
 const MenuItemCard = ({ item, branchId, branchName }) => {
   const { handleAddToCart, setIsCartOpen, cartItems } = useCart();
 
   const [localQty, setLocalQty] = useState(0);
-  
+  const addVariantToCart = (variant) => {
+
+    const itemWithVariant = {
+        ...item,
+        selectedVariant: variant.variant_name,
+        price: Number(variant.price),
+        variant_id: variant.variant_id
+    };
+
+    addToCart(itemWithVariant);
+
+    setShowVariants(false);
+};
   const handleQtyChange = (value) => {
     const newQty = Number(value);
     if (isNaN(newQty) || newQty < 0) return;
@@ -90,7 +103,8 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
   };
 
   return (
-    <div
+    <>
+<div
       className={`group bg-white rounded-xl shadow-sm transition-all duration-300 border border-gray-100 flex p-4 gap-4 items-start relative
       ${
         !isActive
@@ -171,42 +185,144 @@ const MenuItemCard = ({ item, branchId, branchName }) => {
           )}
 
           {isActive && (
-            <div className="flex items-center gap-3 w-full">
-              {localQty === 0 ? (
-                <button
-                  onClick={onAddToCart}
-                  className="flex-1 h-8 rounded-lg font-bold text-xs  tracking-wider transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm theme-accent-bg text-white cursor-pointer"
-                >
-                  Add <FaCartPlus size={12} />
-                </button>
-              ) : (
-                <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
-                  <button
-                    onClick={decrement}
-                    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-l-lg transition-colors flex items-center justify-center"
-                  >
-                    <FaMinus size={8} />
-                  </button>
-                  <input
-                    type="number"
-                    min="0"
-                    value={localQty}
-                    onChange={(e) => handleQtyChange(e.target.value)}
-                    className="w-10 text-center font-bold text-sm text-gray-800 bg-transparent outline-none"
-                  />
-                  <button
-                    onClick={increment}
-                    className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
-                  >
-                    <FaPlus size={8} />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+  <div className="flex items-center gap-3 w-full">
+    {localQty === 0 ? (
+      item.variants && item.variants.length > 0 ? (
+
+        <button
+          onClick={() => setShowVariants(true)}
+          className="flex-1 h-8 rounded-lg font-bold text-xs tracking-wider transition-all hover:scale-[1.02] bg-gradient-to-r from-amber-500 to-orange-500 text-white flex items-center justify-center gap-2 shadow-md cursor-pointer"
+        >
+          View Variants
+        </button>
+
+      ) : (
+
+        <button
+          onClick={onAddToCart}
+          className="flex-1 h-8 rounded-lg font-bold text-xs tracking-wider transition-opacity hover:opacity-90 flex items-center justify-center gap-2 shadow-sm theme-accent-bg text-white cursor-pointer"
+        >
+          Add <FaCartPlus size={12} />
+        </button>
+
+      )
+    ) : (
+      <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 h-8">
+        <button
+          onClick={decrement}
+          className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-l-lg transition-colors flex items-center justify-center"
+        >
+          <FaMinus size={8} />
+        </button>
+
+        <input
+          type="number"
+          min="0"
+          value={localQty}
+          onChange={(e) => handleQtyChange(e.target.value)}
+          className="w-10 text-center font-bold text-sm text-gray-800 bg-transparent outline-none"
+        />
+
+        <button
+          onClick={increment}
+          className="px-2 h-full text-gray-600 hover:bg-gray-200 rounded-r-lg transition-colors flex items-center justify-center"
+        >
+          <FaPlus size={8} />
+        </button>
+      </div>
+    )}
+  </div>
+)}
         </div>
       </div>
     </div>
+    {showVariants && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in">
+
+          {/* Header */}
+          <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-5">
+
+            <div className="flex justify-between items-center">
+
+              <div>
+                <h2 className="text-xl font-bold">
+                  {item.m_menu_name}
+                </h2>
+
+                <p className="text-sm opacity-90">
+                  Select a variant
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowVariants(false)}
+                className="text-2xl hover:opacity-80"
+              >
+                ×
+              </button>
+
+            </div>
+
+          </div>
+
+          {/* Variant List */}
+          <div
+            className={`
+              p-3
+              ${
+                item.variants.length > 5
+                  ? "max-h-[350px] overflow-y-auto"
+                  : ""
+              }
+            `}
+          >
+
+            {item.variants.map((variant) => (
+
+              <div
+                key={variant.id}
+                onClick={() => addVariantToCart(variant)}
+                className="
+                  cursor-pointer
+                  border
+                  rounded-xl
+                  p-4
+                  mb-3
+                  hover:border-orange-500
+                  hover:bg-orange-50
+                  transition-all
+                  flex
+                  justify-between
+                  items-center
+                "
+              >
+
+                <div>
+                  <h4 className="font-semibold text-gray-800">
+                    {variant.variant_name}
+                  </h4>
+                </div>
+
+                <div className="text-right">
+                  <p className="font-bold text-orange-600">
+                    ৳{variant.price}
+                  </p>
+                </div>
+
+              </div>
+
+            ))}
+
+          </div>
+
+        </div>
+
+      </div>
+    )}
+    </>
+    
   );
 };
 
@@ -653,5 +769,6 @@ console.log("filteredItems =", filteredItems);
         </div>
       </div>
     </div>
+    
   );
 }
