@@ -765,7 +765,7 @@ if (!smsApiKey || !senderId) {
         // 🔥 STEP 4: Send OTP
         const message = `Your checkout OTP is ${otp}. Please do not share this with anyone.`;
 
-        const smsUrl = `http://sms.iglweb.com/api/v1/send?api_key=${smsApiKey}&contacts=${formattedPhone}&senderid=${senderId}&msg=${encodeURIComponent(message)}`;
+        const smsUrl = `https://sms.iglweb.com/api/v1/send?api_key=${smsApiKey}&contacts=${formattedPhone}&senderid=${senderId}&msg=${encodeURIComponent(message)}`;
 
         console.log("Sending OTP to:", formattedPhone);
 
@@ -796,7 +796,7 @@ if (!smsApiKey || !senderId) {
             message: "Internal server error"
         });
     }
-});
+}); 
 // ==========================================
 // 5. POST: Verify OTP
 // ==========================================
